@@ -7,6 +7,7 @@ import Data.Either (Either(..))
 import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.Map as Map
+import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
 import GraphQL.Newtypes.ToResolver (class ToJsonResolver, toJsonResolver)
@@ -37,9 +38,13 @@ spec =
         resAll <- resolveTyped resolver "{a b}"
         resAll `shouldEqual` Right (ResultObject ((Tuple "a" (leaf 1)) : (Tuple "b" (leaf 2)) : Nil))
       it "should create resolvers with arguments" do
-        let resolver = (GqlObj { double: \({ a } :: { a :: Int }) -> a * 2 })
+        
+        let 
+          resolver = (GqlObj { double: \({ a } :: { a :: Int }) -> a * 2, shout: \({str} :: {str :: String} ) -> toUpper str })
         resA <- resolveTyped resolver "{double(a: 3)}"
         resA `shouldEqual` Right (ResultObject $ pure $ Tuple "double" $ leaf 6)
+        resB <- resolveTyped resolver "{shout(str: \"hello\")}"
+        resB `shouldEqual` Right (ResultObject $ pure $ Tuple "shout" $ leaf "HELLO")
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
