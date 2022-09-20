@@ -9,7 +9,8 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, Fiber, ParAff)
+import GraphQL.Newtypes.GqlIo (GqlIo)
 import GraphQL.Newtypes.ToResolver (class ToJsonResolver, toJsonResolver)
 import GraphQL.Resolver.Newtypes.ResolveTo (GqlObj(..))
 import GraphQL.Resolver.Untyped (Field, Resolver(..), Result(..), resolveQueryString)
@@ -38,13 +39,20 @@ spec =
         resAll <- resolveTyped resolver "{a b}"
         resAll `shouldEqual` Right (ResultObject ((Tuple "a" (leaf 1)) : (Tuple "b" (leaf 2)) : Nil))
       it "should create resolvers with arguments" do
-        
-        let 
-          resolver = (GqlObj { double: \({ a } :: { a :: Int }) -> a * 2, shout: \({str} :: {str :: String} ) -> toUpper str })
+        let
+          resolver =
+            ( GqlObj
+                { double: \({ a } :: { a :: Int }) -> a * 2
+                , shout: \({ str } :: { str :: String }) -> toUpper str
+                , async: \({ str } :: { str :: String }) -> aff $ toUpper str
+                }
+            )
         resA <- resolveTyped resolver "{double(a: 3)}"
         resA `shouldEqual` Right (ResultObject $ pure $ Tuple "double" $ leaf 6)
         resB <- resolveTyped resolver "{shout(str: \"hello\")}"
         resB `shouldEqual` Right (ResultObject $ pure $ Tuple "shout" $ leaf "HELLO")
+        resC <- resolveTyped resolver "{async(str: \"hello\")}"
+        resC `shouldEqual` Right (ResultObject $ pure $ Tuple "async" $ leaf "HELLO")
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
