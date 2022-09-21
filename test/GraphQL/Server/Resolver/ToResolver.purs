@@ -43,6 +43,7 @@ spec =
                 { double: \({ a } :: { a :: Int }) -> a * 2
                 , shout: \({ str } :: { str :: String }) -> toUpper str
                 , async: \({ str } :: { str :: String }) -> aff $ toUpper str
+                , noArgs: aff "no args"
                 }
             )
 
@@ -58,6 +59,10 @@ spec =
         resC `shouldEqual` Right (ResultObject $ pure expectedC)
         resAll <- resolveTyped resolver "{double(a: 3) shout(str: \"hello\") async(str: \"hello\")}"
         resAll `shouldEqual` Right (ResultObject $ List.fromFoldable [expectedA, expectedB, expectedC])
+
+        resNoArgs <- resolveTyped resolver "{noArgs}"
+        resNoArgs `shouldEqual` Right (ResultObject $ pure $ Tuple "noArgs" $ leaf "no args")
+
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
