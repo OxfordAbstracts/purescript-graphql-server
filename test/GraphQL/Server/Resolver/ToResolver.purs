@@ -2,18 +2,16 @@ module Test.GraphQL.Server.Resolver.ToResolver where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson, encodeJson, jsonNull)
+import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Either (Either(..))
-import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
-import Data.Map as Map
+import Data.List as List
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
-import Effect.Aff (Aff, Fiber, ParAff)
-import GraphQL.Newtypes.GqlIo (GqlIo)
+import Effect.Aff (Aff)
 import GraphQL.Newtypes.ToResolver (class ToJsonResolver, toJsonResolver)
 import GraphQL.Resolver.Newtypes.ResolveTo (GqlObj(..))
-import GraphQL.Resolver.Untyped (Field, Resolver(..), Result(..), resolveQueryString)
+import GraphQL.Resolver.Untyped (Result(..), resolveQueryString)
 import GraphQL.Server.GqlError (GqlError)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -47,12 +45,19 @@ spec =
                 , async: \({ str } :: { str :: String }) -> aff $ toUpper str
                 }
             )
+
+          expectedA = Tuple "double" $ leaf 6
+          expectedB = Tuple "shout" $ leaf "HELLO"
+          expectedC = Tuple "async" $ leaf "HELLO"
+
         resA <- resolveTyped resolver "{double(a: 3)}"
-        resA `shouldEqual` Right (ResultObject $ pure $ Tuple "double" $ leaf 6)
+        resA `shouldEqual` Right (ResultObject $ pure expectedA)
         resB <- resolveTyped resolver "{shout(str: \"hello\")}"
-        resB `shouldEqual` Right (ResultObject $ pure $ Tuple "shout" $ leaf "HELLO")
+        resB `shouldEqual` Right (ResultObject $ pure expectedB)
         resC <- resolveTyped resolver "{async(str: \"hello\")}"
-        resC `shouldEqual` Right (ResultObject $ pure $ Tuple "async" $ leaf "HELLO")
+        resC `shouldEqual` Right (ResultObject $ pure expectedC)
+        resAll <- resolveTyped resolver "{double(a: 3) shout(str: \"hello\") async(str: \"hello\")}"
+        resAll `shouldEqual` Right (ResultObject $ List.fromFoldable [expectedA, expectedB, expectedC])
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
