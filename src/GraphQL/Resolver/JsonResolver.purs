@@ -1,4 +1,4 @@
-module GraphQL.Resolver.Untyped where
+module GraphQL.Resolver.JsonResolver where
 
 import Prelude
 

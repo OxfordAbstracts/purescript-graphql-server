@@ -1,4 +1,4 @@
-module Test.GraphQL.Server.Resolver.Untyped where
+module Test.GraphQL.Server.Resolver.JsonResolver where
 
 import Prelude
 
@@ -8,13 +8,13 @@ import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Tuple (Tuple(..))
-import GraphQL.Resolver.Untyped (Resolver(..), Result(..), Field, resolveQueryString)
+import GraphQL.Resolver.JsonResolver (Resolver(..), Result(..), Field, resolveQueryString)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
 spec :: Spec Unit
 spec =
-  describe "GraphQL.Server.Resolver.Untyped" do
+  describe "GraphQL.Server.Resolver.JsonResolver" do
     describe "resolveQueryString" do
       it "should resolve a flat query string" do
         let

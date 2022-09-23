@@ -12,14 +12,14 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import Effect.Aff (Aff)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.Resolver.ResolveTo (GqlObj(..))
-import GraphQL.Resolver.Untyped (Field, Resolver(..))
-import GraphQL.Resolver.Untyped as Untyped
+import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
+import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Server.GqlError (ResolverError(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
 
 class ToJsonResolver a m where
-  toJsonResolver :: a -> Untyped.Resolver m
+  toJsonResolver :: a -> JsonResolver.Resolver m
 
 instance Applicative m => ToJsonResolver Boolean m where
   toJsonResolver a = Node $ pure $ encodeJson a
@@ -95,7 +95,7 @@ class GetArgResolver a m where
   getArgResolver
     :: a
     -> { args :: Json }
-    -> Untyped.Resolver m
+    -> JsonResolver.Resolver m
 
 instance (DecodeJson a, ToJsonResolver b m) => GetArgResolver (a -> b) m where
   getArgResolver fn { args } = case decodeJson args of
