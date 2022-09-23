@@ -1,4 +1,4 @@
-module GraphQL.Newtypes.ToResolver where
+module GraphQL.Resolver.ToResolver where
 
 import Prelude
 
@@ -10,8 +10,8 @@ import Data.Map as Map
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Effect.Aff (Aff)
-import GraphQL.Newtypes.GqlIo (GqlIo)
-import GraphQL.Resolver.Newtypes.ResolveTo (GqlObj(..))
+import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Untyped (Field, Resolver(..))
 import GraphQL.Resolver.Untyped as Untyped
 import GraphQL.Server.GqlError (ResolverError(..))
@@ -22,25 +22,29 @@ class ToJsonResolver a m where
   toJsonResolver :: a -> Untyped.Resolver m
 
 instance Applicative m => ToJsonResolver Boolean m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+  toJsonResolver = encodeNode 
 
 instance Applicative m => ToJsonResolver Int m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+  toJsonResolver = encodeNode 
 
 instance Applicative m => ToJsonResolver Number m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+  toJsonResolver = encodeNode 
 
 instance Applicative m => ToJsonResolver String m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+  toJsonResolver = encodeNode 
 
 instance Applicative m => ToJsonResolver Json m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+  toJsonResolver = encodeNode 
+
+encodeNode ∷ ∀ (m ∷ Type -> Type) (a ∷ Type). Applicative m ⇒ EncodeJson a ⇒ a → Resolver m
+encodeNode a = Node $ pure $ encodeJson a
 
 instance (EncodeJson a) => ToJsonResolver (Aff a) Aff where
   toJsonResolver m = Node $ map encodeJson m
 
 instance (EncodeJson a, Applicative m) => ToJsonResolver (GqlIo m a) (GqlIo m) where
   toJsonResolver m = Node $ map encodeJson m
+
 
 instance (Applicative m, HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)) => ToJsonResolver (GqlObj name { | r }) m where
   toJsonResolver (GqlObj a) = Fields

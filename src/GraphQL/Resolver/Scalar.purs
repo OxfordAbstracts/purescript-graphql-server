@@ -1,4 +1,4 @@
-module GraphQL.Newtypes.Scalar where
+module GraphQL.Resolver.Scalar where
 
 -- Scalars
 
