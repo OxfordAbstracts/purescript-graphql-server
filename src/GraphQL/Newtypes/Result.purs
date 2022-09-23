@@ -1,4 +1,4 @@
-module GraphQL.Resolver.Result where
+module GraphQL.Newtypes.Result where
 
 import Prelude
 

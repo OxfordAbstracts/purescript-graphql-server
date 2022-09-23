@@ -1,4 +1,4 @@
-module GraphQL.Resolver.GqlIo where
+module GraphQL.Newtypes.GqlIo where
 
 import Prelude
 
