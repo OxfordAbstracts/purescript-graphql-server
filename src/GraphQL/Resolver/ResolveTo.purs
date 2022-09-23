@@ -1,10 +1,10 @@
-module GraphQL.Resolver.Newtypes.ResolveTo where
+module GraphQL.Resolver.Resolver.ResolveTo where
 
 import Prelude
 
 import Data.Argonaut (Json)
 import Effect.Aff (Aff)
-import GraphQL.Newtypes.Scalar (Scalar)
+import GraphQL.Resolver.Scalar (Scalar)
 import Heterogeneous.Mapping (class HMap, class Mapping, hmap)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -47,16 +47,7 @@ resolveProps = hmap ResolveToProp
 testRes :: forall res ret. ResolveTo res ret => Proxy res -> Proxy ret
 testRes _ = Proxy
 
--- x :: Proxy Int
--- intTest :: Proxy Int
--- intTest = testRes (Proxy :: Proxy (GqlIo Aff Int))
 
--- recordTest :: Proxy
---   { a :: Boolean
---   , x :: Int
---   , y :: { z :: String
---          }
---   }
 recordTest :: Proxy Int
 recordTest = testRes
   ( Proxy

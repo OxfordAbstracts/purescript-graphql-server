@@ -1,4 +1,4 @@
-module GraphQL.Newtypes.ToResolver where
+module GraphQL.Resolver.ToResolver where
 
 import Prelude
 
@@ -10,8 +10,8 @@ import Data.Map as Map
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Effect.Aff (Aff)
-import GraphQL.Newtypes.GqlIo (GqlIo)
-import GraphQL.Resolver.Newtypes.ResolveTo (GqlObj(..))
+import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.Resolver.ResolveTo (GqlObj(..))
 import GraphQL.Resolver.Untyped (Field, Resolver(..))
 import GraphQL.Resolver.Untyped as Untyped
 import GraphQL.Server.GqlError (ResolverError(..))
