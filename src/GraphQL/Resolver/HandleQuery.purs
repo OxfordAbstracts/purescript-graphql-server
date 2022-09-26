@@ -25,7 +25,8 @@ handleOperationDefinition resolver = case _ of
     , directives --  ∷ (Maybe Directives)
     , selectionSet --  ∷ SelectionSet
     } -> case resolver of
-    Node _ -> pure $ Left $ OtherError "Node resolver has no fields"
+    Node _ -> pure $ Left $ OtherError "Node resolver at root"
+    ListResolver _ -> pure $ Left $ OtherError "List resolver at root"
     FailedResolver err -> pure $ Left $ ResolverError err
     Fields { fields } ->
       lookup rootField fields

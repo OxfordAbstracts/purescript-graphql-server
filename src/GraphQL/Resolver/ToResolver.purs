@@ -11,9 +11,10 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Effect.Aff (Aff)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Resolver.Resolver.ResolveTo (GqlObj(..))
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
+import GraphQL.Resolver.Resolver.ResolveTo (GqlObj(..))
+import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (ResolverError(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
@@ -36,11 +37,11 @@ instance Applicative m => ToJsonResolver String m where
 instance Applicative m => ToJsonResolver Json m where
   toJsonResolver a = Node $ pure $ encodeJson a
 
-instance (EncodeJson a) => ToJsonResolver (Aff a) Aff where
-  toJsonResolver m = Node $ map encodeJson m
+-- instance (ToJsonResolver a Aff) => ToJsonResolver (Aff a) Aff where
+--   toJsonResolver m =  ?d $ ((map toJsonResolver m) :: Aff (JsonResolver.Resolver Aff))
 
-instance (EncodeJson a, Applicative m) => ToJsonResolver (GqlIo m a) (GqlIo m) where
-  toJsonResolver m = Node $ map encodeJson m
+-- instance (EncodeJson a, Applicative m) => ToJsonResolver (GqlIo m a) (GqlIo m) where
+--   toJsonResolver m = ResultLazy $ map encodeJson m
 
 instance (Applicative m, HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)) => ToJsonResolver (GqlObj name { | r }) m where
   toJsonResolver (GqlObj a) = Fields

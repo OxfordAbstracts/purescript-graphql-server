@@ -4,25 +4,31 @@ import Prelude
 
 import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
 import Data.Either (Either(..))
+import Data.Lazy (Lazy, force)
 import Data.List (List(..), foldl)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
-import Data.Traversable (for)
+import Data.Traversable (class Foldable, class Traversable, for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
 import GraphQL.Parser (selectionSet)
 import GraphQL.Parser.AST (Selection(..), SelectionSet(..))
 import GraphQL.Parser.AST as AST
+import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
 import Partial.Unsafe (unsafeCrashWith)
-import GraphQL.Resolver.Result (Result(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 data Resolver m
   = Node (m Json)
+  | ListResolver (List (Resolver m))
   | Fields (Fields m)
   | FailedResolver ResolverError
+
+
+--  (unsafeCoerce :: m (Resolver m) -> ( Resolver m))
 
 type Fields m =
   { fields :: Map String (Field m)
@@ -53,7 +59,9 @@ resolve = case _, _ of
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
   _, Nothing -> err MissingSelectionSet
-  (Fields { fields }), Just (SelectionSet selections) -> do
+  ListResolver resolvers, selectionSet ->
+    ResultList <$> traverse (\r -> resolve r selectionSet) resolvers
+  (Fields { fields }), Just (SelectionSet selections) ->
     case getSelectionFields =<< selections of
       Nil -> err NoFields
       selectedFields -> ResultObject <$> for selectedFields
