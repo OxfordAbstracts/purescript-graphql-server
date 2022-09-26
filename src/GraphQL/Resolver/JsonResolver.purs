@@ -2,9 +2,8 @@ module GraphQL.Resolver.JsonResolver where
 
 import Prelude
 
-import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull, stringify)
+import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
 import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic)
 import Data.List (List(..), foldl)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), maybe)
@@ -18,6 +17,7 @@ import GraphQL.Parser.AST as AST
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
 import Partial.Unsafe (unsafeCrashWith)
+import GraphQL.Resolver.Result (Result(..))
 
 data Resolver m
   = Node (m Json)
@@ -30,29 +30,8 @@ type Fields m =
 
 type Field m =
   { name :: String
-  , args :: Args
   , resolver :: { args :: Json } -> Resolver m
   }
-
-type Args = List { name :: String, type :: String, required :: Boolean }
-
-data Result
-  = ResultLeaf Json
-  | ResultError ResolverError
-  | ResultObject (List (Tuple String Result))
-  | ResultList (List Result)
-  | ResultNullable (Maybe Result)
-
-derive instance Generic Result _
-derive instance Eq Result
-
-instance Show Result where
-  show = case _ of
-    ResultLeaf json -> "(ResultLeaf " <> stringify json <> ")"
-    ResultError err -> "(ResultError " <> show err <> ")"
-    ResultObject fields -> "(ResultObject " <> show fields <> ")"
-    ResultList items -> "(ResultList " <> show items <> ")"
-    ResultNullable maybeResult -> "(ResultNullable " <> show maybeResult <> ")"
 
 resolveQueryString :: forall m. Applicative m => Resolver m -> String -> m (Either GqlError Result)
 resolveQueryString resolver query = do
@@ -74,7 +53,6 @@ resolve = case _, _ of
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
   _, Nothing -> err MissingSelectionSet
-  -- ResolveList r,   -> err SelectionSetAtListValue
   (Fields { fields }), Just (SelectionSet selections) -> do
     case getSelectionFields =<< selections of
       Nil -> err NoFields

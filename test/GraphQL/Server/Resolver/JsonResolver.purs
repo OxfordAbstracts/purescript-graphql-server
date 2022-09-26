@@ -8,7 +8,8 @@ import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Tuple (Tuple(..))
-import GraphQL.Resolver.JsonResolver (Resolver(..), Result(..), Field, resolveQueryString)
+import GraphQL.Resolver.JsonResolver (Resolver(..), Field, resolveQueryString)
+import GraphQL.Resolver.Result (Result(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -50,28 +51,22 @@ resolver :: forall m. Applicative m => Resolver m
 resolver = Fields
   { fields:
       mkFieldMap
-        [ { args: mempty
-          , name: "top_level_1"
+        [ { name: "top_level_1"
           , resolver: resolveNode "top_val_1"
           }
-        , { args: mempty
-          , name: "top_level_2"
+        , { name: "top_level_2"
           , resolver: resolveNode [ 1 ]
           }
-        , { args: mempty
-          , name: "top_level_3"
+        , { name: "top_level_3"
           , resolver: resolveNode { l1: "v1", l2: 2 }
           }
-        , { args: mempty
-          , name: "top_level_nested_1"
+        , { name: "top_level_nested_1"
           , resolver: \_ -> Fields
               { fields: mkFieldMap
-                  [ { args: mempty
-                    , name: "c1"
+                  [ { name: "c1"
                     , resolver: resolveNode "v11"
                     }
-                  , { args: mempty
-                    , name: "c2"
+                  , { name: "c2"
                     , resolver: resolveNode "v12"
                     }
                   ]

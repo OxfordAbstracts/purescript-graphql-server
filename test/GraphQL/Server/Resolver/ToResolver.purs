@@ -3,15 +3,19 @@ module Test.GraphQL.Server.Resolver.ToResolver where
 import Prelude
 
 import Data.Argonaut (class EncodeJson, encodeJson)
+import Data.Array (filter)
 import Data.Either (Either(..))
+import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
+import Data.Maybe (Maybe, maybe)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import GraphQL.Resolver.ToResolver (class ToJsonResolver, toJsonResolver)
+import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Resolver.ResolveTo (GqlObj(..))
-import GraphQL.Resolver.JsonResolver (Result(..), resolveQueryString)
+import GraphQL.Resolver.Result (Result(..))
+import GraphQL.Resolver.ToResolver (class ToJsonResolver, toJsonResolver)
 import GraphQL.Server.GqlError (GqlError)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -38,31 +42,68 @@ spec =
         resAll `shouldEqual` Right (ResultObject ((Tuple "a" (leaf 1)) : (Tuple "b" (leaf 2)) : Nil))
       it "should create resolvers with arguments" do
         let
-          resolver =
-            ( GqlObj
-                { double: \({ a } :: { a :: Int }) -> a * 2
-                , shout: \({ str } :: { str :: String }) -> toUpper str
-                , async: \({ str } :: { str :: String }) -> aff $ toUpper str
-                , noArgs: aff "no args"
-                }
-            )
 
           expectedA = Tuple "double" $ leaf 6
           expectedB = Tuple "shout" $ leaf "HELLO"
           expectedC = Tuple "async" $ leaf "HELLO"
+          resolve = resolveTyped resolverParent
 
-        resA <- resolveTyped resolver "{double(a: 3)}"
+        resA <- resolve "{double(a: 3)}"
         resA `shouldEqual` Right (ResultObject $ pure expectedA)
-        resB <- resolveTyped resolver "{shout(str: \"hello\")}"
+        resB <- resolve "{shout(str: \"hello\")}"
         resB `shouldEqual` Right (ResultObject $ pure expectedB)
-        resC <- resolveTyped resolver "{async(str: \"hello\")}"
+        resC <- resolve "{async(str: \"hello\")}"
         resC `shouldEqual` Right (ResultObject $ pure expectedC)
-        resAll <- resolveTyped resolver "{double(a: 3) shout(str: \"hello\") async(str: \"hello\")}"
-        resAll `shouldEqual` Right (ResultObject $ List.fromFoldable [expectedA, expectedB, expectedC])
+        resAll <- resolve "{double(a: 3) shout(str: \"hello\") async(str: \"hello\")}"
+        resAll `shouldEqual` Right (ResultObject $ List.fromFoldable [ expectedA, expectedB, expectedC ])
 
-        resNoArgs <- resolveTyped resolver "{noArgs}"
+        resNoArgs <- resolve "{noArgs}"
         resNoArgs `shouldEqual` Right (ResultObject $ pure $ Tuple "noArgs" $ leaf "no args")
+      it "should create resolvers that return arrays" do
+        res <- resolveTyped resolverParent "{ints(min: 3)}"
+        res `shouldEqual` Right (ResultObject $ pure $ Tuple "ints" $ leaf [ 3, 4, 5 ])
 
+resolverParent
+  :: forall name
+   . GqlObj name
+       { async :: { str :: String } -> Aff String
+       , double :: { a :: Int } -> Int
+       , noArgs :: Aff String
+       , shout :: { str :: String } -> String
+       , ints :: { min :: Maybe Int, max :: Maybe Int } -> Aff (Array Int)
+      --  , child1 :: Aff ResolverChild1
+      --  , children1 :: { ids :: Array Int } -> Aff (Array ResolverChild1)
+       }
+resolverParent =
+  ( GqlObj
+      { double: \({ a }) -> a * 2
+      , shout: \({ str }) -> toUpper str
+      , async: \({ str }) -> aff $ toUpper str
+      , noArgs: aff "no args"
+      , ints: \{ min, max } -> pure $
+          [ 1, 2, 3, 4, 5 ]
+            # filter \i -> maybe true (i >= _) min && maybe true (i <= _) max
+      -- , child1: pure $ resolverChild1
+      -- , children1: \{ ids } -> pure $ map mkChild ids
+      }
+  )
+
+type ResolverChild1 = GqlObj "child1"
+  { id :: Int
+  , n :: Number
+  , name :: String
+  }
+
+resolverChild1 :: ResolverChild1
+resolverChild1 = mkChild 1
+
+mkChild :: Int -> ResolverChild1
+mkChild = \id ->
+  GqlObj
+    { id
+    , n: toNumber id
+    , name: "child " <> show id
+    }
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson

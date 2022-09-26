@@ -75,7 +75,6 @@ instance
     field :: Field m
     field =
       { name
-      , args: getArgTypes a
       , resolver: getArgResolver a
       }
 
