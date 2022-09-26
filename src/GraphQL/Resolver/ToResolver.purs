@@ -63,7 +63,6 @@ derive instance Newtype (FieldMap m) _
 
 instance
   ( IsSymbol sym
-  , GetArgTypes a
   , GetArgResolver a m
   ) =>
   FoldingWithIndex ToJsonResolverProps (Proxy sym) (FieldMap m) a (FieldMap m) where
@@ -77,18 +76,6 @@ instance
       { name
       , resolver: getArgResolver a
       }
-
-class GetArgTypes a where
-  getArgTypes
-    :: a
-    -> List
-         { name :: String
-         , required :: Boolean
-         , type :: String
-         }
-
-instance GetArgTypes a where
-  getArgTypes _ = Nil
 
 class GetArgResolver a m where
   getArgResolver
