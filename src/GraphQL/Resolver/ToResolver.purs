@@ -49,12 +49,6 @@ instance (Applicative m, ToJsonResolver a m) => ToJsonResolver (Array a) m where
 instance (Applicative m, EncodeJson a) => ToJsonResolver (GqlIo m a) (GqlIo m) where
   toJsonResolver m = Node $ map encodeJson m
 
--- instance (EncodeJson a) => ToJsonResolver (Aff a) Aff where
---   toJsonResolver m = Node $ map encodeJson m
-
-
-x = encodeJson $ 1 : Nil
-
 instance (Applicative m, HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)) => ToJsonResolver (GqlObj name { | r }) m where
   toJsonResolver (GqlObj a) = Fields
     { fields: makeFields a

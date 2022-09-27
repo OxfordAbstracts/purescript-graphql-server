@@ -4,12 +4,11 @@ import Prelude
 
 import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
 import Data.Either (Either(..))
-import Data.Lazy (Lazy, force)
 import Data.List (List(..), foldl)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
-import Data.Traversable (class Foldable, class Traversable, for, traverse)
+import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
 import GraphQL.Parser (selectionSet)
@@ -19,7 +18,6 @@ import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
 import Partial.Unsafe (unsafeCrashWith)
-import Unsafe.Coerce (unsafeCoerce)
 
 data Resolver m
   = Node (m Json)

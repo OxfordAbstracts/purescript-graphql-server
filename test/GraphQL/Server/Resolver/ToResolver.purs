@@ -113,7 +113,7 @@ resolverParent =
 
 type ResolverChild1 = GqlObj "child1"
   { id :: Int
-  , n :: Number
+  , n :: GqlAff Number
   , name :: String
   }
 
@@ -124,7 +124,7 @@ mkChild :: Int -> ResolverChild1
 mkChild = \id ->
   GqlObj
     { id
-    , n: toNumber id
+    , n: pure $ toNumber id
     , name: "child " <> show id
     }
 
