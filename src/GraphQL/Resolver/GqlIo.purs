@@ -6,7 +6,8 @@ import Control.Alt (class Alt)
 import Control.Lazy (class Lazy)
 import Data.Functor.Invariant (class Invariant, imapF)
 import Data.Newtype (class Newtype)
-import Effect.Aff (Aff)
+import Effect (Effect)
+import Effect.Aff (Aff, Fiber, ParAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 
@@ -14,6 +15,13 @@ newtype GqlIo :: forall k. (k -> Type) -> k -> Type
 newtype GqlIo m a = GqlIo (m a)
 
 type GqlAff = GqlIo Aff
+
+type GqlParAff = GqlIo ParAff
+
+type GqlFiber = GqlIo Fiber
+
+type GqlEffect = GqlIo Effect
+
 
 derive instance Newtype (GqlIo m a) _
 
