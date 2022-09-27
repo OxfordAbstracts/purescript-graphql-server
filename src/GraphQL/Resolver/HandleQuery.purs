@@ -10,7 +10,7 @@ import GraphQL.Parser.AST (OperationType(..))
 import GraphQL.Parser.AST as AST
 import GraphQL.Resolver.JsonResolver (Fields, Resolver(..), resolve)
 import GraphQL.Resolver.Result (Result, resultToData)
-import GraphQL.Resolver.ToResolver (getArgResolver, toJsonResolver)
+import GraphQL.Resolver.ToResolver (getArgResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError(..))
 import Unsafe.Coerce (unsafeCoerce)
 

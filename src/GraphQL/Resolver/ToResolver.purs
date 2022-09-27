@@ -18,70 +18,70 @@ import GraphQL.Server.GqlError (ResolverError(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
 
-class ToJsonResolver a m where
-  toJsonResolver :: a -> JsonResolver.Resolver m
+class ToResolver a m where
+  toResolver :: a -> JsonResolver.Resolver m
 
-instance Applicative m => ToJsonResolver Boolean m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+instance Applicative m => ToResolver Boolean m where
+  toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToJsonResolver Int m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+instance Applicative m => ToResolver Int m where
+  toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToJsonResolver Number m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+instance Applicative m => ToResolver Number m where
+  toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToJsonResolver String m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+instance Applicative m => ToResolver String m where
+  toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToJsonResolver Json m where
-  toJsonResolver a = Node $ pure $ encodeJson a
+instance Applicative m => ToResolver Json m where
+  toResolver a = Node $ pure $ encodeJson a
 
-instance (Applicative m, ToJsonResolver a m) => ToJsonResolver (List a) m where
-  toJsonResolver a = ListResolver $ map toJsonResolver a
+instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
+  toResolver a = ListResolver $ map toResolver a
 
-instance (Applicative m, ToJsonResolver a m) => ToJsonResolver (Array a) m where
-  toJsonResolver a = ListResolver $ map toJsonResolver $ List.fromFoldable a
+instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
+  toResolver a = ListResolver $ map toResolver $ List.fromFoldable a
 
 
 instance
   ( Applicative m
-  , HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)
+  , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   ) =>
-  ToJsonResolver (GqlObj name { | r }) m where
-  toJsonResolver (GqlObj a) = Fields
+  ToResolver (GqlObj name { | r }) m where
+  toResolver (GqlObj a) = Fields
     { fields: makeFields a
     }
 
 instance
   ( Applicative m
-  , HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)
+  , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   ) =>
-  ToJsonResolver ({ | r }) m where
-  toJsonResolver a = Fields
+  ToResolver ({ | r }) m where
+  toResolver a = Fields
     { fields: makeFields a
     }
 
 instance
   ( Applicative m
   , Newtype n { | r } 
-  , HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)
+  , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   ) =>
-  ToJsonResolver (GqlNew n) m where
-  toJsonResolver = unwrap >>> unwrap >>> \a -> Fields
+  ToResolver (GqlNew n) m where
+  toResolver = unwrap >>> unwrap >>> \a -> Fields
     { fields: makeFields a }
 
-instance (Functor m, EncodeJson a) => ToJsonResolver (GqlIo m a) (GqlIo m) where
-  toJsonResolver m = Node $ map encodeJson m
+instance (Functor m, EncodeJson a) => ToResolver (GqlIo m a) (GqlIo m) where
+  toResolver m = Node $ map encodeJson m
 
 makeFields
   :: forall r m
-   . HFoldlWithIndex ToJsonResolverProps (FieldMap m) { | r } (FieldMap m)
+   . HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   => { | r }
   -> Map String (Field m)
 makeFields r =
-  unwrap $ hfoldlWithIndex ToJsonResolverProps ((FieldMap Map.empty) :: FieldMap m) r
+  unwrap $ hfoldlWithIndex ToResolverProps ((FieldMap Map.empty) :: FieldMap m) r
 
-data ToJsonResolverProps = ToJsonResolverProps
+data ToResolverProps = ToResolverProps
 
 newtype FieldMap m = FieldMap (Map String (Field m))
 
@@ -91,8 +91,8 @@ instance
   ( IsSymbol sym
   , GetArgResolver a m
   ) =>
-  FoldingWithIndex ToJsonResolverProps (Proxy sym) (FieldMap m) a (FieldMap m) where
-  foldingWithIndex ToJsonResolverProps prop (FieldMap fieldMap) a =
+  FoldingWithIndex ToResolverProps (Proxy sym) (FieldMap m) a (FieldMap m) where
+  foldingWithIndex ToResolverProps prop (FieldMap fieldMap) a =
     FieldMap $ Map.insert name field fieldMap
     where
     name = reflectSymbol prop
@@ -109,13 +109,13 @@ class GetArgResolver a m where
     -> { args :: Json }
     -> JsonResolver.Resolver m
 
-instance ToJsonResolver a m => GetArgResolver (Unit -> a) m where
-  getArgResolver a = \_ -> toJsonResolver (a unit)
+instance ToResolver a m => GetArgResolver (Unit -> a) m where
+  getArgResolver a = \_ -> toResolver (a unit)
 
-else instance (DecodeJson a, ToJsonResolver b m) => GetArgResolver (a -> b) m where
+else instance (DecodeJson a, ToResolver b m) => GetArgResolver (a -> b) m where
   getArgResolver fn { args } = case decodeJson args of
     Left err -> FailedResolver $ ResolverDecodeError err
-    Right a -> toJsonResolver $ fn a
+    Right a -> toResolver $ fn a
 
-else instance ToJsonResolver a m => GetArgResolver a m where
-  getArgResolver a = \_ -> toJsonResolver a
+else instance ToResolver a m => GetArgResolver a m where
+  getArgResolver a = \_ -> toResolver a

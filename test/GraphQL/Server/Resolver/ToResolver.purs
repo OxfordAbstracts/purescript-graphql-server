@@ -18,7 +18,7 @@ import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToJsonResolver, toJsonResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -26,7 +26,7 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec =
   describe "GraphQL.Server.Resolver.ToResolver" do
-    describe "toJsonResolver" do
+    describe "toResolver" do
       it "should create simple immediate resolvers" do
         let resolver = (GqlObj { a: 1, b: 2.0 })
         resA <- resolveTyped resolver "{a}"
@@ -161,8 +161,8 @@ newtype RecursiveChild1 = RecursiveChild1
 
 derive instance Newtype RecursiveChild1 _
 
-instance ToJsonResolver RecursiveChild1 (GqlIo Fiber) where
-  toJsonResolver a = toJsonResolver (unwrap a)
+instance ToResolver RecursiveChild1 (GqlIo Fiber) where
+  toResolver a = toResolver (unwrap a)
 
 recursiveChild1 :: RecursiveChild1
 recursiveChild1 =
@@ -183,8 +183,8 @@ newtype RecursiveChild2 = RecursiveChild2
 derive instance Generic RecursiveChild2 _
 
 derive instance Newtype RecursiveChild2 _
-instance ToJsonResolver RecursiveChild2 (GqlIo Fiber) where
-  toJsonResolver a = toJsonResolver (unwrap a)
+instance ToResolver RecursiveChild2 (GqlIo Fiber) where
+  toResolver a = toResolver (unwrap a)
 
 recursiveChild2 :: RecursiveChild2
 recursiveChild2 = RecursiveChild2
@@ -200,8 +200,8 @@ leaf = ResultLeaf <<< encodeJson
 aff :: forall a. a -> GqlFiber a
 aff = pure
 
-resolveTypedAff :: forall a. ToJsonResolver a GqlFiber => a -> String -> GqlFiber (Either GqlError Result)
-resolveTypedAff resolver query = resolveQueryString (toJsonResolver resolver) query
+resolveTypedAff :: forall a. ToResolver a GqlFiber => a -> String -> GqlFiber (Either GqlError Result)
+resolveTypedAff resolver query = resolveQueryString (toResolver resolver) query
 
-resolveTyped :: forall a. ToJsonResolver a GqlFiber => a -> String -> Aff (Either GqlError Result)
+resolveTyped :: forall a. ToResolver a GqlFiber => a -> String -> Aff (Either GqlError Result)
 resolveTyped resolver query = joinFiber $ unwrap $ resolveTypedAff resolver query
