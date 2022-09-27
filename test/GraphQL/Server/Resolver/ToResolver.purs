@@ -5,6 +5,7 @@ import Prelude
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (filter)
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
@@ -15,7 +16,7 @@ import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Fiber, joinFiber)
 import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
-import GraphQL.Resolver.Resolver.GqlObject (GqlNew(..), GqlObj(..))
+import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToJsonResolver, toJsonResolver)
 import GraphQL.Server.GqlError (GqlError)
@@ -86,7 +87,7 @@ spec =
               ]
           )
       it "should create recursive resolvers" do
-        res <- ((resolveTyped (GqlNew recursiveChild1)) :: _ -> Aff _) "{id children {id, child {id}}}"
+        res <- resolveTyped recursiveChild1 "{id children {id, child {id}}}"
         res `shouldEqual`
           ( ( Right
                 ( ResultObject
@@ -111,8 +112,7 @@ spec =
           )
 
 resolverParent
-  :: forall name
-   . GqlObj name
+  ::  GqlObj "ResolverParent"
        { async :: { str :: String } -> GqlFiber String
        , double :: { a :: Int } -> Int
        , noArgs :: GqlFiber String
@@ -156,7 +156,7 @@ newtype RecursiveChild1 = RecursiveChild1
   { id :: Int
   , n :: GqlFiber Number
   , name :: String
-  , children :: Unit -> Array (RecursiveChild2)
+  , children :: Unit -> Array RecursiveChild2
   }
 
 derive instance Newtype RecursiveChild1 _
@@ -177,8 +177,10 @@ newtype RecursiveChild2 = RecursiveChild2
   { id :: Int
   , n :: GqlFiber Number
   , name :: String
-  , child :: Unit -> GqlNew RecursiveChild1
+  , child :: Unit -> RecursiveChild1
   }
+
+derive instance Generic RecursiveChild2 _
 
 derive instance Newtype RecursiveChild2 _
 instance ToJsonResolver RecursiveChild2 (GqlIo Fiber) where
@@ -189,7 +191,7 @@ recursiveChild2 = RecursiveChild2
   { id: 2
   , n: pure $ toNumber 2
   , name: "child 2"
-  , child: \_ -> GqlNew recursiveChild1
+  , child: \_ -> recursiveChild1
   }
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result

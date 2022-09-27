@@ -70,7 +70,7 @@ instance
   toJsonResolver = unwrap >>> unwrap >>> \a -> Fields
     { fields: makeFields a }
 
-instance (Applicative m, EncodeJson a) => ToJsonResolver (GqlIo m a) (GqlIo m) where
+instance (Functor m, EncodeJson a) => ToJsonResolver (GqlIo m a) (GqlIo m) where
   toJsonResolver m = Node $ map encodeJson m
 
 makeFields
