@@ -9,11 +9,13 @@ import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe, maybe)
+import Data.Newtype (unwrap)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
+import GraphQL.Resolver.GqlIo (GqlIo, GqlAff)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
-import GraphQL.Resolver.Resolver.ResolveTo (GqlObj(..))
+import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToJsonResolver, toJsonResolver)
 import GraphQL.Server.GqlError (GqlError)
@@ -62,29 +64,50 @@ spec =
       it "should create resolvers that return arrays" do
         res <- resolveTyped resolverParent "{ints(min: 3)}"
         res `shouldEqual` Right (ResultObject $ pure $ Tuple "ints" $ leaf [ 3, 4, 5 ])
+      it "should create nested resolvers" do
+        res <- resolveTyped resolverParent "{child1 {id}}"
+        res `shouldEqual` Right (ResultObject $ pure $ Tuple "child1" $ ResultObject $ pure $ Tuple "id" $ leaf 1)
+      it "should create nested array resolvers" do
+        res <- resolveTyped resolverParent "{children1(ids: [1,2,3]) {id, n}}"
+        res `shouldEqual` Right
+          ( ResultObject $ pure $ Tuple "children1" $ ResultList $ List.fromFoldable
+              [ ResultObject $ List.fromFoldable
+                  [ Tuple "id" $ leaf 1
+                  , Tuple "n" $ leaf 1.0
+                  ]
+              , ResultObject $ List.fromFoldable
+                  [ Tuple "id" $ leaf 2
+                  , Tuple "n" $ leaf 2.0
+                  ]
+              , ResultObject $ List.fromFoldable
+                  [ Tuple "id" $ leaf 3
+                  , Tuple "n" $ leaf 3.0
+                  ]
+              ]
+          )
 
 resolverParent
   :: forall name
    . GqlObj name
-       { async :: { str :: String } -> Aff String
+       { async :: { str :: String } -> GqlAff String
        , double :: { a :: Int } -> Int
-       , noArgs :: Aff String
+       , noArgs :: GqlAff String
        , shout :: { str :: String } -> String
-       , ints :: { min :: Maybe Int, max :: Maybe Int } -> Aff (Array Int)
-      --  , child1 :: Aff ResolverChild1
-      --  , children1 :: { ids :: Array Int } -> Aff (Array ResolverChild1)
+       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlAff (Array Int)
+       , child1 :: ResolverChild1
+       , children1 :: { ids :: Array Int } -> (Array ResolverChild1)
        }
 resolverParent =
   ( GqlObj
       { double: \({ a }) -> a * 2
       , shout: \({ str }) -> toUpper str
-      , async: \({ str }) -> aff $ toUpper str
-      , noArgs: aff "no args"
+      , async: \({ str }) -> pure $ toUpper str
+      , noArgs: pure "no args"
       , ints: \{ min, max } -> pure $
           [ 1, 2, 3, 4, 5 ]
             # filter \i -> maybe true (i >= _) min && maybe true (i <= _) max
-      -- , child1: pure $ resolverChild1
-      -- , children1: \{ ids } -> pure $ map mkChild ids
+      , child1: resolverChild1
+      , children1: \{ ids } -> map mkChild ids
       }
   )
 
@@ -108,8 +131,11 @@ mkChild = \id ->
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
 
-aff :: forall a. a -> Aff a
+aff :: forall a. a -> GqlAff a
 aff = pure
 
-resolveTyped :: forall a. ToJsonResolver a Aff => a -> String -> Aff (Either GqlError Result)
-resolveTyped resolver query = resolveQueryString (toJsonResolver resolver) query
+resolveTypedAff :: forall a. ToJsonResolver a GqlAff => a -> String -> GqlAff (Either GqlError Result)
+resolveTypedAff resolver query = resolveQueryString (toJsonResolver resolver) query
+
+resolveTyped :: forall a. ToJsonResolver a GqlAff => a -> String -> Aff (Either GqlError Result)
+resolveTyped resolver query = unwrap $ resolveTypedAff resolver query

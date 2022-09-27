@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Argonaut (Json)
 import Effect.Aff (Aff)
+import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Scalar (Scalar)
 import Heterogeneous.Mapping (class HMap, class Mapping, hmap)
 import Type.Proxy (Proxy(..))
@@ -23,11 +24,6 @@ instance ResolveTo Int Int
 instance ResolveTo Number Number
 instance ResolveTo String String
 instance ResolveTo Json Json
-
--- Objects
-
-newtype GqlObj :: forall k. k -> Type -> Type
-newtype GqlObj name rec = GqlObj rec
 
 -- Records 
 

@@ -29,6 +29,7 @@ to generate this file without the comments in this block.
   , "identity"
   , "integers"
   , "invariant"
+  , "lazy"
   , "lists"
   , "maybe"
   , "newtype"

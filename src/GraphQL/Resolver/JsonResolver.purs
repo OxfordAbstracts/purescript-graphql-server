@@ -28,8 +28,6 @@ data Resolver m
   | FailedResolver ResolverError
 
 
---  (unsafeCoerce :: m (Resolver m) -> ( Resolver m))
-
 type Fields m =
   { fields :: Map String (Field m)
   }
