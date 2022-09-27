@@ -9,13 +9,13 @@ import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe, maybe)
-import Data.Newtype (unwrap)
+import Data.Newtype (class Newtype, unwrap)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
-import Effect.Aff (Aff, joinFiber, sequential)
-import GraphQL.Resolver.GqlIo (GqlIo, GqlFiber)
+import Effect.Aff (Aff, Fiber, joinFiber)
+import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
-import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
+import GraphQL.Resolver.Resolver.GqlObject (GqlNew(..), GqlObj(..))
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToJsonResolver, toJsonResolver)
 import GraphQL.Server.GqlError (GqlError)
@@ -85,6 +85,30 @@ spec =
                   ]
               ]
           )
+      it "should create recursive resolvers" do
+        res <- ((resolveTyped (GqlNew recursiveChild1)) :: _ -> Aff _) "{id children {id, child {id}}}"
+        res `shouldEqual`
+          ( ( Right
+                ( ResultObject
+                    ( (Tuple "id" (leaf 1))
+                        :
+                          ( Tuple "children"
+                              ( ResultList
+                                  ( ( ResultObject
+                                        ( (Tuple "id" (leaf 2))
+                                            : (Tuple "child" (ResultObject ((Tuple "id" (leaf 1)) : Nil)))
+                                            : Nil
+                                        )
+                                    )
+                                      : Nil
+                                  )
+                              )
+                          )
+                        : Nil
+                    )
+                )
+            )
+          )
 
 resolverParent
   :: forall name
@@ -117,7 +141,6 @@ type ResolverChild1 = GqlObj "ResolverChild1"
   , name :: String
   }
 
-
 resolverChild1 :: ResolverChild1
 resolverChild1 = mkChild 1
 
@@ -128,6 +151,46 @@ mkChild = \id ->
     , n: pure $ toNumber id
     , name: "child " <> show id
     }
+
+newtype RecursiveChild1 = RecursiveChild1
+  { id :: Int
+  , n :: GqlFiber Number
+  , name :: String
+  , children :: Unit -> Array (RecursiveChild2)
+  }
+
+derive instance Newtype RecursiveChild1 _
+
+instance ToJsonResolver RecursiveChild1 (GqlIo Fiber) where
+  toJsonResolver a = toJsonResolver (unwrap a)
+
+recursiveChild1 :: RecursiveChild1
+recursiveChild1 =
+  RecursiveChild1
+    { id: 1
+    , n: pure $ toNumber 1
+    , name: "child 1"
+    , children: \_ -> [ recursiveChild2 ]
+    }
+
+newtype RecursiveChild2 = RecursiveChild2
+  { id :: Int
+  , n :: GqlFiber Number
+  , name :: String
+  , child :: Unit -> GqlNew RecursiveChild1
+  }
+
+derive instance Newtype RecursiveChild2 _
+instance ToJsonResolver RecursiveChild2 (GqlIo Fiber) where
+  toJsonResolver a = toJsonResolver (unwrap a)
+
+recursiveChild2 :: RecursiveChild2
+recursiveChild2 = RecursiveChild2
+  { id: 2
+  , n: pure $ toNumber 2
+  , name: "child 2"
+  , child: \_ -> GqlNew recursiveChild1
+  }
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
