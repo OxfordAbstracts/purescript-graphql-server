@@ -11,9 +11,9 @@ import Data.Newtype (unwrap)
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
-import GraphQL.Parser (selectionSet)
-import GraphQL.Parser.AST (Selection(..), SelectionSet(..))
-import GraphQL.Parser.AST as AST
+import Data.GraphQL.Parser (selectionSet)
+import Data.GraphQL.AST (Selection(..), SelectionSet(..))
+import Data.GraphQL.AST as AST
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)

@@ -7,8 +7,8 @@ import Data.Either (Either(..))
 import Data.Foldable (findMap)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff.Class (liftAff)
-import GraphQL.Parser (document)
-import GraphQL.Parser.AST as AST
+import Data.GraphQL.Parser (document)
+import Data.GraphQL.AST as AST
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
 import HTTPure (Request, toString)

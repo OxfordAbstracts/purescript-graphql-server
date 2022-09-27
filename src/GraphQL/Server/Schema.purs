@@ -2,15 +2,22 @@ module GraphQL.Server.Schema where
 
 import Prelude
 
-data Schema :: forall k. k -> Type
-data Schema s = Schema
+import Type.Proxy (Proxy)
 
-schema
-  :: Schema
-       { query :: Query
-       }
-schema = Schema
+class GqlSchema :: forall k. k -> Constraint
+class GqlSchema a where
+  gqlSchema :: Proxy a -> String
 
-type Query =
-  { hello :: String
-  }
+instance GqlSchema Boolean where
+  gqlSchema _ = "Boolean"
+
+instance GqlSchema Int where
+  gqlSchema _ = "Int"
+
+instance GqlSchema Number where
+  gqlSchema _ = "Float"
+
+instance GqlSchema String where
+  gqlSchema _ = "String"
+
+-- instance name :: Class Type

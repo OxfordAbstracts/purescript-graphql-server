@@ -103,3 +103,36 @@ let upstream =
         sha256:e56fbdf33a5afd2a610c81f8b940b413a638931edb41532164e641bb2a9ec29c
 
 in  upstream
+  with graphql-parser = 
+    { repo = "https://github.com/OxfordAbstracts/purescript-graphql-parser.git"
+    , version = "13bca01"
+    , dependencies =
+      [ "aff"
+      , "arrays"
+      , "console"
+      , "control"
+      , "effect"
+      , "either"
+      , "enums"
+      , "exceptions"
+      , "foldable-traversable"
+      , "integers"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "node-buffer"
+      , "node-fs"
+      , "numbers"
+      , "ordered-collections"
+      , "parsing"
+      , "prelude"
+      , "profunctor"
+      , "profunctor-lenses"
+      , "psci-support"
+      , "spec"
+      , "spec-discovery"
+      , "strings"
+      , "transformers"
+      , "tuples"
+      ]
+    }

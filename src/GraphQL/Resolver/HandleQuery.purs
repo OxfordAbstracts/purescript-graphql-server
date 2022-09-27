@@ -6,8 +6,8 @@ import Data.Argonaut (Json, encodeJson, jsonNull)
 import Data.Either (Either(..))
 import Data.Map (lookup)
 import Data.Maybe (Maybe(..), maybe)
-import GraphQL.Parser.AST (OperationType(..))
-import GraphQL.Parser.AST as AST
+import Data.GraphQL.AST (OperationType(..))
+import Data.GraphQL.AST as AST
 import GraphQL.Resolver.JsonResolver (Fields, Resolver(..), resolve)
 import GraphQL.Resolver.Result (Result, resultToData)
 import GraphQL.Resolver.ToResolver (getArgResolver, toResolver)

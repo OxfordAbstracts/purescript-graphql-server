@@ -7,7 +7,7 @@ import Data.Argonaut (class EncodeJson, Json, encodeJson)
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import GraphQL.Parser.AST as AST
+import Data.GraphQL.AST as AST
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import GraphQL.Server.GqlResM (GqlResM)
 import Unsafe.Coerce (unsafeCoerce)
