@@ -1,22 +1,7 @@
 module GraphQL.Server.Schema where
 
-import Prelude
 
-import Data.GraphQL.AST as AST
-import Data.GraphQL.AST.Print (class PrintAst)
-import Data.List (List(..), (:))
-import Data.Maybe (Maybe(..))
-import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.Resolver.Resolver.GqlObject (GqlObj)
--- import GraphQL.Server.Schema.GetFieldsDefinition (FieldsDefinitions(..))
-import GraphQL.Server.Schema.GetTypeDefinitions (class GetObjectTypeDefinitions, getObjectTypeDefinitions)
-import GraphQL.Server.Schema.GqlTypeName (class GqlTypeName)
-import Type.Proxy (Proxy(..))
-
--- class PrintAst s <= GqlSchema a s | a -> s where
---   gqlSchema :: a -> s
-
--- data GqlRoot q m = GqlRoot { query :: q, mutation :: m }
+data GqlRoot q m = GqlRoot { query :: q, mutation :: m }
 
 -- instance
 --   ( IsSymbol name
