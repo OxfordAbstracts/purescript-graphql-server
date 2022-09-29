@@ -5,7 +5,7 @@ import Prelude
 import Data.GraphQL.AST (ArgumentsDefinition(..), FieldDefinition(..), FieldsDefinition(..), InputValueDefinition(..), ListType(..), NamedType(..), NonNullType(..), Type(..))
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
-import GraphQL.Server.Schema.GetFieldsDefinitions (getFieldsDefinitions)
+import GraphQL.Server.Schema.GetFieldsDefinition (getFieldsDefinitions)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Type.Proxy (Proxy(..))

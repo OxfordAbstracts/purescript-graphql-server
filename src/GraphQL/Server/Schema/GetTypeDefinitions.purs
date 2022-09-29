@@ -12,7 +12,8 @@ import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj)
-import GraphQL.Server.Schema.GetFieldsDefinitions (class GetFieldsDefinitions, getFieldsDefinitions)
+import GraphQL.Server.Schema.GetFieldsDefinition (class GetFieldsDefinition, getFieldsDefinitions)
+import GraphQL.Server.Schema.GetInputFieldsDefinition (class GetInputFieldsDefinition, getInputFieldsDefinitions)
 import Heterogeneous.Folding (class Folding, class HFoldl, hfoldl)
 import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
@@ -26,7 +27,7 @@ class GetObjectTypeDefinitions a where
 instance
   ( IsSymbol name
   , RL.RowToList row rl
-  , GetFieldsDefinitions { | r }
+  , GetFieldsDefinition { | r }
   , UnsequenceProxies { | r } { | p }
   , HFoldl GetObjectTypeDefinitionsProps (List AST.ObjectTypeDefinition) { | p } (List AST.ObjectTypeDefinition)
   ) =>
@@ -55,6 +56,47 @@ getObjectTypeDefintionsRecord
   => { | r }
   -> (List AST.ObjectTypeDefinition)
 getObjectTypeDefintionsRecord = hfoldl GetObjectTypeDefinitionsProps (Nil :: List AST.ObjectTypeDefinition)
+
+
+
+
+class GetInputObjectTypeDefinitions :: forall k. k -> Constraint
+class GetInputObjectTypeDefinitions a where
+  getInputObjectTypeDefinitions
+    :: Proxy a
+    -> List AST.InputObjectTypeDefinition
+
+instance
+  ( IsSymbol name
+  , RL.RowToList row rl
+  , GetInputFieldsDefinition { | r }
+  , UnsequenceProxies { | r } { | p }
+  , HFoldl GetInputObjectTypeDefinitionsProps (List AST.InputObjectTypeDefinition) { | p } (List AST.InputObjectTypeDefinition)
+  ) =>
+  GetInputObjectTypeDefinitions (GqlObj name { | r }) where
+  getInputObjectTypeDefinitions _gqlObj = def : getInputObjectTypeDefintionsRecord ((unsequenceProxies (Proxy :: Proxy { | r })) :: { | p })
+    where
+    def = AST.InputObjectTypeDefinition
+      { description: Nothing
+      , directives: Nothing
+      , inputFieldsDefinition: Just $ getInputFieldsDefinitions (Proxy :: Proxy { | r })
+      , name: reflectSymbol (Proxy :: Proxy name)
+      }
+
+data GetInputObjectTypeDefinitionsProps = GetInputObjectTypeDefinitionsProps
+
+instance (GetInputObjectTypeDefinitions a) => Folding GetInputObjectTypeDefinitionsProps (List AST.InputObjectTypeDefinition) a (List AST.InputObjectTypeDefinition) where
+  folding (GetInputObjectTypeDefinitionsProps) defs _a = defs <> getInputObjectTypeDefinitions (Proxy :: Proxy a)
+
+getInputObjectTypeDefintionsRecord
+  :: forall r
+   . HFoldl GetInputObjectTypeDefinitionsProps
+       (List AST.InputObjectTypeDefinition)
+       { | r }
+       (List AST.InputObjectTypeDefinition)
+  => { | r }
+  -> (List AST.InputObjectTypeDefinition)
+getInputObjectTypeDefintionsRecord = hfoldl GetInputObjectTypeDefinitionsProps (Nil :: List AST.InputObjectTypeDefinition)
 
 
 

@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.GetFieldsDefinitions (class GetFieldsDefinitions, GetFieldsDefinitionsProps, getFieldsDefinitions) where
+module GraphQL.Server.Schema.GetFieldsDefinition (class GetFieldsDefinition, GetFieldsDefinitionProps, getFieldsDefinitions) where
 
 import Prelude
 
@@ -13,26 +13,26 @@ import GraphQL.Server.Schema.ToGqlType (class ToGqlType, toGqlType)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy(..))
 
-class GetFieldsDefinitions :: forall k. k -> Constraint
-class GetFieldsDefinitions a where
+class GetFieldsDefinition :: forall k. k -> Constraint
+class GetFieldsDefinition a where
   getFieldsDefinitions :: Proxy a -> AST.FieldsDefinition
 
 instance
-  ( HFoldlWithIndex GetFieldsDefinitionsProps AST.FieldsDefinition { | p } AST.FieldsDefinition
+  ( HFoldlWithIndex GetFieldsDefinitionProps AST.FieldsDefinition { | p } AST.FieldsDefinition
   , UnsequenceProxies { | r } { | p }
   ) =>
-  GetFieldsDefinitions { | r } where
+  GetFieldsDefinition { | r } where
   getFieldsDefinitions r = getRecordTypeDefs ((unsequenceProxies r) :: { | p })
 
-data GetFieldsDefinitionsProps = GetFieldsDefinitionsProps
+data GetFieldsDefinitionProps = GetFieldsDefinitionProps
 
 instance
   ( IsSymbol label
   , ToGqlType a
   , GetArgumentsDefinitionFromFn a
   ) =>
-  FoldingWithIndex GetFieldsDefinitionsProps (Proxy label) AST.FieldsDefinition (Proxy a) AST.FieldsDefinition where
-  foldingWithIndex (GetFieldsDefinitionsProps) sym (AST.FieldsDefinition defs) _a = AST.FieldsDefinition $ def : defs
+  FoldingWithIndex GetFieldsDefinitionProps (Proxy label) AST.FieldsDefinition (Proxy a) AST.FieldsDefinition where
+  foldingWithIndex (GetFieldsDefinitionProps) sym (AST.FieldsDefinition defs) _a = AST.FieldsDefinition $ def : defs
     where
     def =
       AST.FieldDefinition
@@ -45,9 +45,9 @@ instance
 
 getRecordTypeDefs
   :: forall r
-   . HFoldlWithIndex GetFieldsDefinitionsProps AST.FieldsDefinition { | r } AST.FieldsDefinition
+   . HFoldlWithIndex GetFieldsDefinitionProps AST.FieldsDefinition { | r } AST.FieldsDefinition
   => { | r }
   -> AST.FieldsDefinition
 getRecordTypeDefs =
-  hfoldlWithIndex GetFieldsDefinitionsProps (AST.FieldsDefinition mempty) >>> unwrap >>> reverse >>> wrap
+  hfoldlWithIndex GetFieldsDefinitionProps (AST.FieldsDefinition mempty) >>> unwrap >>> reverse >>> wrap
 
