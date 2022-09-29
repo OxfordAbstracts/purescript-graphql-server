@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.GetFieldsDefinition (class GetFieldsDefinition, GetFieldsDefinitionProps, getFieldsDefinitions) where
+module GraphQL.Server.Schema.GetFieldsDefinition (class GetFieldsDefinition, GetFieldsDefinitionProps, getFieldsDefinition) where
 
 import Prelude
 
@@ -15,14 +15,14 @@ import Type.Proxy (Proxy(..))
 
 class GetFieldsDefinition :: forall k. k -> Constraint
 class GetFieldsDefinition a where
-  getFieldsDefinitions :: Proxy a -> AST.FieldsDefinition
+  getFieldsDefinition :: Proxy a -> AST.FieldsDefinition
 
 instance
   ( HFoldlWithIndex GetFieldsDefinitionProps AST.FieldsDefinition { | p } AST.FieldsDefinition
   , UnsequenceProxies { | r } { | p }
   ) =>
   GetFieldsDefinition { | r } where
-  getFieldsDefinitions r = getRecordTypeDefs ((unsequenceProxies r) :: { | p })
+  getFieldsDefinition r = getRecordTypeDefs ((unsequenceProxies r) :: { | p })
 
 data GetFieldsDefinitionProps = GetFieldsDefinitionProps
 

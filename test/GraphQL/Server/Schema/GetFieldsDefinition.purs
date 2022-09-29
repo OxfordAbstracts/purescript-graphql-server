@@ -5,7 +5,7 @@ import Prelude
 import Data.GraphQL.AST (ArgumentsDefinition(..), FieldDefinition(..), FieldsDefinition(..), InputValueDefinition(..), ListType(..), NamedType(..), NonNullType(..), Type(..))
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
-import GraphQL.Server.Schema.GetFieldsDefinition (getFieldsDefinitions)
+import GraphQL.Server.Schema.GetFieldsDefinition (getFieldsDefinition)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Type.Proxy (Proxy(..))
@@ -13,9 +13,9 @@ import Type.Proxy (Proxy(..))
 spec :: Spec Unit
 spec =
   describe "GraphQL.Server.Schema.GetFieldsDefinition" do
-    describe "getFieldsDefinitions" do
+    describe "getFieldsDefinition" do
       it "should get the fields of a simple record" do
-        getFieldsDefinitions (Proxy :: Proxy { a :: Int, b :: Maybe String, c :: Maybe (Array Boolean) }) `shouldEqual`
+        getFieldsDefinition (Proxy :: Proxy { a :: Int, b :: Maybe String, c :: Maybe (Array Boolean) }) `shouldEqual`
           ( FieldsDefinition $
               FieldDefinition
                 { argumentsDefinition: Nothing
@@ -50,7 +50,7 @@ spec =
                   Nil
           )
       it "should get the fields with arguments" do
-        getFieldsDefinitions
+        getFieldsDefinition
           ( Proxy
               :: Proxy
                    { a :: { arg1 :: Int, arg2 :: Maybe String } -> Int

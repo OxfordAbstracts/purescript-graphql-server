@@ -12,8 +12,8 @@ import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj)
-import GraphQL.Server.Schema.GetFieldsDefinition (class GetFieldsDefinition, getFieldsDefinitions)
-import GraphQL.Server.Schema.GetInputFieldsDefinition (class GetInputFieldsDefinition, getInputFieldsDefinitions)
+import GraphQL.Server.Schema.GetFieldsDefinition (class GetFieldsDefinition, getFieldsDefinition)
+import GraphQL.Server.Schema.GetInputFieldsDefinition (class GetInputFieldsDefinition, getInputFieldsDefinition)
 import Heterogeneous.Folding (class Folding, class HFoldl, hfoldl)
 import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
@@ -37,7 +37,7 @@ instance
     def = AST.ObjectTypeDefinition
       { description: Nothing
       , directives: Nothing
-      , fieldsDefinition: Just $ getFieldsDefinitions (Proxy :: Proxy { | r })
+      , fieldsDefinition: Just $ getFieldsDefinition (Proxy :: Proxy { | r })
       , implementsInterfaces: Nothing
       , name: reflectSymbol (Proxy :: Proxy name)
       }
@@ -79,7 +79,7 @@ instance
     def = AST.InputObjectTypeDefinition
       { description: Nothing
       , directives: Nothing
-      , inputFieldsDefinition: Just $ getInputFieldsDefinitions (Proxy :: Proxy { | r })
+      , inputFieldsDefinition: Just $ getInputFieldsDefinition (Proxy :: Proxy { | r })
       , name: reflectSymbol (Proxy :: Proxy name)
       }
 
