@@ -25,7 +25,6 @@ data Resolver m
   | Fields (Fields m)
   | FailedResolver ResolverError
 
-
 type Fields m =
   { fields :: Map String (Field m)
   }

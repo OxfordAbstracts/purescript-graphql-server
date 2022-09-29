@@ -15,7 +15,7 @@ import Parsing (parseErrorMessage)
 
 newtype GqlResM a = GqlResM (ExceptT GqlError Aff a)
 
-derive instance Newtype (GqlResM a) _ 
+derive instance Newtype (GqlResM a) _
 derive instance Functor GqlResM
 derive newtype instance Apply GqlResM
 derive newtype instance Bind GqlResM

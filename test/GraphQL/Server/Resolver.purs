@@ -25,8 +25,8 @@ spec =
           it "(Array Number)" do
             [ 1.0, 2.0 ] `shouldResolveNodeTo` [ 1.0, 2.0 ]
 
-          -- it "single field record" do
-          --   { foo: "bar" } `shouldResolveNodeTo` { foo: "bar" }
+-- it "single field record" do
+--   { foo: "bar" } `shouldResolveNodeTo` { foo: "bar" }
 
 shouldResolveNodeTo :: forall resolver result. EncodeJson resolver => Resolver resolver => EncodeJson result => resolver -> result -> Aff Unit
 shouldResolveNodeTo input output =

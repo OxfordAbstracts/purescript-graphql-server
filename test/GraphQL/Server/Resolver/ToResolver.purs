@@ -112,7 +112,7 @@ spec =
           )
 
 resolverParent
-  ::  GqlObj "ResolverParent"
+  :: GqlObj "ResolverParent"
        { async :: { str :: String } -> GqlFiber String
        , double :: { a :: Int } -> Int
        , noArgs :: GqlFiber String

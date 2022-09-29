@@ -22,7 +22,6 @@ data Result
   | ResultList (List Result)
   | ResultNullable (Maybe Result)
 
-
 derive instance Generic Result _
 derive instance Eq Result
 

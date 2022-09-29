@@ -22,7 +22,6 @@ type GqlFiber = GqlIo Fiber
 
 type GqlEffect = GqlIo Effect
 
-
 derive instance Newtype (GqlIo m a) _
 
 derive newtype instance Eq (m a) => Eq (GqlIo m a)
