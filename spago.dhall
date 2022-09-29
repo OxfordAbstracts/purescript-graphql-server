@@ -22,6 +22,7 @@ to generate this file without the comments in this block.
   , "either"
   , "enums"
   , "exceptions"
+  , "filterable"
   , "foldable-traversable"
   , "foreign-object"
   , "graphql-parser"
@@ -42,11 +43,13 @@ to generate this file without the comments in this block.
   , "parsing"
   , "partial"
   , "prelude"
+  , "record"
   , "spec"
   , "spec-discovery"
   , "strings"
   , "transformers"
   , "tuples"
+  , "typelevel-prelude"
   , "unsafe-coerce"
   ]
 , packages = ./packages.dhall
