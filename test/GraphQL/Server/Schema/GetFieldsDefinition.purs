@@ -53,7 +53,7 @@ spec =
         getFieldsDefinitions
           ( Proxy
               :: Proxy
-                   { a :: { arg1 :: Int } -> Int
+                   { a :: { arg1 :: Int, arg2 :: Maybe String } -> Int
                    }
           ) `shouldEqual`
           ( FieldsDefinition $
@@ -65,7 +65,17 @@ spec =
                       , directives: Nothing
                       , name: "arg1"
                       , type: Type_NonNullType $ NonNullType_NamedType $ NamedType "Int"
-                      } : Nil
+                      }
+                      :
+                        InputValueDefinition
+                          { defaultValue: Nothing
+                          , description: Nothing
+                          , directives: Nothing
+                          , name: "arg2"
+                          , type: Type_NamedType $ NamedType "String"
+                          }
+                      :
+                        Nil
                 , description: Nothing
                 , directives: Nothing
                 , name: "a"
