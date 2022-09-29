@@ -2,22 +2,22 @@ module GraphQL.Server.Schema where
 
 import Prelude
 
+import Data.GraphQL.AST.Print (class PrintAst)
 import Type.Proxy (Proxy)
 
-class GqlSchema :: forall k. k -> Constraint
-class GqlSchema a where
-  gqlSchema :: Proxy a -> String
+class PrintAst s <= GqlSchema a s where
+  gqlSchema :: Proxy a -> s
 
-instance GqlSchema Boolean where
-  gqlSchema _ = "Boolean"
+-- instance GqlSchema Boolean where
+--   gqlSchema _ = "Boolean"
 
-instance GqlSchema Int where
-  gqlSchema _ = "Int"
+-- instance GqlSchema Int where
+--   gqlSchema _ = "Int"
 
-instance GqlSchema Number where
-  gqlSchema _ = "Float"
+-- instance GqlSchema Number where
+--   gqlSchema _ = "Float"
 
-instance GqlSchema String where
-  gqlSchema _ = "String"
+-- instance GqlSchema String where
+--   gqlSchema _ = "String"
 
 -- instance name :: Class Type
