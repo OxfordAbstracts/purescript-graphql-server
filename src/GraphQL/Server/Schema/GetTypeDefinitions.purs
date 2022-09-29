@@ -1,7 +1,7 @@
 module GraphQL.Server.Schema.GetTypeDefinitions
-  ( GetGetObjectTypeDefinitionsProps(..)
+  ( GetObjectTypeDefinitionsProps(..)
   , class GetObjectTypeDefinitions
-  , getTypeDefinitions
+  , getObjectTypeDefinitions
   ) where
 
 import Prelude
@@ -19,7 +19,7 @@ import Type.Proxy (Proxy(..))
 
 class GetObjectTypeDefinitions :: forall k. k -> Constraint
 class GetObjectTypeDefinitions a where
-  getTypeDefinitions
+  getObjectTypeDefinitions
     :: Proxy a
     -> List AST.ObjectTypeDefinition
 
@@ -28,10 +28,10 @@ instance
   , RL.RowToList row rl
   , GetFieldsDefinitions { | r }
   , UnsequenceProxies { | r } { | p }
-  , HFoldl GetGetObjectTypeDefinitionsProps (List AST.ObjectTypeDefinition) { | p } (List AST.ObjectTypeDefinition)
+  , HFoldl GetObjectTypeDefinitionsProps (List AST.ObjectTypeDefinition) { | p } (List AST.ObjectTypeDefinition)
   ) =>
   GetObjectTypeDefinitions (GqlObj name { | r }) where
-  getTypeDefinitions _gqlObj = def : getRecordTypeDefs ((unsequenceProxies (Proxy :: Proxy { | r })) :: { | p })
+  getObjectTypeDefinitions _gqlObj = def : getObjectTypeDefintionsRecord ((unsequenceProxies (Proxy :: Proxy { | r })) :: { | p })
     where
     def = AST.ObjectTypeDefinition
       { description: Nothing
@@ -41,20 +41,20 @@ instance
       , name: reflectSymbol (Proxy :: Proxy name)
       }
 
-data GetGetObjectTypeDefinitionsProps = GetGetObjectTypeDefinitionsProps
+data GetObjectTypeDefinitionsProps = GetObjectTypeDefinitionsProps
 
-instance (GetObjectTypeDefinitions a) => Folding GetGetObjectTypeDefinitionsProps (List AST.ObjectTypeDefinition) a (List AST.ObjectTypeDefinition) where
-  folding (GetGetObjectTypeDefinitionsProps) defs _a = defs <> getTypeDefinitions (Proxy :: Proxy a)
+instance (GetObjectTypeDefinitions a) => Folding GetObjectTypeDefinitionsProps (List AST.ObjectTypeDefinition) a (List AST.ObjectTypeDefinition) where
+  folding (GetObjectTypeDefinitionsProps) defs _a = defs <> getObjectTypeDefinitions (Proxy :: Proxy a)
 
-getRecordTypeDefs
+getObjectTypeDefintionsRecord
   :: forall r
-   . HFoldl GetGetObjectTypeDefinitionsProps
+   . HFoldl GetObjectTypeDefinitionsProps
        (List AST.ObjectTypeDefinition)
        { | r }
        (List AST.ObjectTypeDefinition)
   => { | r }
   -> (List AST.ObjectTypeDefinition)
-getRecordTypeDefs = hfoldl GetGetObjectTypeDefinitionsProps (Nil :: List AST.ObjectTypeDefinition)
+getObjectTypeDefintionsRecord = hfoldl GetObjectTypeDefinitionsProps (Nil :: List AST.ObjectTypeDefinition)
 
 
 
