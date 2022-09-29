@@ -2,7 +2,7 @@ module Test.GraphQL.Server.Schema.GetFieldsDefinition where
 
 import Prelude
 
-import Data.GraphQL.AST (FieldDefinition(..), FieldsDefinition(..), ListType(..), NamedType(..), NonNullType(..), Type(..))
+import Data.GraphQL.AST (ArgumentsDefinition(..), FieldDefinition(..), FieldsDefinition(..), InputValueDefinition(..), ListType(..), NamedType(..), NonNullType(..), Type(..))
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import GraphQL.Server.Schema.GetFieldsDefinitions (getFieldsDefinitions)
@@ -58,7 +58,14 @@ spec =
           ) `shouldEqual`
           ( FieldsDefinition $
               FieldDefinition
-                { argumentsDefinition: Nothing
+                { argumentsDefinition: Just $ ArgumentsDefinition $
+                    InputValueDefinition
+                      { defaultValue: Nothing
+                      , description: Nothing
+                      , directives: Nothing
+                      , name: "arg1"
+                      , type: Type_NonNullType $ NonNullType_NamedType $ NamedType "Int"
+                      } : Nil
                 , description: Nothing
                 , directives: Nothing
                 , name: "a"
