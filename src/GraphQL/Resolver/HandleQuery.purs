@@ -2,12 +2,14 @@ module GraphQL.Resolver.HandleQuery where
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Data.Argonaut (Json, encodeJson, jsonNull)
 import Data.Either (Either(..))
-import Data.Map (lookup)
-import Data.Maybe (Maybe(..), maybe)
 import Data.GraphQL.AST (OperationType(..))
 import Data.GraphQL.AST as AST
+import Data.Map (lookup)
+import Data.Maybe (Maybe(..), maybe)
+import Data.String (toLower)
 import GraphQL.Resolver.JsonResolver (Fields, Resolver(..), resolve)
 import GraphQL.Resolver.Result (Result, resultToData)
 import GraphQL.Resolver.ToResolver (getArgResolver, toResolver)
@@ -29,7 +31,7 @@ handleOperationDefinition resolver = case _ of
     ListResolver _ -> pure $ Left $ OtherError "List resolver at root"
     FailedResolver err -> pure $ Left $ ResolverError err
     Fields { fields } ->
-      lookup rootField fields
+      (lookup rootField fields <|> lookup (toLower rootField) fields)
         # maybe (pure $ Left $ OtherError $ show rootField <> " not field found")
             \rootFields -> getJson <$> resolve (rootFields.resolver { args: jsonNull }) (Just selectionSet)
       -- (?D $ resolve rootFields  (?d )) :: m (Either GqlError Json)

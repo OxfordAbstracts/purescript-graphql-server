@@ -2,6 +2,9 @@ module GraphQL.Server.Schema.GetTypeDefinitions
   ( GetObjectTypeDefinitionsProps(..)
   , class GetObjectTypeDefinitions
   , getObjectTypeDefinitions
+  , class GetInputObjectTypeDefinitionsFromFn
+  , GetInputObjectTypeDefinitionsProps
+  , getInputObjectTypeDefinitionsFromFn
   ) where
 
 import Prelude
@@ -62,6 +65,14 @@ getObjectTypeDefintionsRecord
   -> (List AST.ObjectTypeDefinition)
 getObjectTypeDefintionsRecord = hfoldl GetObjectTypeDefinitionsProps (Nil :: List AST.ObjectTypeDefinition)
 
+class GetInputObjectTypeDefinitionsFromFn a where 
+  getInputObjectTypeDefinitionsFromFn :: a -> List AST.InputObjectTypeDefinition
+
+instance GetInputObjectTypeDefinitions (Proxy b) => GetInputObjectTypeDefinitionsFromFn (a ->  b) where 
+  getInputObjectTypeDefinitionsFromFn _ = getInputObjectTypeDefinitions (Proxy :: Proxy b)
+else instance GetInputObjectTypeDefinitionsFromFn a where 
+  getInputObjectTypeDefinitionsFromFn _ = Nil
+
 class GetInputObjectTypeDefinitions a where
   getInputObjectTypeDefinitions
     :: a -> List AST.InputObjectTypeDefinition
@@ -93,8 +104,8 @@ else instance GetInputObjectTypeDefinitions a where
 
 data GetInputObjectTypeDefinitionsProps = GetInputObjectTypeDefinitionsProps
 
-instance (GetInputObjectTypeDefinitions a) => Folding GetInputObjectTypeDefinitionsProps (List AST.InputObjectTypeDefinition) a (List AST.InputObjectTypeDefinition) where
-  folding (GetInputObjectTypeDefinitionsProps) defs a = defs <> getInputObjectTypeDefinitions a
+instance (GetInputObjectTypeDefinitionsFromFn a) => Folding GetInputObjectTypeDefinitionsProps (List AST.InputObjectTypeDefinition) a (List AST.InputObjectTypeDefinition) where
+  folding (GetInputObjectTypeDefinitionsProps) defs a = defs <> getInputObjectTypeDefinitionsFromFn a
 
 getInputObjectTypeDefintionsRecord
   :: forall r

@@ -15,6 +15,7 @@ import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..), GqlNew)
 import GraphQL.Server.GqlError (ResolverError(..))
+import GraphQL.Server.Schema (GqlRoot(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
 
@@ -24,23 +25,58 @@ class ToResolver a m where
 instance Applicative m => ToResolver Boolean m where
   toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToResolver Int m where
+else instance Applicative m => ToResolver (GqlIo m Boolean) m where
+  toResolver a = Node $ map encodeJson $ unwrap a
+
+else instance Applicative m => ToResolver Int m where
   toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToResolver Number m where
+else instance Applicative m => ToResolver (GqlIo m Int) m where
+  toResolver a = Node $ map encodeJson $ unwrap a
+
+else instance Applicative m => ToResolver Number m where
   toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToResolver String m where
+else instance Applicative m => ToResolver (GqlIo m Number) m where
+  toResolver a = Node $ map encodeJson $ unwrap a
+
+else instance Applicative m => ToResolver String m where
   toResolver a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToResolver Json m where
+else instance Applicative m => ToResolver (GqlIo m String) m where
+  toResolver a = Node $ map encodeJson $ unwrap a
+
+else instance Applicative m => ToResolver Json m where
+  toResolver a = Node $ pure $ encodeJson a
+  
+else instance Applicative m => ToResolver (GqlIo m Json) m where
+  toResolver a = Node $ map encodeJson $ unwrap a
+
+else instance Applicative m => ToResolver Unit m where
   toResolver a = Node $ pure $ encodeJson a
 
-instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
+else instance Applicative m => ToResolver Void m where
+  toResolver a = Node $ pure $ encodeJson a
+
+else instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ map toResolver a
 
-instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
+else instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
   toResolver a = ListResolver $ map toResolver $ List.fromFoldable a
+
+
+
+else instance (Functor m, EncodeJson a) => ToResolver (GqlIo m a) (GqlIo m) where
+  toResolver m = Node $ map encodeJson m
+
+instance
+  ( Applicative m
+  , HFoldlWithIndex ToResolverProps (FieldMap m) ({query:: q, mutation:: mut}) (FieldMap m)
+  ) =>
+  ToResolver (GqlRoot q mut) m where
+  toResolver (GqlRoot root) = Fields
+    { fields: makeFields root
+    }
 
 instance
   ( Applicative m
@@ -68,9 +104,6 @@ instance
   ToResolver (GqlNew n) m where
   toResolver = unwrap >>> unwrap >>> \a -> Fields
     { fields: makeFields a }
-
-instance (Functor m, EncodeJson a) => ToResolver (GqlIo m a) (GqlIo m) where
-  toResolver m = Node $ map encodeJson m
 
 makeFields
   :: forall r m

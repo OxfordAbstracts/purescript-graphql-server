@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow)
 import Control.Monad.Except (ExceptT, runExceptT)
+import Data.Argonaut (Json, stringify)
 import Data.Either (Either(..))
 import Data.Newtype (class Newtype, unwrap)
 import Effect.Aff (Aff)
@@ -25,7 +26,7 @@ derive newtype instance MonadThrow GqlError GqlResM
 derive newtype instance MonadEffect GqlResM
 derive newtype instance MonadAff GqlResM
 
-toResponse :: GqlResM String -> ResponseM
+toResponse :: GqlResM Json -> ResponseM
 toResponse (GqlResM gqlResM) = do
   e <- runExceptT gqlResM
   case e of
@@ -33,7 +34,7 @@ toResponse (GqlResM gqlResM) = do
     Left NoOperationDefinition -> badRequest "No operation definition in request body"
     Left (OtherError str) -> badRequest str
     Left err -> badRequest $ show err
-    Right res -> ok res
+    Right res -> ok $ stringify res
 
 toAff :: forall a. GqlResM a -> Aff (Either GqlError a)
 toAff = unwrap >>> runExceptT
