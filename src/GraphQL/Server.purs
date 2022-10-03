@@ -8,6 +8,7 @@ import Data.Argonaut (Json)
 import Data.Either (Either)
 import Effect.Aff (Aff)
 import Effect.Class.Console (log)
+import GraphQL.Resolver.GqlSequential (class GqlSequential)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError)
@@ -18,16 +19,16 @@ import HTTPure (ServerM, serve)
 
 -- | Boot up the server
 start
-  :: forall query m
-   . Applicative m
-  => ToResolver (GqlRoot query Unit) m
+  :: forall query m f
+   . GqlSequential f m
+  => ToResolver (GqlRoot query Unit) f
   => { root :: GqlRoot query Unit
-     , runM :: m (Either GqlError Json) -> Aff (Either GqlError Json)
+     , runM :: f (Either GqlError Json) -> Aff (Either GqlError Json)
      }
   -> ServerM
 start { root, runM } = serve port (handleRequest runM resolvers >>> toResponse) onStart
   where
-  resolvers :: Resolver m
+  resolvers :: Resolver f
   resolvers = toResolver root
 
   port = 9000

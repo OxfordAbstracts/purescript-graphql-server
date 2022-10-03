@@ -10,13 +10,14 @@ import Data.GraphQL.AST as AST
 import Data.Map (lookup)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (toLower)
+import GraphQL.Resolver.GqlSequential (class GqlSequential)
 import GraphQL.Resolver.JsonResolver (Fields, Resolver(..), resolve)
 import GraphQL.Resolver.Result (Result, resultToData)
 import GraphQL.Resolver.ToResolver (getArgResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError(..))
 import Unsafe.Coerce (unsafeCoerce)
 
-handleOperationDefinition :: forall m. Applicative m => Resolver m -> AST.OperationDefinition -> m (Either GqlError Json)
+handleOperationDefinition :: forall m f. GqlSequential f m => Resolver f -> AST.OperationDefinition -> f (Either GqlError Json)
 handleOperationDefinition resolver = case _ of
   AST.OperationDefinition_SelectionSet selectionSet ->
     getJson <$> resolve resolver (Just selectionSet)
@@ -28,7 +29,9 @@ handleOperationDefinition resolver = case _ of
     , selectionSet --  ∷ SelectionSet
     } -> case resolver of
     Node _ -> pure $ Left $ OtherError "Node resolver at root"
+    ResolveAsync _ -> pure $ Left $ OtherError "ResolveAsync resolver at root"
     ListResolver _ -> pure $ Left $ OtherError "List resolver at root"
+    ListResolverAsync _ -> pure $ Left $ OtherError "List resolver at root"
     FailedResolver err -> pure $ Left $ ResolverError err
     Fields { fields } ->
       (lookup rootField fields <|> lookup (toLower rootField) fields)

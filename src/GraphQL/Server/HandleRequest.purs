@@ -11,6 +11,7 @@ import Data.GraphQL.Parser (document)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff, liftAff)
+import GraphQL.Resolver.GqlSequential (class GqlSequential)
 import GraphQL.Resolver.HandleQuery (handleOperationDefinition)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Server.GqlError (GqlError(..))
@@ -20,10 +21,10 @@ import HTTPure.Body (RequestBody)
 import Parsing (runParser)
 
 handleRequest
-  :: forall m
-   . Applicative m
-  => (m (Either GqlError Json) -> Aff (Either GqlError Json))
-  -> Resolver m
+  :: forall m f
+   . GqlSequential f m
+  => (f (Either GqlError Json) -> Aff (Either GqlError Json))
+  -> Resolver f
   -> Request
   -> GqlResM Json
 handleRequest runM resolvers req = do

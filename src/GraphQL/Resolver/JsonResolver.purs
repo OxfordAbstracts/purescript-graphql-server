@@ -2,8 +2,12 @@ module GraphQL.Resolver.JsonResolver where
 
 import Prelude
 
+import Control.Parallel (parallel)
 import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
 import Data.Either (Either(..))
+import Data.GraphQL.AST (Selection(..), SelectionSet(..))
+import Data.GraphQL.AST as AST
+import Data.GraphQL.Parser (selectionSet)
 import Data.List (List(..), foldl)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), maybe)
@@ -11,19 +15,26 @@ import Data.Newtype (unwrap)
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
-import Data.GraphQL.Parser (selectionSet)
-import Data.GraphQL.AST (Selection(..), SelectionSet(..))
-import Data.GraphQL.AST as AST
+import GraphQL.Resolver.GqlSequential (class GqlSequential, gqlParallel, gqlSequential)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
 import Partial.Unsafe (unsafeCrashWith)
+import Unsafe.Coerce (unsafeCoerce)
 
 data Resolver m
-  = Node (m Json)
+  = Node (Node m)
   | ListResolver (List (Resolver m))
+  | ListResolverAsync (m (List (Resolver m)))
   | Fields (Fields m)
+  | ResolveAsync (m (Resolver m))
   | FailedResolver ResolverError
+
+data Node m
+  = NodeJson Json
+  | NodeAsync (m (Node m))
+
+-- derive instance Functor Node
 
 type Fields m =
   { fields :: Map String (Field m)
@@ -34,7 +45,12 @@ type Field m =
   , resolver :: { args :: Json } -> Resolver m
   }
 
-resolveQueryString :: forall m. Applicative m => Resolver m -> String -> m (Either GqlError Result)
+resolveQueryString
+  :: forall f m
+   . GqlSequential f m
+  => Resolver f
+  -> String
+  -> f (Either GqlError Result)
 resolveQueryString resolver query = do
   let
     queryParseResult = runParser query selectionSet
@@ -44,18 +60,26 @@ resolveQueryString resolver query = do
       Right <$> resolve resolver (Just queryAST)
 
 resolve
-  :: forall m
-   . Applicative m
-  => Resolver m
+  :: forall f m
+   . Applicative f
+  => Monad m
+  => GqlSequential f m
+  => Resolver f
   -> (Maybe SelectionSet)
-  -> m Result
+  -> f Result
 resolve = case _, _ of
+  ResolveAsync resolverM, a -> gqlParallel do 
+    resolver <- gqlSequential resolverM
+    gqlSequential $ resolve resolver a
   FailedResolver error, _ -> err error
   Node _, Just _ -> err SelectionSetAtNodeValue
-  Node node, _ -> ResultLeaf <$> node
+  Node node, _ -> ResultLeaf <$> (resolveNode node)
   _, Nothing -> err MissingSelectionSet
   ListResolver resolvers, selectionSet ->
     ResultList <$> traverse (\r -> resolve r selectionSet) resolvers
+  ListResolverAsync resolverM, selectionSet -> gqlParallel do
+    resolvers <- gqlSequential resolverM
+    gqlSequential $ ResultList <$> (traverse (\r -> resolve r selectionSet) resolvers)
   (Fields { fields }), Just (SelectionSet selections) ->
     case getSelectionFields =<< selections of
       Nil -> err NoFields
@@ -95,3 +119,9 @@ resolve = case _, _ of
     AST.Value_ObjectValue (AST.ObjectValue args) -> encodeArguments args
 
   err = pure <<< ResultError
+
+  resolveNode = case _ of
+    NodeJson json -> pure json
+    NodeAsync async -> gqlParallel do
+      n <- gqlSequential async
+      gqlSequential $ resolveNode n
