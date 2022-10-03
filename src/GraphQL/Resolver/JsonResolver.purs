@@ -71,9 +71,6 @@ resolve = case _, _ of
   _, Nothing -> err MissingSelectionSet
   ListResolver resolvers, selectionSet ->
     ResultList <$> traverse (\r -> resolve r selectionSet) resolvers
-  -- ListResolverAsync resolverM, selectionSet -> gqlParallel do
-  --   resolvers <- gqlSequential resolverM
-  --   gqlSequential $ ResultList <$> (traverse (\r -> resolve r selectionSet) resolvers)
   (Fields { fields }), Just (SelectionSet selections) ->
     case getSelectionFields =<< selections of
       Nil -> err NoFields
