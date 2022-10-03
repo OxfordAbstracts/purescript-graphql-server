@@ -8,7 +8,7 @@ import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Tuple (Tuple(..))
-import GraphQL.Resolver.JsonResolver (Field, Node(..), Resolver(..), resolveQueryString)
+import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -76,7 +76,7 @@ resolver = Fields
   }
 
 resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). Applicative m ⇒ EncodeJson a ⇒ a → args → Resolver m
-resolveNode a _ = Node $ NodeJson $ encodeJson a
+resolveNode a _ = Node $ pure $ encodeJson a
 
 mkFieldMap
   :: forall f m

@@ -23,18 +23,12 @@ import Partial.Unsafe (unsafeCrashWith)
 import Unsafe.Coerce (unsafeCoerce)
 
 data Resolver m
-  = Node (Node m)
+  = Node (m Json)
   | ListResolver (List (Resolver m))
   | ListResolverAsync (m (List (Resolver m)))
   | Fields (Fields m)
   | ResolveAsync (m (Resolver m))
   | FailedResolver ResolverError
-
-data Node m
-  = NodeJson Json
-  | NodeAsync (m (Node m))
-
--- derive instance Functor Node
 
 type Fields m =
   { fields :: Map String (Field m)
@@ -73,7 +67,7 @@ resolve = case _, _ of
     gqlSequential $ resolve resolver a
   FailedResolver error, _ -> err error
   Node _, Just _ -> err SelectionSetAtNodeValue
-  Node node, _ -> ResultLeaf <$> (resolveNode node)
+  Node node, _ -> ResultLeaf <$> node
   _, Nothing -> err MissingSelectionSet
   ListResolver resolvers, selectionSet ->
     ResultList <$> traverse (\r -> resolve r selectionSet) resolvers
@@ -120,8 +114,8 @@ resolve = case _, _ of
 
   err = pure <<< ResultError
 
-  resolveNode = case _ of
-    NodeJson json -> pure json
-    NodeAsync async -> gqlParallel do
-      n <- gqlSequential async
-      gqlSequential $ resolveNode n
+  -- resolveNode = case _ of
+  --   NodeJson json -> pure json
+  --   NodeAsync async -> gqlParallel do
+  --     n <- gqlSequential async
+  --     gqlSequential $ resolveNode n

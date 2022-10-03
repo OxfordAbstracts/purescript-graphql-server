@@ -12,7 +12,7 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Record.Unsequence (unsequenceRecord)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Resolver.JsonResolver (Field, Node(..), Resolver(..))
+import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..), GqlNew)
 import GraphQL.Server.GqlError (ResolverError(..))
@@ -23,50 +23,47 @@ import Type.Proxy (Proxy)
 class ToResolver a m where
   toResolver :: a -> JsonResolver.Resolver m
 
-instance Applicative m => ToResolver Boolean m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
+resolveNode a = Node $ pure $ encodeJson a
 
-instance Applicative m => ToResolver (GqlIo m Boolean) m where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) $ unwrap a
+resolveAsyncNode :: forall f a. Applicative f => ToResolver a f => a -> Resolver f
+resolveAsyncNode a =  ResolveAsync $ pure $ toResolver a
+
+instance Applicative m => ToResolver Boolean m where
+  toResolver = resolveNode
+
+instance Applicative m => ToResolver (GqlIo m Boolean) (GqlIo m) where
+  toResolver = resolveAsyncNode
 
 instance Applicative m => ToResolver Int m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+  toResolver = resolveNode
 
-instance Applicative m => ToResolver (GqlIo m Int) m where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) $ unwrap a
-else instance Applicative m => ToResolver (GqlIo m Int) (GqlIo m) where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) a
+instance Applicative m => ToResolver (GqlIo m Int) (GqlIo m) where
+  toResolver = resolveAsyncNode
 
 instance Applicative m => ToResolver Number m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+  toResolver = resolveNode
 
-instance Applicative m => ToResolver (GqlIo m Number) m where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) $ unwrap a
-
-else instance Applicative m => ToResolver (GqlIo m Number) (GqlIo m) where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) a
+instance Applicative m => ToResolver (GqlIo m Number) (GqlIo m) where
+  toResolver = resolveAsyncNode
 
 instance Applicative m => ToResolver String m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+  toResolver = resolveNode
 
 instance Applicative m => ToResolver (GqlIo m String) (GqlIo m) where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) a
-
-else instance Applicative m => ToResolver (GqlIo m String) m where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) $ unwrap a
-
+  toResolver = resolveAsyncNode
 
 instance Applicative m => ToResolver Json m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+  toResolver = resolveNode
 
-instance Applicative m => ToResolver (GqlIo m Json) m where
-  toResolver a = Node $ NodeAsync $ map (NodeJson <<< encodeJson) $ unwrap a
+instance Applicative m => ToResolver (GqlIo m Json) (GqlIo m) where
+  toResolver = resolveAsyncNode
 
 instance Applicative m => ToResolver Unit m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+  toResolver = resolveNode
 
 instance Applicative m => ToResolver Void m where
-  toResolver a = Node $ NodeJson $ encodeJson a
+  toResolver = resolveNode
 
 instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ map toResolver a
@@ -79,6 +76,9 @@ instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
 
 instance (Applicative m, ToResolver a (GqlIo m)) => ToResolver (GqlIo m (Array a)) (GqlIo m) where
   toResolver a = ListResolverAsync $ map (map toResolver <<< List.fromFoldable) a
+
+instance ToResolver a m => ToResolver (Unit -> a) m where
+  toResolver a = toResolver $ a unit
 
 instance
   ( Applicative m

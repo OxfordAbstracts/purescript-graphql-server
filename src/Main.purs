@@ -31,16 +31,17 @@ main = do
         }
     }
 
-  books = \(opts :: { maxPrice :: Maybe Number }) ->
-    filter (\b -> maybe true ( b.price <= _) opts.maxPrice)
+  books = \(opts :: { maxPrice :: Maybe Number }) -> io $
+    filter (\b -> maybe true ((b unit).price <= _) opts.maxPrice)
       [ book
-      , { title: "Consider Phlebas"
-        , price: 5.99
-        , author: io author
-        }
+      , \_ ->
+          { title: "Consider Phlebas"
+          , price: 5.99
+          , author: io author
+          }
       ]
 
-  book =
+  book = \_ ->
     { title: "State of the Art"
     , price: 9.99
     , author: io author
@@ -51,7 +52,8 @@ main = do
     , bio: io "This is some stuff about the author"
     }
 
+-- unitFn :: forall a. a -> (Unit -> a)
+
 io :: forall a. a -> GqlFiber a
 io = GqlIo <<< pure
-
 
