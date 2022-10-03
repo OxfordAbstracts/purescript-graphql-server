@@ -31,7 +31,6 @@ handleOperationDefinition resolver = case _ of
     Node _ -> pure $ Left $ OtherError "Node resolver at root"
     ResolveAsync _ -> pure $ Left $ OtherError "ResolveAsync resolver at root"
     ListResolver _ -> pure $ Left $ OtherError "List resolver at root"
-    ListResolverAsync _ -> pure $ Left $ OtherError "List resolver at root"
     FailedResolver err -> pure $ Left $ ResolverError err
     Fields { fields } ->
       (lookup rootField fields <|> lookup (toLower rootField) fields)

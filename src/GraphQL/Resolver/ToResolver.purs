@@ -69,13 +69,13 @@ instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ map toResolver a
 
 instance (Applicative m, ToResolver a (GqlIo m)) => ToResolver (GqlIo m (List a)) (GqlIo m) where
-  toResolver a = ListResolverAsync $ map (map toResolver) a
+  toResolver = resolveAsyncNode
 
 instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
   toResolver a = ListResolver $ map toResolver $ List.fromFoldable a
 
 instance (Applicative m, ToResolver a (GqlIo m)) => ToResolver (GqlIo m (Array a)) (GqlIo m) where
-  toResolver a = ListResolverAsync $ map (map toResolver <<< List.fromFoldable) a
+  toResolver = resolveAsyncNode
 
 instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
