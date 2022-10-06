@@ -2,7 +2,6 @@ module GraphQL.Resolver.JsonResolver where
 
 import Prelude
 
-import Control.Parallel (parallel)
 import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
 import Data.Either (Either(..))
 import Data.GraphQL.AST (Selection(..), SelectionSet(..))
@@ -15,17 +14,15 @@ import Data.Newtype (unwrap)
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
-import GraphQL.Resolver.GqlSequential (class GqlSequential, gqlParallel, gqlSequential)
+import GraphQL.Resolver.Gqlable (class Gqlable, gqlParallel, gqlSequential)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
 import Partial.Unsafe (unsafeCrashWith)
-import Unsafe.Coerce (unsafeCoerce)
 
 data Resolver m
   = Node (m Json)
   | ListResolver (List (Resolver m))
-  -- | ListResolverAsync (m (List (Resolver m)))
   | Fields (Fields m)
   | ResolveAsync (m (Resolver m))
   | FailedResolver ResolverError
@@ -41,7 +38,7 @@ type Field m =
 
 resolveQueryString
   :: forall f m
-   . GqlSequential f m
+   . Gqlable f m
   => Resolver f
   -> String
   -> f (Either GqlError Result)
@@ -57,7 +54,7 @@ resolve
   :: forall f m
    . Applicative f
   => Monad m
-  => GqlSequential f m
+  => Gqlable f m
   => Resolver f
   -> (Maybe SelectionSet)
   -> f Result
@@ -110,9 +107,3 @@ resolve = case _, _ of
     AST.Value_ObjectValue (AST.ObjectValue args) -> encodeArguments args
 
   err = pure <<< ResultError
-
-  -- resolveNode = case _ of
-  --   NodeJson json -> pure json
-  --   NodeAsync async -> gqlParallel do
-  --     n <- gqlSequential async
-  --     gqlSequential $ resolveNode n

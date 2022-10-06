@@ -19,38 +19,38 @@ import GraphQL.Server.Schema (GqlRoot(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
 
-class ToResolver a m where
+class ToResolver a m | a -> m where
   toResolver :: a -> JsonResolver.Resolver m
 
 resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
 resolveNode a = Node $ pure $ encodeJson a
 
-resolveAsync :: forall f a. Applicative f => ToResolver a f => a -> Resolver f
-resolveAsync a = ResolveAsync $ pure $ toResolver a
+resolveAsync :: forall f a. Functor f => ToResolver a f => f a -> Resolver f
+resolveAsync a =  ResolveAsync $ map toResolver a
 
 instance (ToResolver a (GqlIo m), Applicative m) => ToResolver (GqlIo m a) (GqlIo m) where
-  toResolver = resolveAsync
+  toResolver a = resolveAsync a
 
 instance Applicative m => ToResolver Boolean m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance Applicative m => ToResolver Int m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance Applicative m => ToResolver Number m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance Applicative m => ToResolver String m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance Applicative m => ToResolver Json m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance Applicative m => ToResolver Unit m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance Applicative m => ToResolver Void m where
-  toResolver = resolveNode
+  toResolver a = resolveNode a
 
 instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ map toResolver a

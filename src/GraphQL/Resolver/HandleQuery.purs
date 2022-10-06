@@ -10,14 +10,14 @@ import Data.GraphQL.AST as AST
 import Data.Map (lookup)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (toLower)
-import GraphQL.Resolver.GqlSequential (class GqlSequential)
+import GraphQL.Resolver.Gqlable (class Gqlable)
 import GraphQL.Resolver.JsonResolver (Fields, Resolver(..), resolve)
 import GraphQL.Resolver.Result (Result, resultToData)
 import GraphQL.Resolver.ToResolver (getArgResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError(..))
 import Unsafe.Coerce (unsafeCoerce)
 
-handleOperationDefinition :: forall m f. GqlSequential f m => Resolver f -> AST.OperationDefinition -> f (Either GqlError Json)
+handleOperationDefinition :: forall m f. Gqlable f m => Resolver f -> AST.OperationDefinition -> f (Either GqlError Json)
 handleOperationDefinition resolver = case _ of
   AST.OperationDefinition_SelectionSet selectionSet ->
     getJson <$> resolve resolver (Just selectionSet)
@@ -36,11 +36,6 @@ handleOperationDefinition resolver = case _ of
       (lookup rootField fields <|> lookup (toLower rootField) fields)
         # maybe (pure $ Left $ OtherError $ show rootField <> " not field found")
             \rootFields -> getJson <$> resolve (rootFields.resolver { args: jsonNull }) (Just selectionSet)
-      -- (?D $ resolve rootFields  (?d )) :: m (Either GqlError Json)
-      -- getJson <$> ?D <$>
-      --  (?d $ resolve resolver  (rootFields)) :: m (Either GqlError Json)
-      --  <$> resolver rootFields
-      --  $ getArgResolver rootFields
       where
       rootField = case operationType of
         Query -> "Query"

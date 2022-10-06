@@ -2,10 +2,9 @@ module GraphQL.Resolver.EffFiber where
 
 import Prelude
 
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype)
 import Effect (Effect)
-import Effect.Aff (Aff, Fiber, joinFiber)
-import Effect.Class (liftEffect)
+import Effect.Aff (Fiber)
 
 newtype EffFiber a = EffFiber (Effect (Fiber a))
 
@@ -18,7 +17,3 @@ instance Apply EffFiber where
 
 instance Applicative EffFiber where 
   pure = EffFiber <<< pure <<< pure
-
-
-toAff :: EffFiber ~> Aff
-toAff = unwrap >>> liftEffect >=> joinFiber

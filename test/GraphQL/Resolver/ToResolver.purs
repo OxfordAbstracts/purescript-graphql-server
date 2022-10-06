@@ -5,17 +5,15 @@ import Prelude
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (filter)
 import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe, maybe)
-import Data.Newtype (class Newtype, unwrap)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
-import Effect.Aff (Aff, Fiber, joinFiber)
-import GraphQL.Resolver.EffFiber (toAff)
-import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo)
+import Effect.Aff (Aff)
+import GraphQL.Resolver.GqlIo (GqlFiber)
+import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Result (Result(..))
@@ -205,4 +203,4 @@ resolveTypedFiber :: forall a. ToResolver a GqlFiber => a -> String -> GqlFiber 
 resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) query
 
 resolveTyped :: forall a. ToResolver a GqlFiber => a -> String -> Aff (Either GqlError Result)
-resolveTyped resolver query = toAff $ unwrap $ resolveTypedFiber resolver query
+resolveTyped resolver query = toAff $ resolveTypedFiber resolver query
