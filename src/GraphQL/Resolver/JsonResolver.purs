@@ -65,9 +65,9 @@ resolve = case _, _ of
   FailedResolver error, _ -> err error
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
-  _, Nothing -> err MissingSelectionSet
   ListResolver resolvers, selectionSet ->
     ResultList <$> traverse (\r -> resolve r selectionSet) resolvers
+  Fields _, Nothing -> err MissingSelectionSet
   (Fields { fields }), Just (SelectionSet selections) ->
     case getSelectionFields =<< selections of
       Nil -> err NoFields

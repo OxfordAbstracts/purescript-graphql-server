@@ -63,7 +63,7 @@ spec =
         resNoArgs `shouldEqual` Right (ResultObject $ pure $ Tuple "noArgs" $ leaf "no args")
       it "should create resolvers that return arrays" do
         res <- resolveTyped resolverParent "{ints(min: 3)}"
-        res `shouldEqual` Right (ResultObject $ pure $ Tuple "ints" $ leaf [ 3, 4, 5 ])
+        res `shouldEqual` Right (ResultObject $ pure $ Tuple "ints" $ ResultList (leaf 3 : leaf 4 : leaf 5 : Nil))
       it "should create nested resolvers" do
         res <- resolveTyped resolverParent "{child1 {id}}"
         res `shouldEqual` Right (ResultObject $ pure $ Tuple "child1" $ ResultObject $ pure $ Tuple "id" $ leaf 1)
