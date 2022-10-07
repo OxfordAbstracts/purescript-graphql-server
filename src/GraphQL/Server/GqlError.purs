@@ -8,8 +8,11 @@ import Data.Show.Generic (genericShow)
 import Parsing (ParseError)
 
 data GqlError
-  = CouldNotParseRequest ParseError
+  = ParseGqlDocumentError ParseError
+  | ParseGqlRequestError JsonDecodeError
   | NoOperationDefinition
+  | NoOperationDefinitionWithGivenName String
+  | MultipleOperationDefinitions
   | OtherError String
   | ResolverError ResolverError
 

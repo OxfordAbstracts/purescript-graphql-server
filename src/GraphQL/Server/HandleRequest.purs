@@ -3,20 +3,23 @@ module GraphQL.Server.HandleRequest where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow, throwError)
-import Data.Argonaut (Json)
-import Data.Either (Either(..), either)
+import Data.Argonaut (Json, decodeJson, parseJson)
+import Data.Either (Either(..), either, note)
+import Data.Filterable (filterMap)
 import Data.Foldable (findMap)
 import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (document)
-import Data.Maybe (Maybe(..), maybe)
+import Data.List (List(..), (:))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect.Aff.Class (class MonadAff, liftAff)
+import Foreign.Object (Object)
+import Foreign.Object as Object
 import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
 import GraphQL.Resolver.HandleQuery (handleOperationDefinition)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
 import HTTPure (Request, toString)
-import HTTPure.Body (RequestBody)
 import Parsing (runParser)
 
 handleRequest
@@ -26,27 +29,54 @@ handleRequest
   -> Request
   -> GqlResM Json
 handleRequest resolvers req = do
-  op <- parseOperation req
-  either throwError pure =<< (liftAff $ toAff $ handleOperationDefinition resolvers op)
+  bodyStr <- liftAff $ toString req.body
+  { operationName, operation, variables } <- parseGqlRequest bodyStr
+  op <- parseOperation operationName operation
+  either throwError pure =<< (liftAff $ toAff $ handleOperationDefinition resolvers op $ fromMaybe Object.empty variables)
 
-parseOperation :: Request -> GqlResM AST.OperationDefinition
-parseOperation { body } = do
+parseGqlRequest
+  :: forall m
+   . MonadThrow GqlError m
+  => String
+  -> m
+       { operationName :: Maybe String
+       , operation :: String
+       , variables :: Maybe (Object Json)
+       }
+parseGqlRequest =
+  (parseJson >=> decodeJson) >>>
+    either (ParseGqlRequestError >>> throwError) pure
+
+parseOperation :: Maybe String -> String -> GqlResM AST.OperationDefinition
+parseOperation operationName body = do
   doc <- getDoc body
-  maybe (throwError NoOperationDefinition) pure $ getOperationDefinition doc
+  either throwError pure $ getOperationDefinition operationName doc
 
 getDoc
   :: forall m
    . MonadAff m
   => MonadThrow GqlError m
-  => RequestBody
+  => String
   -> m AST.Document
-getDoc body = do
-  str <- liftAff $ toString body
+getDoc str = do
   case runParser str document of
-    Left err -> throwError $ CouldNotParseRequest err
+    Left err -> throwError $ ParseGqlDocumentError err
     Right doc -> pure doc
 
-getOperationDefinition :: AST.Document -> Maybe (AST.OperationDefinition)
-getOperationDefinition (AST.Document doc) = doc # findMap case _ of
-  AST.Definition_ExecutableDefinition (AST.ExecutableDefinition_OperationDefinition opDef) -> Just opDef
-  _ -> Nothing
+getOperationDefinition :: Maybe String -> AST.Document -> Either GqlError (AST.OperationDefinition)
+getOperationDefinition operationName (AST.Document doc) = case operationName of
+  Nothing ->
+    doc
+      # filterMap case _ of
+          AST.Definition_ExecutableDefinition (AST.ExecutableDefinition_OperationDefinition opDef) -> pure opDef
+          _ -> Nothing
+      # case _ of
+          Nil -> Left NoOperationDefinition
+          opDef : Nil -> pure opDef
+          _ -> Left $ MultipleOperationDefinitions
+  Just name ->
+    doc
+      # findMap case _ of
+          AST.Definition_ExecutableDefinition (AST.ExecutableDefinition_OperationDefinition opDef) -> pure opDef
+          _ -> Nothing
+      # note (NoOperationDefinitionWithGivenName name)

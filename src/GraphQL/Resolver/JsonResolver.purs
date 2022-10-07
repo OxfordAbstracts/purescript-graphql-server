@@ -13,12 +13,12 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
+import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver.Gqlable (class Gqlable, gqlParallel, gqlSequential)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
-import Partial.Unsafe (unsafeCrashWith)
 
 data Resolver m
   = Node (m Json)
@@ -46,9 +46,9 @@ resolveQueryString resolver query = do
   let
     queryParseResult = runParser query selectionSet
   case queryParseResult of
-    Left err -> pure $ Left $ CouldNotParseRequest err
+    Left err -> pure $ Left $ ParseGqlDocumentError err
     Right queryAST -> do
-      Right <$> resolve resolver (Just queryAST)
+      Right <$> resolve resolver Object.empty (Just queryAST)
 
 resolve
   :: forall f m
@@ -56,17 +56,18 @@ resolve
   => Monad m
   => Gqlable f m
   => Resolver f
+  -> Object Json
   -> (Maybe SelectionSet)
   -> f Result
-resolve = case _, _ of
+resolve resolver vars = case resolver, _ of
   ResolveAsync resolverM, a -> gqlParallel do
-    resolver <- gqlSequential resolverM
-    gqlSequential $ resolve resolver a
+    resolver' <- gqlSequential resolverM
+    gqlSequential $ resolve resolver' vars a
   FailedResolver error, _ -> err error
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
   ListResolver resolvers, selectionSet ->
-    ResultList <$> traverse (\r -> resolve r selectionSet) resolvers
+    ResultList <$> traverse (\r -> resolve r vars selectionSet) resolvers
   Fields _, Nothing -> err MissingSelectionSet
   (Fields { fields }), Just (SelectionSet selections) ->
     case getSelectionFields =<< selections of
@@ -82,7 +83,7 @@ resolve = case _, _ of
               let
                 args = maybe jsonEmptyObject (encodeArguments <<< unwrap) arguments
               in
-                resolve (field.resolver { args }) selectionSet
+                resolve (field.resolver { args }) vars selectionSet
   where
   getSelectionFields :: Selection -> List AST.T_Field
   getSelectionFields = case _ of
@@ -96,7 +97,7 @@ resolve = case _, _ of
 
   encodeValue :: AST.Value -> Json
   encodeValue = case _ of
-    AST.Value_Variable _ -> unsafeCrashWith "encode Value_Variable not implemented"
+    AST.Value_Variable (AST.Variable varName) -> Object.lookup varName vars # encodeJson
     AST.Value_IntValue (AST.IntValue a) -> encodeJson a
     AST.Value_FloatValue (AST.FloatValue a) -> encodeJson a
     AST.Value_StringValue (AST.StringValue a) -> encodeJson a

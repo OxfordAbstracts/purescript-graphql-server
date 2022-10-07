@@ -30,7 +30,7 @@ toResponse :: GqlResM Json -> ResponseM
 toResponse (GqlResM gqlResM) = do
   e <- runExceptT gqlResM
   case e of
-    Left (CouldNotParseRequest err) -> badRequest $ parseErrorMessage err
+    Left (ParseGqlDocumentError err) -> badRequest $ parseErrorMessage err
     Left NoOperationDefinition -> badRequest "No operation definition in request body"
     Left (OtherError str) -> badRequest str
     Left err -> badRequest $ show err
