@@ -1,15 +1,24 @@
-module Test.GraphQL.Server.Resolver.JsonResolver where
+module Test.GraphQL.Server.Resolver.JsonResolver (spec) where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson, encodeJson, jsonNull)
+import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Either (Either(..))
+import Data.Filterable (filter)
 import Data.Foldable (class Foldable)
 import Data.List (List(..), (:))
 import Data.Map as Map
+import Data.Maybe (Maybe, maybe)
+import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..))
+import GraphQL.Resolver.EffFiber (EffFiber)
+import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
+import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
+import GraphQL.Resolver.ToResolver (class ToResolver, newtypeResolver, toResolver)
+import GraphQL.Server.GqlError (ResolverError(..))
+import Test.GraphQL.Server.Resolver.ToResolver (leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -46,6 +55,57 @@ spec =
 
         actual <- resolveQueryString resolver query
         actual `shouldEqual` Right expected
+
+      it "should resolve a recursive resolver constucted using `toResolver` " do
+        res <- toAff $ resolveQueryString booksResolver
+          """{ books (maxPrice: 7) { 
+            title 
+            author { 
+              name 
+              books { 
+                title 
+              }
+            }
+            woops
+          } 
+        }"""
+        res `shouldEqual`
+          ( Right
+              $ ResultObject
+                  ( ( Tuple "books"
+                        ( ResultList
+                            ( ( ResultObject
+                                  ( (Tuple "title" (leaf "Consider Phlebas"))
+                                      :
+                                        ( Tuple "author"
+                                            ( ResultObject
+                                                ( ( Tuple "name"
+                                                      ( leaf "Iain M. Banks"
+                                                      )
+                                                  )
+                                                    :
+                                                      ( Tuple "books"
+                                                          ( ResultList
+                                                              ( (ResultObject ((Tuple "title" (leaf "State of the Art")) : Nil))
+                                                                  : (ResultObject ((Tuple "title" (leaf "Consider Phlebas")) : Nil))
+                                                                  : Nil
+                                                              )
+                                                          )
+                                                      )
+                                                    : Nil
+                                                )
+                                            )
+                                        )
+                                      : (Tuple "woops" (ResultError FieldNotFound))
+                                      : Nil
+                                  )
+                              ) : Nil
+                            )
+                        )
+                    ) : Nil
+                  )
+              
+          )
 
 resolver :: forall m. Applicative m => Resolver m
 resolver = Fields
@@ -85,3 +145,58 @@ mkFieldMap
   => f (Field m)
   -> Map.Map String (Field m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
+
+booksResolver :: Resolver (GqlIo EffFiber)
+booksResolver = toResolver
+  { books
+  }
+  where
+  books = \(opts :: { maxPrice :: Maybe Number }) -> do
+    io $
+      filter (\(Book b) -> maybe true (b.price <= _) opts.maxPrice)
+        books_
+
+  author :: (Author _)
+  author = Author
+    { name: "Iain M. Banks"
+    , bio: io "This is some stuff about the author"
+    , books: \_ -> books_
+    }
+
+  books_ =
+    [ Book
+        { title: "State of the Art"
+        , price: 9.99
+        , author: \_ -> io author
+        }
+    , Book
+        { title: "Consider Phlebas"
+        , price: 5.99
+        , author: \_ -> io author
+        }
+    ]
+
+newtype Book m = Book
+  { title :: String
+  , price :: Number
+  , author :: Unit -> m (Author m)
+  }
+
+derive instance Newtype (Book m) _
+
+instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
+  toResolver a = newtypeResolver a
+
+newtype Author m = Author
+  { name :: String
+  , bio :: m String
+  , books :: Unit -> Array (Book m)
+  }
+
+derive instance Newtype (Author m) _
+
+instance Applicative m => ToResolver (Author (GqlIo m)) (GqlIo m) where
+  toResolver a = newtypeResolver a
+
+io :: forall a. a -> GqlFiber a
+io = GqlIo <<< pure

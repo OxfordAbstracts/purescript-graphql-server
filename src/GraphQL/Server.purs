@@ -12,6 +12,7 @@ import GraphQL.Server.GqlResM (toResponse)
 import GraphQL.Server.HandleRequest (handleRequest)
 import GraphQL.Server.Schema (GqlRoot)
 import HTTPure (ServerM, serve)
+import Type.Proxy (Proxy)
 
 -- | Boot up the server
 start
@@ -19,6 +20,7 @@ start
    . Gqlable f m
   => ToResolver (GqlRoot query Unit) f
   => { root :: GqlRoot query Unit
+     , runsOn :: Proxy (f Unit)
      }
   -> ServerM
 start { root } = serve port (handleRequest resolvers >>> toResponse) onStart
@@ -29,4 +31,3 @@ start { root } = serve port (handleRequest resolvers >>> toResponse) onStart
   port = 9000
   onStart = do
     log $ "Graphql server listening at http://0.0.0.0:" <> show port
-

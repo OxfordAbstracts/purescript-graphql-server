@@ -59,7 +59,7 @@ resolve
   -> (Maybe SelectionSet)
   -> f Result
 resolve = case _, _ of
-  ResolveAsync resolverM, a -> gqlParallel do 
+  ResolveAsync resolverM, a -> gqlParallel do
     resolver <- gqlSequential resolverM
     gqlSequential $ resolve resolver a
   FailedResolver error, _ -> err error

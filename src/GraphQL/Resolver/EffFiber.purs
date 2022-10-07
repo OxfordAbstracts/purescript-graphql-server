@@ -17,3 +17,4 @@ instance Apply EffFiber where
 
 instance Applicative EffFiber where 
   pure = EffFiber <<< pure <<< pure
+

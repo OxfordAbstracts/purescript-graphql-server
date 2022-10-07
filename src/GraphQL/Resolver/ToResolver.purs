@@ -19,8 +19,11 @@ import GraphQL.Server.Schema (GqlRoot(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
 
-class ToResolver a m | a -> m where
+class ToResolver a m  where
   toResolver :: a -> JsonResolver.Resolver m
+
+newtypeResolver :: forall a m n. ToResolver a m => Newtype n a => n -> Resolver m
+newtypeResolver a = toResolver $ unwrap a
 
 resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
 resolveNode a = Node $ pure $ encodeJson a
@@ -66,18 +69,14 @@ instance
   , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   ) =>
   ToResolver (GqlObj name { | r }) m where
-  toResolver (GqlObj a) = Fields
-    { fields: makeFields a
-    }
+  toResolver (GqlObj a) = toResolver a
 
 instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
   ) =>
   ToResolver (GqlRoot q mut) m where
-  toResolver (GqlRoot root) = Fields
-    { fields: makeFields root
-    }
+  toResolver (GqlRoot root) = toResolver root
 
 instance
   ( Applicative m
@@ -94,8 +93,7 @@ instance
   , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   ) =>
   ToResolver (GqlNew n) m where
-  toResolver = unwrap >>> unwrap >>> \a -> Fields
-    { fields: makeFields a }
+  toResolver = unwrap >>> unwrap >>> toResolver
 
 makeFields
   :: forall r m
@@ -133,13 +131,13 @@ class GetArgResolver a m where
     -> { args :: Json }
     -> JsonResolver.Resolver m
 
-instance ToResolver a m => GetArgResolver (Unit -> a) m where
+instance argResolverUnitFn :: ToResolver a m => GetArgResolver (Unit -> a) m where
   getArgResolver a = \_ -> toResolver (a unit)
 
-else instance (DecodeJson a, ToResolver b m) => GetArgResolver (a -> b) m where
+else instance argResolverAllFn :: (DecodeJson a, ToResolver b m) => GetArgResolver (a -> b) m where
   getArgResolver fn { args } = case decodeJson args of
     Left err -> FailedResolver $ ResolverDecodeError err
     Right a -> toResolver $ fn a
 
-else instance ToResolver a m => GetArgResolver a m where
+else instance argResolverAny :: ToResolver a m => GetArgResolver a m where
   getArgResolver a = \_ -> toResolver a

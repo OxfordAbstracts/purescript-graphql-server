@@ -18,7 +18,7 @@ import GraphQL.Server.GqlError (GqlError(..))
 import Unsafe.Coerce (unsafeCoerce)
 
 handleOperationDefinition :: forall m f. Gqlable f m => Resolver f -> AST.OperationDefinition -> f (Either GqlError Json)
-handleOperationDefinition resolver = case _ of
+handleOperationDefinition resolver opDef = case opDef of
   AST.OperationDefinition_SelectionSet selectionSet ->
     getJson <$> resolve resolver (Just selectionSet)
   -- in getJson result
@@ -28,6 +28,7 @@ handleOperationDefinition resolver = case _ of
     , directives --  ∷ (Maybe Directives)
     , selectionSet --  ∷ SelectionSet
     } -> case resolver of
+    -- LazyResolver r -> handleOperationDefinition (r unit) opDef
     Node _ -> pure $ Left $ OtherError "Node resolver at root"
     ResolveAsync _ -> pure $ Left $ OtherError "ResolveAsync resolver at root"
     ListResolver _ -> pure $ Left $ OtherError "List resolver at root"
