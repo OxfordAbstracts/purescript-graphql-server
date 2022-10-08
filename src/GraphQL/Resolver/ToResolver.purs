@@ -1,4 +1,12 @@
-module GraphQL.Resolver.ToResolver where
+module GraphQL.Resolver.ToResolver
+  ( class ToResolver
+  , class GetArgResolver
+  , ToResolverProps(..)
+  , FieldMap(..)
+  , getArgResolver
+  , toResolver
+  , newtypeResolver
+  ) where
 
 import Prelude
 
@@ -19,7 +27,7 @@ import GraphQL.Server.Schema (GqlRoot(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy)
 
-class ToResolver a m  where
+class ToResolver a m where
   toResolver :: a -> JsonResolver.Resolver m
 
 newtypeResolver :: forall a m n. ToResolver a m => Newtype n a => n -> Resolver m
@@ -29,7 +37,7 @@ resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
 resolveNode a = Node $ pure $ encodeJson a
 
 resolveAsync :: forall f a. Functor f => ToResolver a f => f a -> Resolver f
-resolveAsync a =  ResolveAsync $ map toResolver a
+resolveAsync a = ResolveAsync $ map toResolver a
 
 instance (ToResolver a (GqlIo m), Applicative m) => ToResolver (GqlIo m a) (GqlIo m) where
   toResolver a = resolveAsync a
@@ -102,6 +110,12 @@ makeFields
   -> Map String (Field m)
 makeFields r =
   unwrap $ hfoldlWithIndex ToResolverProps ((FieldMap Map.empty) :: FieldMap m) r
+
+-- where 
+-- init :: FieldMap m
+-- init = FieldMap $ Map.singleton "__typename"     
+--   { name: "__typename"
+--   , esolver: resolveNode $ reflectSymbol (Proxy :: Proxy name) }
 
 data ToResolverProps = ToResolverProps
 

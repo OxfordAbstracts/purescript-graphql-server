@@ -8,7 +8,7 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Server.Schema.GetDefinitions (class GetDefinitions, getDefinitions)
-import GraphQL.Server.Schema.GqlTypeName (class GqlTypeName)
+import GraphQL.Server.Schema.Introspection.TypeName (class GqlTypeName)
 import Type.Proxy (Proxy(..))
 
 data GqlRoot q m = GqlRoot { query :: q, mutation :: m }

@@ -13,6 +13,7 @@ data GqlError
   | NoOperationDefinition
   | NoOperationDefinitionWithGivenName String
   | MultipleOperationDefinitions
+  | VariableInputError VariableInputError
   | OtherError String
   | ResolverError ResolverError
 
@@ -32,5 +33,13 @@ data ResolverError
 derive instance Eq ResolverError
 derive instance Generic ResolverError _
 instance Show ResolverError where
+  show = genericShow
+
+data VariableInputError
+  = VariableNotFound String
+
+derive instance Eq VariableInputError
+derive instance Generic VariableInputError _
+instance Show VariableInputError where
   show = genericShow
 

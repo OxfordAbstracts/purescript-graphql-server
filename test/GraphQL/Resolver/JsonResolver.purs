@@ -6,10 +6,12 @@ import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Either (Either(..))
 import Data.Filterable (filter)
 import Data.Foldable (class Foldable)
+import Data.Generic.Rep (class Generic, Constructor(..), from)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Newtype (class Newtype)
+import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Tuple (Tuple(..))
 import GraphQL.Resolver.EffFiber (EffFiber)
 import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
@@ -21,6 +23,7 @@ import GraphQL.Server.GqlError (ResolverError(..))
 import Test.GraphQL.Server.Resolver.ToResolver (leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
+import Type.Proxy (Proxy(..))
 
 spec :: Spec Unit
 spec =
@@ -183,6 +186,13 @@ newtype Book m = Book
   }
 
 derive instance Newtype (Book m) _
+derive instance Generic (Book m) _
+
+-- x :: forall m. String 
+-- -- x = (Proxy :: Proxy (Book m)) # map from # map (\(Constructor sym ) -> sym) # ?r
+
+-- getName :: forall a name t. IsSymbol name => Generic a (Constructor name t) => Proxy a -> String
+-- getName _ = reflectSymbol (Proxy :: Proxy name) 
 
 instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
   toResolver a = newtypeResolver a
