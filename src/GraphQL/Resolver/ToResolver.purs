@@ -3,15 +3,17 @@ module GraphQL.Resolver.ToResolver
   , class GetArgResolver
   , ToResolverProps(..)
   , FieldMap(..)
+  , WithTypeName
   , getArgResolver
   , toResolver
-  , newtypeResolver
+  , genericResolver
   ) where
 
 import Prelude
 
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), from)
 import Data.List (List)
 import Data.List as List
 import Data.Map (Map)
@@ -21,17 +23,25 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
-import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..), GqlNew)
+import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Server.GqlError (ResolverError(..))
 import GraphQL.Server.Schema (GqlRoot(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
-import Type.Proxy (Proxy)
+import Type.Proxy (Proxy(..))
 
 class ToResolver a m where
   toResolver :: a -> JsonResolver.Resolver m
 
-newtypeResolver :: forall a m n. ToResolver a m => Newtype n a => n -> Resolver m
-newtypeResolver a = toResolver $ unwrap a
+
+genericResolver
+  :: forall r name m a
+   . Generic r (Constructor name (Argument a))
+  => ToResolver (WithTypeName name a) m
+  => r
+  -> Resolver m
+genericResolver a = toResolver $ (WithTypeName arg :: WithTypeName name a)
+  where
+  (Constructor (Argument arg)) = from a
 
 resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
 resolveNode a = Node $ pure $ encodeJson a
@@ -75,47 +85,46 @@ instance ToResolver a m => ToResolver (Unit -> a) m where
 instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
+  , IsSymbol name
   ) =>
   ToResolver (GqlObj name { | r }) m where
-  toResolver (GqlObj a) = toResolver a
+  toResolver (GqlObj a) = toResolver (WithTypeName a :: WithTypeName name _)
 
 instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
   ) =>
   ToResolver (GqlRoot q mut) m where
-  toResolver (GqlRoot root) = toResolver root
+  toResolver (GqlRoot root) = toResolver (WithTypeName root :: WithTypeName "root" _)
 
 instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
+  , IsSymbol name
   ) =>
-  ToResolver ({ | r }) m where
-  toResolver a = Fields
-    { fields: makeFields a
+  ToResolver (WithTypeName name { | r }) m where
+  toResolver (WithTypeName a) = Fields
+    { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) a
     }
 
-instance
-  ( Applicative m
-  , Newtype n { | r }
-  , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
-  ) =>
-  ToResolver (GqlNew n) m where
-  toResolver = unwrap >>> unwrap >>> toResolver
+data WithTypeName :: Symbol -> Type -> Type
+data WithTypeName sym a = WithTypeName a
 
 makeFields
   :: forall r m
    . HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
-  => { | r }
+  => Applicative m
+  => String
+  -> { | r }
   -> Map String (Field m)
-makeFields r =
-  unwrap $ hfoldlWithIndex ToResolverProps ((FieldMap Map.empty) :: FieldMap m) r
-
--- where 
--- init :: FieldMap m
--- init = FieldMap $ Map.singleton "__typename"     
---   { name: "__typename"
---   , esolver: resolveNode $ reflectSymbol (Proxy :: Proxy name) }
+makeFields typename r =
+  unwrap $ hfoldlWithIndex ToResolverProps resolveTypename r
+  where
+  resolveTypename :: FieldMap m
+  resolveTypename = FieldMap $ Map.singleton "__typename"
+    { name: "__typename"
+    , resolver: \_ -> resolveNode typename
+    }
 
 data ToResolverProps = ToResolverProps
 

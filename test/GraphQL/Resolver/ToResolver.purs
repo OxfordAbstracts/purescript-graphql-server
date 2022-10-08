@@ -27,7 +27,7 @@ spec =
   describe "GraphQL.Server.Resolver.ToResolver" do
     describe "toResolver" do
       it "should create simple immediate resolvers" do
-        let resolver = (GqlObj { a: 1, b: 2.0 })
+        let resolver = (gqlObj { a: 1, b: 2.0 })
         resA <- resolveTyped resolver "{a}"
         resA `shouldEqual` Right (ResultObject $ pure $ Tuple "a" $ leaf 1)
         resB <- resolveTyped resolver "{b}"
@@ -35,7 +35,7 @@ spec =
         resAll <- resolveTyped resolver "{a b}"
         resAll `shouldEqual` Right (ResultObject ((Tuple "a" (leaf 1)) : (Tuple "b" (leaf 2)) : Nil))
       it "should create simple async resolvers" do
-        let resolver = (GqlObj { a: aff 1, b: aff 2.0 })
+        let resolver = (gqlObj { a: aff 1, b: aff 2.0 })
         resA <- resolveTyped resolver "{a}"
         resA `shouldEqual` Right (ResultObject $ pure $ Tuple "a" $ leaf 1)
         resB <- resolveTyped resolver "{b}"
@@ -44,7 +44,6 @@ spec =
         resAll `shouldEqual` Right (ResultObject ((Tuple "a" (leaf 1)) : (Tuple "b" (leaf 2)) : Nil))
       it "should create resolvers with arguments" do
         let
-
           expectedA = Tuple "double" $ leaf 6
           expectedB = Tuple "shout" $ leaf "HELLO"
           expectedC = Tuple "async" $ leaf "HELLO"
@@ -85,30 +84,9 @@ spec =
                   ]
               ]
           )
-      -- it "should create recursive resolvers" do
-      --   res <- resolveTyped recursiveChild1 "{id children {id, child {id}}}"
-      --   res `shouldEqual`
-      --     ( ( Right
-      --           ( ResultObject
-      --               ( (Tuple "id" (leaf 1))
-      --                   :
-      --                     ( Tuple "children"
-      --                         ( ResultList
-      --                             ( ( ResultObject
-      --                                   ( (Tuple "id" (leaf 2))
-      --                                       : (Tuple "child" (ResultObject ((Tuple "id" (leaf 1)) : Nil)))
-      --                                       : Nil
-      --                                   )
-      --                               )
-      --                                 : Nil
-      --                             )
-      --                         )
-      --                     )
-      --                   : Nil
-      --               )
-      --           )
-      --       )
-      --     )
+
+gqlObj :: forall a. a -> GqlObj "test_object" a 
+gqlObj = GqlObj 
 
 resolverParent
   :: GqlObj "ResolverParent"
@@ -151,47 +129,6 @@ mkChild = \id ->
     , name: "child " <> show id
     }
 
--- newtype RecursiveChild1 = RecursiveChild1
---   { id :: Int
---   , n :: GqlFiber Number
---   , name :: String
---   , children :: Unit -> Array RecursiveChild2
---   }
-
--- derive instance Newtype RecursiveChild1 _
-
--- instance ToResolver RecursiveChild1 (GqlIo Fiber) where
---   toResolver a = toResolver (unwrap a)
-
--- recursiveChild1 :: RecursiveChild1
--- recursiveChild1 =
---   RecursiveChild1
---     { id: 1
---     , n: pure $ toNumber 1
---     , name: "child 1"
---     , children: \_ -> [ recursiveChild2 ]
---     }
-
--- newtype RecursiveChild2 = RecursiveChild2
---   { id :: Int
---   , n :: GqlFiber Number
---   , name :: String
---   , child :: Unit -> RecursiveChild1
---   }
-
--- derive instance Generic RecursiveChild2 _
-
--- derive instance Newtype RecursiveChild2 _
--- instance ToResolver RecursiveChild2 (GqlIo Fiber) where
---   toResolver a = toResolver (unwrap a)
-
--- recursiveChild2 :: RecursiveChild2
--- recursiveChild2 = RecursiveChild2
---   { id: 2
---   , n: pure $ toNumber 2
---   , name: "child 2"
---   , child: \_ -> recursiveChild1
---   }
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson

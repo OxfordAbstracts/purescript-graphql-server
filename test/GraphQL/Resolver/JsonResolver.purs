@@ -6,24 +6,21 @@ import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Either (Either(..))
 import Data.Filterable (filter)
 import Data.Foldable (class Foldable)
-import Data.Generic.Rep (class Generic, Constructor(..), from)
+import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
-import Data.Newtype (class Newtype)
-import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Tuple (Tuple(..))
 import GraphQL.Resolver.EffFiber (EffFiber)
 import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, newtypeResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, toResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
-import Test.GraphQL.Server.Resolver.ToResolver (leaf)
+import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
-import Type.Proxy (Proxy(..))
 
 spec :: Spec Unit
 spec =
@@ -107,7 +104,7 @@ spec =
                         )
                     ) : Nil
                   )
-              
+
           )
 
 resolver :: forall m. Applicative m => Resolver m
@@ -150,9 +147,10 @@ mkFieldMap
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
 booksResolver :: Resolver (GqlIo EffFiber)
-booksResolver = toResolver
-  { books
-  }
+booksResolver =
+  toResolver $ gqlObj
+    { books
+    }
   where
   books = \(opts :: { maxPrice :: Maybe Number }) -> do
     io $
@@ -185,28 +183,20 @@ newtype Book m = Book
   , author :: Unit -> m (Author m)
   }
 
-derive instance Newtype (Book m) _
 derive instance Generic (Book m) _
-
--- x :: forall m. String 
--- -- x = (Proxy :: Proxy (Book m)) # map from # map (\(Constructor sym ) -> sym) # ?r
-
--- getName :: forall a name t. IsSymbol name => Generic a (Constructor name t) => Proxy a -> String
--- getName _ = reflectSymbol (Proxy :: Proxy name) 
-
 instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
-  toResolver a = newtypeResolver a
-
+  toResolver a = genericResolver a
+  
 newtype Author m = Author
   { name :: String
   , bio :: m String
   , books :: Unit -> Array (Book m)
   }
 
-derive instance Newtype (Author m) _
+derive instance Generic (Author m) _
 
 instance Applicative m => ToResolver (Author (GqlIo m)) (GqlIo m) where
-  toResolver a = newtypeResolver a
+  toResolver a = genericResolver a
 
 io :: forall a. a -> GqlFiber a
 io = GqlIo <<< pure
