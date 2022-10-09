@@ -18,6 +18,7 @@ import Data.List (List)
 import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
+import Data.Maybe (Maybe, fromMaybe, maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Resolver.GqlIo (GqlIo)
@@ -75,6 +76,9 @@ instance Applicative m => ToResolver Void m where
 
 instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ map toResolver a
+
+instance (Applicative m, ToResolver a m) => ToResolver (Maybe a) m where
+  toResolver a = NullableResolver $ map toResolver a
 
 instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
   toResolver a = ListResolver $ map toResolver $ List.fromFoldable a

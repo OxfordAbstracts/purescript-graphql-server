@@ -25,6 +25,7 @@ data Resolver m
   | ListResolver (List (Resolver m))
   | Fields (Fields m)
   | ResolveAsync (m (Resolver m))
+  | NullableResolver (Maybe (Resolver m))
   | FailedResolver ResolverError
 
 type Fields m =
@@ -68,6 +69,8 @@ resolve resolver vars = case resolver, _ of
   Node node, _ -> ResultLeaf <$> node
   ListResolver resolvers, selectionSet ->
     ResultList <$> traverse (\r -> resolve r vars selectionSet) resolvers
+  NullableResolver resolvers, selectionSet ->
+    ResultNullable <$> traverse (\r -> resolve r vars selectionSet) resolvers
   Fields _, Nothing -> err MissingSelectionSet
   (Fields { fields }), Just (SelectionSet selections) ->
     case getSelectionFields =<< selections of

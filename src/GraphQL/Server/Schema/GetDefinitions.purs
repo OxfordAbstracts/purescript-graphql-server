@@ -10,7 +10,9 @@ class GetDefinitions a where
   getDefinitions :: a -> List AST.Definition
 
 instance (GetObjectTypeDefinitions a, GetInputObjectTypeDefinitionsFromFn a) => GetDefinitions a where
-  getDefinitions a = map objectToDef (getObjectTypeDefinitions a) <> map inputToDef (getInputObjectTypeDefinitionsFromFn a)
+  getDefinitions a =
+    map objectToDef (getObjectTypeDefinitions a)
+      <> map inputToDef (getInputObjectTypeDefinitionsFromFn a)
     where
     objectToDef =
       AST.Definition_TypeSystemDefinition

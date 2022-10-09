@@ -1,60 +1,68 @@
 module GraphQL.Server.Schema.GetDocument where
 
+import Prelude
 
--- import Prelude
+import Data.GraphQL.AST as AST
+import Data.List (List(..), (:))
+import Data.Maybe (Maybe(..))
+import Data.Symbol (class IsSymbol, reflectSymbol)
+import GraphQL.Resolver.Root (GqlRoot(..))
+import GraphQL.Server.Schema.GetDefinitions (class GetDefinitions, getDefinitions)
+import GraphQL.Server.Schema.Introspection.TypeName (class GqlTypeName)
+import Type.Proxy (Proxy(..))
 
--- import Data.GraphQL.AST as AST
--- import Data.List (reverse, (:))
--- import Data.Maybe (Maybe(..))
--- import Data.Newtype (unwrap, wrap)
--- import Data.Symbol (class IsSymbol, reflectSymbol)
--- import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
--- import GraphQL.Server.Schema.GetArgumentsDefinition (class GetArgumentsDefinitionFromFn, getArgumentsDefinitionFromFn)
--- import GraphQL.Server.Schema.GetTypeDefinitions (class GetObjectTypeDefinitions)
--- import GraphQL.Server.Schema.ToGqlType (class ToGqlType, toGqlType)
--- import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
--- import Type.Proxy (Proxy(..))
+class GetDocument root where
+  getDocument :: root -> AST.Document
 
--- class GetDocument :: forall k. k -> Constraint
--- class GetDocument a where
---   getDocument :: Proxy a -> AST.Document
+instance
+  ( IsSymbol name
+  , GqlTypeName q name
+  , GetDefinitions q
+  ) =>
+  GetDocument (GqlRoot q Unit) where
+  getDocument (GqlRoot { query }) = AST.Document $
+    getNamedDefinition (Proxy :: Proxy name)
+      : gqlTypeDefs
+    where
+    gqlTypeDefs = getDefinitions query
+else instance
+  ( IsSymbol qName
+  , GqlTypeName q qName
+  , IsSymbol mName
+  , GqlTypeName m mName
+  , GetDefinitions q
+  , GetDefinitions m
+  ) =>
+  GetDocument (GqlRoot q m) where
+  getDocument (GqlRoot { query }) = AST.Document $
+    getNamedDefinition (Proxy :: Proxy qName)
+      : getNamedDefinition (Proxy :: Proxy mName)
+      : gqlTypeDefs
+    where
+    gqlTypeDefs = getDefinitions query
 
--- instance
---   ( HFoldlWithIndex GetDocumentProps AST.Document { | p } AST.Document
---   , UnsequenceProxies { | r } { | p }
---   ) =>
---   GetDocument { | r } where
---   getDocument r = getRecordTypeDefs ((unsequenceProxies r) :: { | p })
+getNamedDefinition :: forall sym. IsSymbol sym => Proxy sym -> AST.Definition
+getNamedDefinition nameProxy =
+  AST.Definition_TypeSystemDefinition $ AST.TypeSystemDefinition_SchemaDefinition $ getSchemaDefinition nameProxy
 
--- data GetDocumentProps = GetDocumentProps
-
--- instance
---   ( IsSymbol label
---   , GetObjectTypeDefinitions a
---   ) =>
---   FoldingWithIndex GetDocumentProps (Proxy label) AST.Document (Proxy a) AST.Document where
---   foldingWithIndex (GetDocumentProps) sym (AST.Document defs) _a = 
---     -- AST.Document $ def : defs
---     AST.Document  defs
---     -- where
---     -- def =
---     --   AST.Definition_TypeSystemDefinition 
---     --    $ AST.TypeSystemDefinition_TypeDefinition ?d
---           -- { description: Nothing
---           -- , argumentsDefinition: getArgumentsDefinitionFromFn (Proxy :: Proxy a)
---           -- , name: reflectSymbol sym
---           -- , type: toGqlType (Proxy :: Proxy a)
---           -- , directives: Nothing
---           -- }
-
--- getRecordTypeDefs
---   :: forall r
---    . HFoldlWithIndex GetDocumentProps AST.Document { | r } AST.Document
---   => { | r }
---   -> AST.Document
--- getRecordTypeDefs =
---   hfoldlWithIndex GetDocumentProps (AST.Document mempty) >>> unwrap >>> reverse >>> wrap
-
-
+getSchemaDefinition :: forall sym. IsSymbol sym => Proxy sym -> AST.SchemaDefinition
+getSchemaDefinition nameProxy = AST.SchemaDefinition
+  { directives: Nothing
+  , rootOperationTypeDefinition:
+      AST.RootOperationTypeDefinition
+        ( { namedType: AST.NamedType $ reflectSymbol nameProxy
+          , operationType: AST.Query
+          }
+        ) : Nil
+  }
 
 
+-- getNamedDefinition = AST.Definition_TypeSystemDefinition $ AST.TypeSystemDefinition_SchemaDefinition $ AST.SchemaDefinition
+--       { directives: Nothing
+--       , rootOperationTypeDefinition:
+--           AST.RootOperationTypeDefinition
+--             ( { namedType: AST.NamedType $ reflectSymbol (Proxy :: Proxy name)
+--               , operationType: AST.Query
+--               }
+--             ) : Nil
+--       }
