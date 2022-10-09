@@ -186,7 +186,7 @@ newtype Book m = Book
 derive instance Generic (Book m) _
 instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
   toResolver a = genericResolver a
-  
+
 newtype Author m = Author
   { name :: String
   , bio :: m String

@@ -85,8 +85,8 @@ spec =
               ]
           )
 
-gqlObj :: forall a. a -> GqlObj "test_object" a 
-gqlObj = GqlObj 
+gqlObj :: forall a. a -> GqlObj "test_object" a
+gqlObj = GqlObj
 
 resolverParent
   :: GqlObj "ResolverParent"
@@ -128,7 +128,6 @@ mkChild = \id ->
     , n: pure $ toNumber id
     , name: "child " <> show id
     }
-
 
 leaf ∷ ∀ (a ∷ Type). EncodeJson a ⇒ a → Result
 leaf = ResultLeaf <<< encodeJson
