@@ -6,24 +6,18 @@ import Data.Either (Either, note)
 import Data.Generic.Rep (class Generic)
 import Data.GraphQL.AST as AST
 import Data.GraphQL.AST.Print (printAst)
-import Data.List (List(..), find, findMap, mapMaybe)
+import Data.List (List(..), findMap, mapMaybe)
 import Data.List.Types (NonEmptyList)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
-import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
-import GraphQL.Resolver.Root (GqlRoot)
-import GraphQL.Server.Schema.GetDocument (class GetDocument, getDocument, getSchemaDefinition)
+import GraphQL.Server.Schema.GetDocument (class GetDocument, getDocument)
 import GraphQL.Server.Schema.Introspection.TypeDefinitionGetter (getTypeDefDescription, getTypeDefFields, getTypeDefKind, getTypeDefName, getTypeDefPossibleValues)
-import GraphQL.Server.Schema.Introspection.TypeName (class GqlTypeName)
 import GraphQL.Server.Schema.Introspection.Types as ITypes
-import Partial.Unsafe (unsafeCrashWith)
-import Type.Proxy (Proxy(..))
-import Unsafe.Coerce (unsafeCoerce)
 
 data IntrospectionError
   = NamedTypeNotDefined String
@@ -77,9 +71,13 @@ introspectSchema root = do
       findMap getRootDef rootOperationTypeDefinition
     _ -> Nothing
 
-    where 
+    where
     getRootDef :: AST.RootOperationTypeDefinition -> Maybe AST.NamedType
-    getRootDef = unsafeCoerce
+    getRootDef (AST.RootOperationTypeDefinition rootOpDef) =
+      if rootOpDef.operationType == AST.Query then
+        Just $ rootOpDef.namedType
+      else
+        Nothing
 
 defintionToTypeDefinition :: AST.Definition -> Maybe AST.TypeDefinition
 defintionToTypeDefinition = case _ of
@@ -113,7 +111,6 @@ typeDefinitionToIType env = case _ of
       }
   AST.TypeDefinition_ObjectTypeDefinition (AST.ObjectTypeDefinition d) -> do
     fields <- fieldsDefinitionToIFields env d.fieldsDefinition
-    -- d.fieldsDefinition <#> unwrap # traverse (traverse (fieldDefinitionToIField env))
     pure $ ITypes.IType
       { kind: ITypes.OBJECT
       , name: Just d.name
@@ -138,7 +135,7 @@ typeDefinitionToIType env = case _ of
       , inputFields: Nothing
       , ofType: Nothing
       }
-  AST.TypeDefinition_UnionTypeDefinition (AST.UnionTypeDefinition d) -> do 
+  AST.TypeDefinition_UnionTypeDefinition (AST.UnionTypeDefinition d) -> do
     possibleTypes <- traverse (traverse (lookupType env >=> typeDefinitionToIType env)) (map unwrap d.unionMemberTypes)
     pure $ ITypes.IType
       { kind: ITypes.UNION
@@ -151,18 +148,49 @@ typeDefinitionToIType env = case _ of
       , inputFields: Nothing
       , ofType: Nothing
       }
-  -- AST.TypeDefinition_EnumTypeDefinition (AST.EnumTypeDefinition d) ->
-  --    ?d d
-  -- AST.TypeDefinition_InputObjectTypeDefinition (AST.InputObjectTypeDefinition d) ->
-  --    ?d d
-  _ -> todo
+  AST.TypeDefinition_EnumTypeDefinition (AST.EnumTypeDefinition d) -> do
+    enumValues <- traverse (traverse (enumValueDefinitionToIEnumValue env)) (map unwrap d.enumValuesDefinition)
+    pure $ ITypes.IType
+      { kind: ITypes.ENUM
+      , name: Just d.name
+      , description: d.description
+      , fields: \{} -> Nothing
+      , interfaces: Nothing
+      , possibleTypes: Nothing
+      , enumValues: \_ -> enumValues
+      , inputFields: Nothing
+      , ofType: Nothing
+      }
+  AST.TypeDefinition_InputObjectTypeDefinition (AST.InputObjectTypeDefinition d) -> do
+    inputFields <- inputFieldsDefinitionToIInputValues env d.inputFieldsDefinition
+    pure $ ITypes.IType
+      { kind: ITypes.OBJECT
+      , name: Just d.name
+      , description: d.description
+      , fields: \{} -> Nothing
+      , interfaces: Nothing
+      , possibleTypes: Nothing
+      , enumValues: \_ -> Nothing
+      , inputFields
+      , ofType: Nothing
+      }
 
-
--- enumType
+enumValueDefinitionToIEnumValue :: Env -> AST.EnumValueDefinition -> Err ITypes.IEnumValue
+enumValueDefinitionToIEnumValue _env (AST.EnumValueDefinition evd) = do
+  pure $ ITypes.IEnumValue
+    { name: unwrap evd.enumValue
+    , description: evd.description
+    , isDeprecated: false
+    , deprecationReason: Nothing
+    }
 
 fieldsDefinitionToIFields :: Env -> Maybe AST.FieldsDefinition -> Err (Maybe (List ITypes.IField))
-fieldsDefinitionToIFields env fieldsDefinition = 
+fieldsDefinitionToIFields env fieldsDefinition =
   fieldsDefinition <#> unwrap # traverse (traverse (fieldDefinitionToIField env))
+
+inputFieldsDefinitionToIInputValues :: Env -> Maybe AST.InputFieldsDefinition -> Err (Maybe (List ITypes.IInputValue))
+inputFieldsDefinitionToIInputValues env inputFieldsDefinition =
+  inputFieldsDefinition <#> unwrap # traverse (traverse (inputValueDefinitionToIField env))
 
 fieldDefinitionToIField :: Env -> AST.FieldDefinition -> Err ITypes.IField
 fieldDefinitionToIField env (AST.FieldDefinition fd) = do
@@ -259,31 +287,3 @@ lookupType :: Env -> AST.NamedType -> Err AST.TypeDefinition
 lookupType { namedTypes } (AST.NamedType name) =
   Map.lookup name namedTypes
     # note (pure $ NamedTypeNotDefined name)
-
--- class QueryType root where
---   queryType :: Env -> root -> Err ITypes.IType
-
--- instance
---   ( IsSymbol name
---   , GqlTypeName q name
---   ) =>
---   QueryType (GqlRoot query mutation) where
---   queryType env _ = do 
-
---     pure $ ITypes.IType
---       { kind: ITypes.OBJECT
---       , name: Just $ reflectSymbol (Proxy :: Proxy name)
---       , description: Nothing
---       , fields: \{} -> Nothing
---       , interfaces: Nothing
---       , possibleTypes: Nothing
---       , enumValues: \{} -> Nothing
---       , inputFields: Nothing
---       , ofType: Nothing
---       }
-
---     where
---     (AST.SchemaDefinition queryDef) = getSchemaDefinition (Proxy :: Proxy name)
-
-todo :: forall a. a
-todo = unsafeCrashWith "TODO"
