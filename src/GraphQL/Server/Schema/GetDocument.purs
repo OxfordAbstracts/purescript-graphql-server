@@ -56,7 +56,6 @@ getSchemaDefinition nameProxy = AST.SchemaDefinition
         ) : Nil
   }
 
-
 -- getNamedDefinition = AST.Definition_TypeSystemDefinition $ AST.TypeSystemDefinition_SchemaDefinition $ AST.SchemaDefinition
 --       { directives: Nothing
 --       , rootOperationTypeDefinition:

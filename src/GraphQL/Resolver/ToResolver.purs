@@ -33,7 +33,6 @@ import Type.Proxy (Proxy(..))
 class ToResolver a m where
   toResolver :: a -> JsonResolver.Resolver m
 
-
 genericResolver
   :: forall r name m a
    . Generic r (Constructor name (Argument a))

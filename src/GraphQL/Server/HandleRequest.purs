@@ -86,8 +86,7 @@ makeVariables :: Object Json -> List AST.VariableDefinition -> Either VariableIn
 makeVariables vars = foldM makeVar Object.empty
   where
   makeVar :: Object Json -> AST.VariableDefinition -> Either VariableInputError (Object Json)
-  makeVar coercedVars (AST.VariableDefinition varDef@{ variable: AST.Variable varName }) = 
-
+  makeVar coercedVars (AST.VariableDefinition varDef@{ variable: AST.Variable varName }) =
     case Object.lookup varName vars, varDef of
 
       Just var, _ -> Right $ Object.insert varName var coercedVars
@@ -95,8 +94,6 @@ makeVariables vars = foldM makeVar Object.empty
       Nothing, { defaultValue: Just (AST.DefaultValue defaultValue) } ->
         Right
           $ Object.insert varName (encodeValue defaultValue) coercedVars
-          
+
       _, _ -> Left $ VariableNotFound varName
 
-
-  

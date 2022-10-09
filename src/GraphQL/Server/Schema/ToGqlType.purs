@@ -12,7 +12,7 @@ import Type.Proxy (Proxy(..))
 class ToGqlType :: forall k. k -> Constraint
 class ToGqlType a where
   toGqlType :: Proxy a -> AST.Type
-  
+
 instance (ToGqlType b) => ToGqlType (a -> b) where
   toGqlType _ = toGqlType (Proxy :: Proxy b)
 

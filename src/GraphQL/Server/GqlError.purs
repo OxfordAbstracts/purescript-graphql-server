@@ -35,8 +35,7 @@ derive instance Generic ResolverError _
 instance Show ResolverError where
   show = genericShow
 
-data VariableInputError
-  = VariableNotFound String
+data VariableInputError = VariableNotFound String
 
 derive instance Eq VariableInputError
 derive instance Generic VariableInputError _

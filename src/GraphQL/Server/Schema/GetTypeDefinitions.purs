@@ -65,12 +65,12 @@ getObjectTypeDefintionsRecord
   -> (List AST.ObjectTypeDefinition)
 getObjectTypeDefintionsRecord = hfoldl GetObjectTypeDefinitionsProps (Nil :: List AST.ObjectTypeDefinition)
 
-class GetInputObjectTypeDefinitionsFromFn a where 
+class GetInputObjectTypeDefinitionsFromFn a where
   getInputObjectTypeDefinitionsFromFn :: a -> List AST.InputObjectTypeDefinition
 
-instance GetInputObjectTypeDefinitions (Proxy b) => GetInputObjectTypeDefinitionsFromFn (a ->  b) where 
+instance GetInputObjectTypeDefinitions (Proxy b) => GetInputObjectTypeDefinitionsFromFn (a -> b) where
   getInputObjectTypeDefinitionsFromFn _ = getInputObjectTypeDefinitions (Proxy :: Proxy b)
-else instance GetInputObjectTypeDefinitionsFromFn a where 
+else instance GetInputObjectTypeDefinitionsFromFn a where
   getInputObjectTypeDefinitionsFromFn _ = Nil
 
 class GetInputObjectTypeDefinitions a where

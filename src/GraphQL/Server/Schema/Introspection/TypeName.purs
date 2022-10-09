@@ -1,6 +1,5 @@
 module GraphQL.Server.Schema.Introspection.TypeName where
 
-
 import Data.Argonaut (Json)
 import Data.Generic.Rep (class Generic, Constructor)
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj)

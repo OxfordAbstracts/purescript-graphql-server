@@ -76,6 +76,6 @@ derive newtype instance MonadEffect m => MonadEffect (GqlIo m)
 
 derive newtype instance MonadAff m => MonadAff (GqlIo m)
 
-instance Parallel f m => Parallel (GqlIo f) (GqlIo m) where 
+instance Parallel f m => Parallel (GqlIo f) (GqlIo m) where
   parallel = hoistGql parallel
   sequential = hoistGql sequential
