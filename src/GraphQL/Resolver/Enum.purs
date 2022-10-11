@@ -1,6 +1,5 @@
 module GraphQL.Resolver.Enum where
 
-
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
 
