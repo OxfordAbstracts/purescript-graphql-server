@@ -7,6 +7,7 @@ import Data.List (List)
 import Data.Maybe (Maybe)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver)
+import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation) 
 import Unsafe.Coerce (unsafeCoerce)
 
 newtype ISchema = ISchema
@@ -97,27 +98,3 @@ newtype IDirective = IDirective
 derive instance Generic IDirective _
 instance Applicative m => ToResolver IDirective m where
   toResolver a = genericResolver a
-
-data IDirectiveLocation
-  = DirectiveLocation_QUERY
-  | DirectiveLocation_MUTATION
-  | DirectiveLocation_SUBSCRIPTION
-  | DirectiveLocation_FIELD
-  | DirectiveLocation_FRAGMENT_DEFINITION
-  | DirectiveLocation_FRAGMENT_SPREAD
-  | DirectiveLocation_INLINE_FRAGMENT
-  | DirectiveLocation_SCHEMA
-  | DirectiveLocation_SCALAR
-  | DirectiveLocation_OBJECT
-  | DirectiveLocation_FIELD_DEFINITION
-  | DirectiveLocation_ARGUMENT_DEFINITION
-  | DirectiveLocation_INTERFACE
-  | DirectiveLocation_UNION
-  | DirectiveLocation_ENUM
-  | DirectiveLocation_ENUM_VALUE
-  | DirectiveLocation_INPUT_OBJECT
-  | DirectiveLocation_INPUT_FIELD_DEFINITION
-
-derive instance Generic IDirectiveLocation _
-instance Applicative m => ToResolver IDirectiveLocation m where
-  toResolver a = unsafeCoerce a
