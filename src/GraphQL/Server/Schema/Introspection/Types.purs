@@ -2,13 +2,14 @@ module GraphQL.Server.Schema.Introspection.Types where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson)
+import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Enum (class Enum)
 import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
 import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, resolveNode)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
@@ -23,7 +24,7 @@ newtype ISchema = ISchema
 
 derive instance Generic ISchema _
 
-instance Applicative m => ToResolver ISchema (GqlIo m) where
+instance Applicative m => ToResolver ISchema m where
   toResolver a = genericResolver a
 
 newtype IType = IType
@@ -56,10 +57,14 @@ data ITypeKind
 derive instance Generic ITypeKind _
 
 derive instance Eq ITypeKind
+
 derive instance Ord ITypeKind
 
+instance Show ITypeKind where
+  show = genericShow
+
 instance EncodeJson ITypeKind where
-  encodeJson = genericEncodeJson
+  encodeJson = show >>> encodeJson
 
 instance Enum ITypeKind where
   succ = genericSucc
