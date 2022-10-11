@@ -2,13 +2,16 @@ module GraphQL.Server.Schema.Introspection.Types where
 
 import Prelude
 
+import Data.Argonaut (class EncodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import Data.Enum (class Enum)
+import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
 import Data.Maybe (Maybe)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver)
-import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation) 
-import Unsafe.Coerce (unsafeCoerce)
+import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, resolveNode)
+import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
   { types :: List IType
@@ -19,6 +22,7 @@ newtype ISchema = ISchema
   }
 
 derive instance Generic ISchema _
+
 instance Applicative m => ToResolver ISchema (GqlIo m) where
   toResolver a = genericResolver a
 
@@ -50,8 +54,19 @@ data ITypeKind
   | NON_NULL
 
 derive instance Generic ITypeKind _
+
+derive instance Eq ITypeKind
+derive instance Ord ITypeKind
+
+instance EncodeJson ITypeKind where
+  encodeJson = genericEncodeJson
+
+instance Enum ITypeKind where
+  succ = genericSucc
+  pred = genericPred
+
 instance Applicative m => ToResolver ITypeKind m where
-  toResolver a = unsafeCoerce a
+  toResolver = resolveNode
 
 newtype IField = IField
   { name :: String
@@ -74,6 +89,7 @@ newtype IInputValue = IInputValue
   }
 
 derive instance Generic IInputValue _
+
 instance Applicative m => ToResolver IInputValue m where
   toResolver a = genericResolver a
 
@@ -85,6 +101,7 @@ newtype IEnumValue = IEnumValue
   }
 
 derive instance Generic IEnumValue _
+
 instance Applicative m => ToResolver IEnumValue m where
   toResolver a = genericResolver a
 
@@ -96,5 +113,6 @@ newtype IDirective = IDirective
   }
 
 derive instance Generic IDirective _
+
 instance Applicative m => ToResolver IDirective m where
   toResolver a = genericResolver a

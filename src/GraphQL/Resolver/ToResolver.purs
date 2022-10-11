@@ -6,6 +6,7 @@ module GraphQL.Resolver.ToResolver
   , WithTypeName
   , getArgResolver
   , toResolver
+  , resolveNode
   , genericResolver
   ) where
 
@@ -18,7 +19,7 @@ import Data.List (List)
 import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe, fromMaybe, maybe)
+import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Resolver.GqlIo (GqlIo)

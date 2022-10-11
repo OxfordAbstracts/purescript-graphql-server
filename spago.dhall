@@ -14,6 +14,8 @@ to generate this file without the comments in this block.
 , dependencies =
   [ "aff"
   , "argonaut"
+  , "argonaut-codecs"
+  , "argonaut-generic"
   , "arrays"
   , "bifunctors"
   , "console"
