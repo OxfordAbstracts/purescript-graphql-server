@@ -20,6 +20,12 @@ import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
 
+type TopLevelJsonResolver m =
+  { query :: Resolver m
+  , mutation :: Maybe (Resolver m)
+  , subscription :: Maybe (Resolver m)
+  }
+
 data Resolver m
   = Node (m Json)
   | ListResolver (List (Resolver m))
@@ -30,6 +36,7 @@ data Resolver m
 
 type Fields m =
   { fields :: Map String (Field m)
+  , typename :: String
   }
 
 type Field m =

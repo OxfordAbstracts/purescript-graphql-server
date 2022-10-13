@@ -7,11 +7,11 @@ import Data.GraphQL.AST.Print (class PrintAst)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import GraphQL.Resolver.Root (GqlRoot(..))
 import GraphQL.Server.Schema.GetDefinitions (class GetDefinitions, getDefinitions)
 import GraphQL.Server.Schema.Introspection.TypeName (class GqlTypeName)
 import Type.Proxy (Proxy(..))
 
-data GqlRoot q m = GqlRoot { query :: q, mutation :: m }
 
 class PrintAst s <= GqlSchema a s | a -> s where
   gqlSchema :: a -> s

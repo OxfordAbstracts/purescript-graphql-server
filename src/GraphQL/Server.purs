@@ -7,10 +7,10 @@ import Prelude
 import Effect.Class.Console (log)
 import GraphQL.Resolver.Gqlable (class Gqlable)
 import GraphQL.Resolver.JsonResolver (Resolver)
+import GraphQL.Resolver.Root (GqlRoot)
 import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.GqlResM (toResponse)
 import GraphQL.Server.HandleRequest (handleRequest)
-import GraphQL.Server.Schema (GqlRoot)
 import HTTPure (ServerM, serve)
 import Type.Proxy (Proxy)
 

@@ -3,7 +3,7 @@ module GraphQL.Resolver.ToResolver
   , class GetArgResolver
   , ToResolverProps(..)
   , FieldMap(..)
-  , WithTypeName
+  , WithTypeName(..)
   , getArgResolver
   , toResolver
   , resolveNode
@@ -22,14 +22,15 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.GqlIo (GqlIo(..))
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
+import GraphQL.Resolver.Root (GqlRoot(..))
 import GraphQL.Server.GqlError (ResolverError(..))
-import GraphQL.Server.Schema (GqlRoot(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 class ToResolver a m where
   toResolver :: a -> JsonResolver.Resolver m
@@ -97,9 +98,14 @@ instance
 instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
+  , IsSymbol "root"
   ) =>
   ToResolver (GqlRoot q mut) m where
   toResolver (GqlRoot root) = toResolver (WithTypeName root :: WithTypeName "root" _)
+
+-- instance ToResolver (GqlRoot q mut) m where
+--   toResolver (GqlRoot root) = unsafeCoerce unit
+-- toResolver (WithTypeName root :: WithTypeName "root" _)
 
 instance
   ( Applicative m
@@ -109,10 +115,13 @@ instance
   ToResolver (WithTypeName name { | r }) m where
   toResolver (WithTypeName a) = Fields
     { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) a
+    , typename: reflectSymbol (Proxy :: Proxy name)
     }
 
-data WithTypeName :: Symbol -> Type -> Type
-data WithTypeName sym a = WithTypeName a
+newtype WithTypeName :: Symbol -> Type -> Type
+newtype WithTypeName sym a = WithTypeName a
+
+derive instance Newtype (WithTypeName sym a) _
 
 makeFields
   :: forall r m

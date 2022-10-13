@@ -6,7 +6,7 @@ import Data.Either (Either, note)
 import Data.Generic.Rep (class Generic)
 import Data.GraphQL.AST as AST
 import Data.GraphQL.AST.Print (printAst)
-import Data.List (List(..), findMap, mapMaybe)
+import Data.List (List(..), findMap, mapMaybe, (:))
 import Data.List.Types (NonEmptyList)
 import Data.Map (Map)
 import Data.Map as Map
@@ -15,6 +15,7 @@ import Data.Newtype (unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
+import Debug (spy, spyWith, traceM)
 import GraphQL.Server.Schema.GetDocument (class GetDocument, getDocument)
 import GraphQL.Server.Schema.Introspection.TypeDefinitionGetter (getTypeDefDescription, getTypeDefFields, getTypeDefKind, getTypeDefName, getTypeDefPossibleValues)
 import GraphQL.Server.Schema.Introspection.Types as ITypes
@@ -40,7 +41,8 @@ introspectSchema
   => root
   -> Err ITypes.ISchema
 introspectSchema root = do
-  types <- join <$> traverse (definitionToIType env) defs
+  types <- join <$> traverse (definitionToIType env) (spyWith "defs" show defs)
+  traceM { types }
   queryName <- note (pure NoQueryType) $ defs # findMap getQueryType
   queryTypeAst <- lookupType env queryName
   queryType <- typeDefinitionToIType env queryTypeAst
@@ -49,7 +51,7 @@ introspectSchema root = do
     , queryType
     , mutationType: Nothing
     , subscriptionType: Nothing
-    , types
+    , types: queryType : types
     }
   where
   (AST.Document defs) = getDocument root
@@ -58,7 +60,10 @@ introspectSchema root = do
   typeDefs = mapMaybe defintionToTypeDefinition defs
 
   env :: Env
-  env = { namedTypes: Map.fromFoldable $ typeDefs <#> \def -> Tuple (getTypeDefName def) def }
+  env =
+    { namedTypes: Map.fromFoldable $ typeDefs <#> \def ->
+        Tuple (getTypeDefName def) def
+    }
 
   getQueryType :: AST.Definition -> Maybe AST.NamedType
   getQueryType = case _ of
@@ -287,3 +292,6 @@ lookupType :: Env -> AST.NamedType -> Err AST.TypeDefinition
 lookupType { namedTypes } (AST.NamedType name) =
   Map.lookup name namedTypes
     # note (pure $ NamedTypeNotDefined name)
+
+
+ 

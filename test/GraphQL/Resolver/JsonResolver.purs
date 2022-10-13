@@ -109,7 +109,8 @@ spec =
 
 resolver :: forall m. Applicative m => Resolver m
 resolver = Fields
-  { fields:
+  { typename: "name"
+  , fields:
       mkFieldMap
         [ { name: "top_level_1"
           , resolver: resolveNode "top_val_1"
@@ -122,7 +123,8 @@ resolver = Fields
           }
         , { name: "top_level_nested_1"
           , resolver: \_ -> Fields
-              { fields: mkFieldMap
+              { typename: "name"
+              , fields: mkFieldMap
                   [ { name: "c1"
                     , resolver: resolveNode "v11"
                     }

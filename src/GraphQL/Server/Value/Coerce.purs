@@ -26,7 +26,7 @@ coerceValue json val = case _ of
     "Int" -> typeCheck (Proxy :: Proxy Int) json
     "Float" -> typeCheck (Proxy :: Proxy Number) json
     "Boolean" -> typeCheck (Proxy :: Proxy Boolean) json
-    "ID" -> typeCheck (Proxy :: Proxy Int) json <|> typeCheck (Proxy :: Proxy String) json
+    "ID" -> typeCheck (Proxy :: Proxy String) json
     _ -> Right json
   _ -> Left $ UnrecognizedNamedType $ "?d json"
 

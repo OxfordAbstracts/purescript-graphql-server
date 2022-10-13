@@ -40,7 +40,7 @@ resultToData = case _ of
   ResultError _err -> jsonNull
   ResultLazy res -> resultToData (force res)
   ResultObject fields -> fromObject $ Object.fromFoldable $
-    fields <#> \(Tuple name result) -> Tuple name $ resultToData result
+    fields <#> map resultToData
   ResultList items -> fromArray $ Array.fromFoldable $ map resultToData items
   ResultNullable maybeResult -> maybe jsonNull resultToData maybeResult
 
