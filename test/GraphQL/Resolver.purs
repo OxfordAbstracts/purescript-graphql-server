@@ -2,19 +2,12 @@ module Test.GraphQL.Resolver where
 
 import Prelude
 
-import Data.Either (Either(..))
 import Data.Filterable (filter)
-import Data.Generic.Rep (class Generic, repOf)
+import Data.Generic.Rep (class Generic)
 import Effect.Aff (Aff)
-import GraphQL.Resolver (rootResolver)
 import GraphQL.Resolver.GqlIo (GqlIo(..))
-import GraphQL.Resolver.JsonResolver (Resolver)
-import GraphQL.Resolver.Root (GqlRoot)
 import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver)
-import GraphQL.Server.Schema.Introspection.TypeName (class GqlTypeName)
-import Partial.Unsafe (unsafeCrashWith)
 import Test.Spec (Spec, describe, it)
-import Type.Proxy (Proxy(..))
 
 spec :: Spec Unit
 spec =
@@ -57,8 +50,6 @@ author = Author
 
 newtype SimpleQuery = SimpleQuery { books :: GqlIo Aff (Array Book) }
 
-instance GqlTypeName SimpleQuery "SimpleQuery"
-
 derive instance Generic SimpleQuery _
 
 instance ToResolver SimpleQuery (GqlIo Aff) where
@@ -70,8 +61,6 @@ newtype Book = Book
   , author :: Unit -> GqlIo Aff Author
   }
 
-instance GqlTypeName Book "Book"
-
 derive instance Generic Book _
 
 instance ToResolver Book (GqlIo Aff) where
@@ -81,8 +70,6 @@ newtype Author = Author
   { name :: String
   , books :: { maxPrice :: Number } -> GqlIo Aff (Array Book)
   }
-
-instance GqlTypeName Author "Author"
 
 derive instance Generic Author _
 

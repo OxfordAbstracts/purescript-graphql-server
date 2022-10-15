@@ -54,40 +54,40 @@ resolveAsync a = ResolveAsync $ map toResolver a
 instance (ToResolver a (GqlIo m), Applicative m) => ToResolver (GqlIo m a) (GqlIo m) where
   toResolver a = resolveAsync a
 
-instance Applicative m => ToResolver Boolean m where
+else instance Applicative m => ToResolver Boolean m where
   toResolver a = resolveNode a
 
-instance Applicative m => ToResolver Int m where
+else instance Applicative m => ToResolver Int m where
   toResolver a = resolveNode a
 
-instance Applicative m => ToResolver Number m where
+else instance Applicative m => ToResolver Number m where
   toResolver a = resolveNode a
 
-instance Applicative m => ToResolver String m where
+else instance Applicative m => ToResolver String m where
   toResolver a = resolveNode a
 
-instance Applicative m => ToResolver Json m where
+else instance Applicative m => ToResolver Json m where
   toResolver a = resolveNode a
 
-instance Applicative m => ToResolver Unit m where
+else instance Applicative m => ToResolver Unit m where
   toResolver a = resolveNode a
 
-instance Applicative m => ToResolver Void m where
+else instance Applicative m => ToResolver Void m where
   toResolver a = resolveNode a
 
-instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
+else instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ map toResolver a
 
-instance (Applicative m, ToResolver a m) => ToResolver (Maybe a) m where
+else instance (Applicative m, ToResolver a m) => ToResolver (Maybe a) m where
   toResolver a = NullableResolver $ map toResolver a
 
-instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
+else instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
   toResolver a = ListResolver $ map toResolver $ List.fromFoldable a
 
-instance ToResolver a m => ToResolver (Unit -> a) m where
+else instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
 
-instance
+else instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   , IsSymbol name
@@ -95,7 +95,7 @@ instance
   ToResolver (GqlObj name { | r }) m where
   toResolver (GqlObj a) = toResolver (WithTypeName a :: WithTypeName name _)
 
-instance
+else instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
   , IsSymbol "root"
@@ -103,11 +103,8 @@ instance
   ToResolver (GqlRoot q mut) m where
   toResolver (GqlRoot root) = toResolver (WithTypeName root :: WithTypeName "root" _)
 
--- instance ToResolver (GqlRoot q mut) m where
---   toResolver (GqlRoot root) = unsafeCoerce unit
--- toResolver (WithTypeName root :: WithTypeName "root" _)
 
-instance
+else instance
   ( Applicative m
   , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
   , IsSymbol name
