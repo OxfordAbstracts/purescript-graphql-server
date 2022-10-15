@@ -5,15 +5,13 @@ import Prelude
 import Data.List (List, foldl, (:))
 import Data.Maybe (Maybe(..))
 import Data.Typelevel.Num (toInt')
-import GraphQL.Server.Schema.Introspection.GetType (DepthLimit)
+import GraphQL.Server.MaxDepth (maxDepth)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..))
-import Type.Proxy (Proxy(..))
-
 
 getDescendantITypes :: IType -> List IType
 getDescendantITypes = go depthLimit mempty
   where
-  depthLimit = toInt' (Proxy :: Proxy DepthLimit)
+  depthLimit = toInt' maxDepth
 
   go :: Int -> ITypes -> IType -> ITypes
   go 0 result _ = result

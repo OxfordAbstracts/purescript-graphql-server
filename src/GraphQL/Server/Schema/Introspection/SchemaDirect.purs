@@ -5,15 +5,16 @@ import Prelude
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import GraphQL.Resolver.Root (GqlRoot(..))
-import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, DepthLimit, getIType)
+import GraphQL.Server.MaxDepth (MaxDepth)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getIType)
 import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
+import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
 import Type.Proxy (Proxy(..))
 
 class SchemaDirect a where
   schemaDirect :: a -> ISchema
 
-instance (GetIType DepthLimit q) => SchemaDirect (GqlRoot q Unit) where
+instance (GetIType MaxDepth q) => SchemaDirect (GqlRoot q Unit) where
   schemaDirect _ = ISchema
     { types: getDescendantITypes queryType
     , queryType

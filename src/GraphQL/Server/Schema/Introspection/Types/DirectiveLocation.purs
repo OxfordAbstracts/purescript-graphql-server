@@ -6,7 +6,7 @@ import Data.Argonaut (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, resolveNode)
+import GraphQL.Resolver.ToResolver (class ToResolver, resolveNode)
 
 data IDirectiveLocation
   = QUERY

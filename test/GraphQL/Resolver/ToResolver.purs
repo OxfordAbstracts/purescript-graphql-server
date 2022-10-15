@@ -5,6 +5,7 @@ import Prelude
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (filter)
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
@@ -15,10 +16,10 @@ import Effect.Aff (Aff)
 import GraphQL.Resolver.GqlIo (GqlFiber)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
-import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError)
+import GraphQL.Server.MaxDepth (MaxDepth, maxDepth)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -85,11 +86,15 @@ spec =
               ]
           )
 
-gqlObj :: forall a. a -> GqlObj "test_object" a
-gqlObj = GqlObj
+gqlObj :: forall a115. a115 -> TestGqlObj a115
+gqlObj = TestGqlObj
+
+newtype TestGqlObj a = TestGqlObj a
+
+derive instance Generic (TestGqlObj a) _
 
 resolverParent
-  :: GqlObj "ResolverParent"
+  :: TestGqlObj
        { async :: { str :: String } -> GqlFiber String
        , double :: { a :: Int } -> Int
        , noArgs :: GqlFiber String
@@ -99,7 +104,7 @@ resolverParent
        , children1 :: { ids :: Array Int } -> (Array ResolverChild1)
        }
 resolverParent =
-  ( GqlObj
+  ( TestGqlObj
       { double: \({ a }) -> a * 2
       , shout: \({ str }) -> toUpper str
       , async: \({ str }) -> pure $ toUpper str
@@ -112,7 +117,7 @@ resolverParent =
       }
   )
 
-type ResolverChild1 = GqlObj "ResolverChild1"
+type ResolverChild1 = TestGqlObj 
   { id :: Int
   , n :: GqlFiber Number
   , name :: String
@@ -123,7 +128,7 @@ resolverChild1 = mkChild 1
 
 mkChild :: Int -> ResolverChild1
 mkChild = \id ->
-  GqlObj
+  TestGqlObj
     { id
     , n: pure $ toNumber id
     , name: "child " <> show id
@@ -135,8 +140,8 @@ leaf = ResultLeaf <<< encodeJson
 aff :: forall a. a -> GqlFiber a
 aff = pure
 
-resolveTypedFiber :: forall a. ToResolver a GqlFiber => a -> String -> GqlFiber (Either GqlError Result)
-resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) query
+resolveTypedFiber :: forall a. ToResolver MaxDepth a GqlFiber => a -> String -> GqlFiber (Either GqlError Result)
+resolveTypedFiber resolver query = resolveQueryString (toResolver maxDepth resolver) query
 
-resolveTyped :: forall a. ToResolver a GqlFiber => a -> String -> Aff (Either GqlError Result)
+resolveTyped :: forall a. ToResolver MaxDepth a GqlFiber => a -> String -> Aff (Either GqlError Result)
 resolveTyped resolver query = toAff $ resolveTypedFiber resolver query

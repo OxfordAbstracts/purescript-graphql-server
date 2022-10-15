@@ -28,6 +28,7 @@ data ResolverError
   | NoFields
   | FieldNotFound
   | OtherFailure
+  | MaximumDepthExceeded
   | ResolverDecodeError JsonDecodeError
 
 derive instance Eq ResolverError

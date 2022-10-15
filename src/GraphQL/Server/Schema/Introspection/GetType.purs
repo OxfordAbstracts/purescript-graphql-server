@@ -6,8 +6,9 @@ import Data.Generic.Rep (class Generic, Argument, Constructor, from)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import Data.Typelevel.Num (class Nat, class Succ, D0, D32, toInt')
+import Data.Typelevel.Num (class Nat, class Succ, D0, toInt')
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
+import GraphQL.Server.MaxDepth (MaxDepth, maxDepth)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
@@ -20,10 +21,8 @@ class Nat n <= GetIType n a where
   getITypeImpl :: Proxy a -> Proxy n -> IType
   gqlNullable :: Proxy a -> Proxy n -> Boolean
 
-type DepthLimit = D32
-
-getIType :: forall a. GetIType DepthLimit a => Proxy a -> IType
-getIType a = getITypeWithNullable a (Proxy :: Proxy DepthLimit)
+getIType :: forall a. GetIType MaxDepth a => Proxy a -> IType
+getIType a = getITypeWithNullable a (Proxy :: Proxy MaxDepth)
 
 nodeITypes :: forall a n. GetIType n a => Proxy a -> Proxy n -> List IType
 nodeITypes a n = pure $ getITypeWithNullable a n
@@ -116,7 +115,7 @@ instance
           { name = Just "Depth limit exceeded"
           , description = Just $
               "You have exceeded the maximum introspection depth of "
-                <> show (toInt' (Proxy :: Proxy DepthLimit))
+                <> show (toInt' maxDepth)
           }
       }
 else instance

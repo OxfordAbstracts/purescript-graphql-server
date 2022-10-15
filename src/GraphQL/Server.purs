@@ -12,13 +12,13 @@ import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.GqlResM (toResponse)
 import GraphQL.Server.HandleRequest (handleRequest)
 import HTTPure (ServerM, serve)
-import Type.Proxy (Proxy)
+import Type.Proxy (Proxy(..))
 
 -- | Boot up the server
 start
-  :: forall query m f
+  :: forall query m f n
    . Gqlable f m
-  => ToResolver (GqlRoot query Unit) f
+  => ToResolver n (GqlRoot query Unit) f
   => { root :: GqlRoot query Unit
      , runsOn :: Proxy (f Unit)
      }
@@ -26,7 +26,7 @@ start
 start { root } = serve port (handleRequest resolvers >>> toResponse) onStart
   where
   resolvers :: Resolver f
-  resolvers = toResolver root
+  resolvers = toResolver (Proxy :: Proxy n) root
 
   port = 9000
   onStart = do

@@ -8,7 +8,8 @@ import Data.List (List(..), find, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Effect.Exception (Error)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, DepthLimit, getIType)
+import GraphQL.Server.MaxDepth (MaxDepth)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getIType)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIField, defaultIType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
@@ -94,7 +95,7 @@ notNull fn = defaultIType
 shouldBeGqlType
   :: forall m a
    . MonadThrow Error m
-  => GetIType DepthLimit a
+  => GetIType MaxDepth a
   => Proxy a
   -> IType_T
   -> m Unit

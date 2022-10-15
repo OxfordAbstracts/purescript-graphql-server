@@ -16,8 +16,9 @@ import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
+import GraphQL.Server.MaxDepth (maxDepth)
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -150,7 +151,7 @@ mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
 booksResolver :: Resolver (GqlIo EffFiber)
 booksResolver =
-  toResolver $ gqlObj
+  toResolver maxDepth $ gqlObj
     { books
     }
   where

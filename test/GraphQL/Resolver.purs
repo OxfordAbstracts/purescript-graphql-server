@@ -6,7 +6,7 @@ import Data.Filterable (filter)
 import Data.Generic.Rep (class Generic)
 import Effect.Aff (Aff)
 import GraphQL.Resolver.GqlIo (GqlIo(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver)
 import Test.Spec (Spec, describe, it)
 
 spec :: Spec Unit
