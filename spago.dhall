@@ -44,13 +44,16 @@ to generate this file without the comments in this block.
   , "partial"
   , "prelude"
   , "record"
+  , "safe-coerce"
   , "spec"
   , "spec-discovery"
   , "strings"
   , "transformers"
   , "tuples"
+  , "typelevel"
   , "typelevel-prelude"
   , "unsafe-coerce"
+  , "variant"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

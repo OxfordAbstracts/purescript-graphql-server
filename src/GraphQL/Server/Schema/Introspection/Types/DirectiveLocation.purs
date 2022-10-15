@@ -5,7 +5,8 @@ import Prelude
 import Data.Argonaut (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
-import GraphQL.Resolver.ToResolver (class ToResolver, resolveNode)
+import Data.Show.Generic (genericShow)
+import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, resolveNode)
 
 data IDirectiveLocation
   = QUERY
@@ -34,4 +35,9 @@ instance EncodeJson IDirectiveLocation where
 
 instance Applicative m => ToResolver IDirectiveLocation m where
   toResolver = resolveNode
+
+instance Show IDirectiveLocation where 
+  show a = genericShow a
+
+derive instance Eq IDirectiveLocation
 

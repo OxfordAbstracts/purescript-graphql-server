@@ -3,14 +3,12 @@ module GraphQL.Server.Schema.Introspection.Types where
 import Prelude
 
 import Data.Argonaut (class EncodeJson, encodeJson)
-import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Enum (class Enum)
 import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Generic.Rep (class Generic)
-import Data.List (List)
-import Data.Maybe (Maybe)
+import Data.List (List(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Show.Generic (genericShow)
-import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, resolveNode)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
@@ -27,7 +25,9 @@ derive instance Generic ISchema _
 instance Applicative m => ToResolver ISchema m where
   toResolver a = genericResolver a
 
-newtype IType = IType
+newtype IType = IType IType_T
+
+type IType_T =
   { kind :: ITypeKind
   , name :: Maybe String
   , description :: Maybe String
@@ -37,6 +37,19 @@ newtype IType = IType
   , enumValues :: { includeDeprecated :: Maybe Boolean } -> Maybe (List IEnumValue)
   , inputFields :: Maybe (List IInputValue)
   , ofType :: Maybe IType
+  }
+
+defaultIType :: IType_T
+defaultIType =
+  { kind: SCALAR
+  , name: Nothing
+  , description: Nothing
+  , fields: const Nothing
+  , interfaces: Nothing
+  , possibleTypes: Nothing
+  , enumValues: const Nothing
+  , inputFields: Nothing
+  , ofType: Nothing
   }
 
 derive instance Generic IType _
@@ -73,13 +86,25 @@ instance Enum ITypeKind where
 instance Applicative m => ToResolver ITypeKind m where
   toResolver = resolveNode
 
-newtype IField = IField
+newtype IField = IField IField_T
+
+type IField_T =
   { name :: String
   , description :: Maybe String
   , args :: List IInputValue
   , type :: IType
   , isDeprecated :: Boolean
   , deprecationReason :: Maybe String
+  }
+
+defaultIField :: IField_T
+defaultIField =
+  { name: ""
+  , description: Nothing
+  , args: Nil
+  , type: IType defaultIType
+  , isDeprecated: false
+  , deprecationReason: Nothing
   }
 
 derive instance Generic IField _
@@ -106,6 +131,9 @@ newtype IEnumValue = IEnumValue
   }
 
 derive instance Generic IEnumValue _
+
+instance Show IEnumValue where
+  show = genericShow
 
 instance Applicative m => ToResolver IEnumValue m where
   toResolver a = genericResolver a
