@@ -23,7 +23,6 @@ makeIntrospectionResolver schema@(ISchema { types }) = toResolver maxIntrospecti
 
   typeMap = Map.fromFoldable $ types <#> \iType@(IType { name }) -> Tuple name iType
 
-
 -- test1 :: forall n m. Applicative m => ISchema -> Resolver m
 -- test1 schema@(ISchema { types }) = toResolver maxDepth introspection
 

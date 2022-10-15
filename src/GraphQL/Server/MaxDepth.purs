@@ -3,7 +3,6 @@ module GraphQL.Server.MaxDepth where
 import Data.Typelevel.Num (D16, D4, D5, D6)
 import Type.Proxy (Proxy(..))
 
-
 -- The max depth of a query.
 type MaxDepth = D16
 

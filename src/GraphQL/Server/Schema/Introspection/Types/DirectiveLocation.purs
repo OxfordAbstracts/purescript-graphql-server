@@ -6,6 +6,7 @@ import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+
 -- import GraphQL.Resolver.ToResolver (class ToResolver, resolveNode)
 
 data IDirectiveLocation
@@ -29,7 +30,6 @@ data IDirectiveLocation
   | INPUT_FIELD_DEFINITION
 
 derive instance Generic IDirectiveLocation _
-
 
 instance Show IDirectiveLocation where
   show a = genericShow a

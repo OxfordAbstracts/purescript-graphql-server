@@ -78,7 +78,6 @@ instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
 
-
 newtype IField = IField IField_T
 
 type IField_T =

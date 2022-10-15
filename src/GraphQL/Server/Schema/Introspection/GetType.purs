@@ -68,8 +68,8 @@ else instance (Nat n, GetIType n a) => GetIType n (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
   gqlNullable _ _ = true
 
-else instance (Nat n) =>  GetIType n IType where 
-  getITypeImpl a n =     
+else instance (Nat n) => GetIType n IType where
+  getITypeImpl a n =
     IType defaultIType
       { name = Just "Type"
       , kind = IT.OBJECT

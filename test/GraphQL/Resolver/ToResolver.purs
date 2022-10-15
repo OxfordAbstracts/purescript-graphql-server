@@ -117,7 +117,7 @@ resolverParent =
       }
   )
 
-type ResolverChild1 = TestGqlObj 
+type ResolverChild1 = TestGqlObj
   { id :: Int
   , n :: GqlFiber Number
   , name :: String

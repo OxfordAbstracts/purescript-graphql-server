@@ -196,6 +196,5 @@ newtype Author m = Author
 
 derive instance Generic (Author m) _
 
-
 io :: forall a. a -> GqlFiber a
 io = GqlIo <<< pure
