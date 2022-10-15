@@ -9,8 +9,10 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Typelevel.Num (class Nat, class Succ, D0, toInt')
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Server.MaxDepth (MaxDepth, maxDepth)
-import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), IType_T, defaultIType)
+import GraphQL.Server.Schema.Introspection.GetEnumValues (enumType)
+import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), ITypeKind, IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
+import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Safe.Coerce (coerce)
 import Type.Proxy (Proxy(..))
@@ -66,23 +68,37 @@ else instance (Nat n, GetIType n a) => GetIType n (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
   gqlNullable _ _ = true
 
-else instance (Nat n, Generic a rep, GenericGetIType n rep) => GetIType n a where
-  getITypeImpl a = genericGetITypeImpl $ map from a
-  gqlNullable a = genericGqlNullable $ map from a
+else instance (Nat n) =>  GetIType n IType where 
+  getITypeImpl a n =     
+    IType defaultIType
+      { name = Just "Type"
+      , kind = IT.OBJECT
+      , fields = \_ -> Nothing -- Just $ getIFields (Proxy :: Proxy { | r }) (Proxy :: Proxy n)
+      }
 
-class GenericGetIType :: forall k. Type -> k -> Constraint
-class Nat n <= GenericGetIType n a where
-  genericGetITypeImpl :: Proxy a -> Proxy n -> IType
-  genericGqlNullable :: Proxy a -> Proxy n -> Boolean
+  gqlNullable _ _ = false
 
-instance (IsSymbol name, Nat n, GetIFields n { | r }) => GenericGetIType n (Constructor name (Argument { | r })) where
-  genericGetITypeImpl _ _ =
+else instance (Nat n, Generic a rep, CustomGetIType n rep) => GetIType n a where
+  getITypeImpl a = customGetIType $ map from a
+  gqlNullable _ _ = false
+
+class CustomGetIType :: forall k. Type -> k -> Constraint
+class Nat n <= CustomGetIType n a where
+  customGetIType :: Proxy a -> Proxy n -> IType
+
+instance (IsSymbol name, Nat n, GetIFields n { | r }) => CustomGetIType n (Constructor name (Argument { | r })) where
+  customGetIType _ _ =
     IType defaultIType
       { name = Just $ reflectSymbol (Proxy :: Proxy name)
       , kind = IT.OBJECT
       , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r }) (Proxy :: Proxy n)
       }
-  genericGqlNullable _ _ = false
+
+instance Nat n => CustomGetIType n ITypeKind where
+  customGetIType kind _n = enumType "Kind" $ map from kind
+
+instance Nat n => CustomGetIType n IDirectiveLocation where
+  customGetIType kind _n = enumType "DirectiveLocation" $ map from kind
 
 class GetIFields :: forall k. Type -> k -> Constraint
 class Nat n <= GetIFields n a where

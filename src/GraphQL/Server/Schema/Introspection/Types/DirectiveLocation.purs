@@ -2,11 +2,11 @@ module GraphQL.Server.Schema.Introspection.Types.DirectiveLocation where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson)
+import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import GraphQL.Resolver.ToResolver (class ToResolver, resolveNode)
+-- import GraphQL.Resolver.ToResolver (class ToResolver, resolveNode)
 
 data IDirectiveLocation
   = QUERY
@@ -30,11 +30,12 @@ data IDirectiveLocation
 
 derive instance Generic IDirectiveLocation _
 
-instance EncodeJson IDirectiveLocation where
-  encodeJson = genericEncodeJson
 
 instance Show IDirectiveLocation where
   show a = genericShow a
+
+instance EncodeJson IDirectiveLocation where
+  encodeJson = show >>> encodeJson
 
 derive instance Eq IDirectiveLocation
 

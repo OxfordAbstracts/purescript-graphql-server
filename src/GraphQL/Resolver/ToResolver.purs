@@ -1,8 +1,8 @@
 module GraphQL.Resolver.ToResolver
   ( class ToResolver
   , class GetArgResolver
-  , class ToResolverGeneric
-  , toResolverGeneric
+  , class ToResolverCustom
+  , toResolverCustom
   , ToResolverProps(..)
   , FieldMap(..)
   , getArgResolver
@@ -22,25 +22,26 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import Data.Typelevel.Num (class Nat, class Succ, D0)
+import Data.Typelevel.Num (class IsZero, class Nat, class Pos, class Succ, D0)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Resolver.Root (GqlRoot(..))
 import GraphQL.Server.GqlError (ResolverError(..))
+import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IType(..), ITypeKind, IType_T)
+import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy(..))
 
 class Nat n <= ToResolver n a m where
   toResolver :: Proxy n -> a -> JsonResolver.Resolver m
 
--- resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
 resolveNode :: forall x m a. Applicative m => EncodeJson a => x -> a -> Resolver m
 resolveNode _n a = Node $ pure $ encodeJson a
 
 -- resolveAsync :: forall f a. Functor f => ToResolver a f => f a -> Resolver f
 resolveAsync :: forall m n a. Functor m => ToResolver n a m => Proxy n -> m a -> Resolver m
-resolveAsync n a = ResolveAsync $ map (toResolver n) a
+resolveAsync n a = ResolveAsync $ toResolver n <$> a
 
 instance (ToResolver n a (GqlIo m), Applicative m) => ToResolver n (GqlIo m a) (GqlIo m) where
   toResolver a = resolveAsync a
@@ -66,11 +67,17 @@ else instance (Applicative m, Nat n) => ToResolver n Unit m where
 else instance (Applicative m, Nat n) => ToResolver n Void m where
   toResolver a = resolveNode a
 
+else instance (Applicative m, Nat n) => ToResolver n IDirectiveLocation m where
+  toResolver a = resolveNode a
+
+else instance (Applicative m, Nat n) => ToResolver n ITypeKind m where
+  toResolver a = resolveNode a
+
 else instance (Applicative m, ToResolver n a m) => ToResolver n (List a) m where
-  toResolver n a = ListResolver $ map (toResolver n) a
+  toResolver n a = ListResolver $ toResolver n <$> a
 
 else instance (Applicative m, ToResolver n a m) => ToResolver n (Maybe a) m where
-  toResolver n a = NullableResolver $ map (toResolver n) a
+  toResolver n a = NullableResolver $ toResolver n <$> a
 
 else instance (Applicative m, ToResolver n a m) => ToResolver n (Array a) m where
   toResolver n a = ListResolver $ map (toResolver n) $ List.fromFoldable a
@@ -78,7 +85,8 @@ else instance (Applicative m, ToResolver n a m) => ToResolver n (Array a) m wher
 else instance ToResolver n a m => ToResolver n (Unit -> a) m where
   toResolver n a = toResolver n $ a unit
 
-else instance Applicative m =>
+else instance
+  Applicative m =>
   ToResolver D0 a m where
   toResolver _ _ = FailedResolver MaximumDepthExceeded
 
@@ -92,18 +100,18 @@ else instance
   ToResolver n (GqlRoot q mut) m where
   toResolver _n (GqlRoot root) = Fields
     { fields: makeFields (Proxy :: Proxy pred) (reflectSymbol (Proxy :: Proxy "root")) root
-    , typename: reflectSymbol (Proxy :: Proxy "root")
+    , typename: "root"
     }
 
 else instance
   ( Generic r rep
-  , ToResolverGeneric n rep m
+  , ToResolverCustom n rep m
   ) =>
   ToResolver n r m where
-  toResolver n a = toResolverGeneric n $ from a
+  toResolver n a = toResolverCustom n $ from a
 
-class Nat n <= ToResolverGeneric n a m where
-  toResolverGeneric :: Proxy n -> a -> JsonResolver.Resolver m
+class Nat n <= ToResolverCustom n a m where
+  toResolverCustom :: Proxy n -> a -> JsonResolver.Resolver m
 
 instance
   ( Applicative m
@@ -112,8 +120,8 @@ instance
   , IsSymbol name
   , HFoldlWithIndex (ToResolverProps pred m) (FieldMap m) { | arg } (FieldMap m)
   ) =>
-  ToResolverGeneric nat (Constructor name (Argument { | arg })) m where
-  toResolverGeneric _n (Constructor (Argument arg)) =
+  ToResolverCustom nat (Constructor name (Argument { | arg })) m where
+  toResolverCustom _n (Constructor (Argument arg)) =
     Fields
       { fields: makeFields (Proxy :: Proxy pred) (reflectSymbol (Proxy :: Proxy name)) arg
       , typename: reflectSymbol (Proxy :: Proxy name)

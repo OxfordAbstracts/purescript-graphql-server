@@ -10,7 +10,6 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import GraphQL.Resolver.ToResolver (class ToResolver, resolveNode)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
@@ -78,6 +77,7 @@ instance EncodeJson ITypeKind where
 instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
+
 
 newtype IField = IField IField_T
 
