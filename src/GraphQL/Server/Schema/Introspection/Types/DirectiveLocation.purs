@@ -33,9 +33,6 @@ derive instance Generic IDirectiveLocation _
 instance EncodeJson IDirectiveLocation where
   encodeJson = genericEncodeJson
 
-instance Applicative m => ToResolver IDirectiveLocation m where
-  toResolver = resolveNode
-
 instance Show IDirectiveLocation where
   show a = genericShow a
 

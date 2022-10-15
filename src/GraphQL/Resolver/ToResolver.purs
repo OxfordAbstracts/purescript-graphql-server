@@ -1,6 +1,8 @@
 module GraphQL.Resolver.ToResolver
   ( class ToResolver
   , class GetArgResolver
+  , class ToResolverGeneric
+  , toResolverGeneric
   , ToResolverProps(..)
   , FieldMap(..)
   , WithTypeName(..)
@@ -22,7 +24,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.Resolver.GqlIo (GqlIo(..))
+import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Resolver.Resolver.GqlObject (GqlObj(..))
@@ -34,16 +36,6 @@ import Unsafe.Coerce (unsafeCoerce)
 
 class ToResolver a m where
   toResolver :: a -> JsonResolver.Resolver m
-
-genericResolver
-  :: forall r name m a
-   . Generic r (Constructor name (Argument a))
-  => ToResolver (WithTypeName name a) m
-  => r
-  -> Resolver m
-genericResolver a = toResolver $ (WithTypeName arg :: WithTypeName name a)
-  where
-  (Constructor (Argument arg)) = from a
 
 resolveNode :: forall f a. Applicative f => EncodeJson a => a -> Resolver f
 resolveNode a = Node $ pure $ encodeJson a
@@ -89,7 +81,7 @@ else instance ToResolver a m => ToResolver (Unit -> a) m where
 
 else instance
   ( Applicative m
-  , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
+  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | r } (FieldMap m)
   , IsSymbol name
   ) =>
   ToResolver (GqlObj name { | r }) m where
@@ -97,16 +89,15 @@ else instance
 
 else instance
   ( Applicative m
-  , HFoldlWithIndex ToResolverProps (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
+  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
   , IsSymbol "root"
   ) =>
   ToResolver (GqlRoot q mut) m where
   toResolver (GqlRoot root) = toResolver (WithTypeName root :: WithTypeName "root" _)
 
-
 else instance
   ( Applicative m
-  , HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
+  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | r } (FieldMap m)
   , IsSymbol name
   ) =>
   ToResolver (WithTypeName name { | r }) m where
@@ -115,6 +106,29 @@ else instance
     , typename: reflectSymbol (Proxy :: Proxy name)
     }
 
+else instance
+  ( Generic r rep
+  , ToResolverGeneric rep m
+  ) =>
+  ToResolver r m where
+  toResolver a = toResolverGeneric $ from a
+
+class ToResolverGeneric a m where
+  toResolverGeneric :: a -> JsonResolver.Resolver m
+
+instance
+  ( Applicative m
+  -- , IsSymbol name
+  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
+  ) =>
+  ToResolverGeneric (Constructor name (Argument { | arg })) m where
+  toResolverGeneric (Constructor (Argument arg)) = unsafeCoerce unit
+
+-- Fields
+--   { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
+--   , typename: reflectSymbol (Proxy :: Proxy name)
+--   }
+
 newtype WithTypeName :: Symbol -> Type -> Type
 newtype WithTypeName sym a = WithTypeName a
 
@@ -122,13 +136,13 @@ derive instance Newtype (WithTypeName sym a) _
 
 makeFields
   :: forall r m
-   . HFoldlWithIndex ToResolverProps (FieldMap m) { | r } (FieldMap m)
+   . HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | r } (FieldMap m)
   => Applicative m
   => String
   -> { | r }
   -> Map String (Field m)
 makeFields typename r =
-  unwrap $ hfoldlWithIndex ToResolverProps resolveTypename r
+  unwrap $ ((hfoldlWithIndex (ToResolverProps :: ToResolverProps m) resolveTypename r) :: FieldMap m)
   where
   resolveTypename :: FieldMap m
   resolveTypename = FieldMap $ Map.singleton "__typename"
@@ -136,7 +150,8 @@ makeFields typename r =
     , resolver: \_ -> resolveNode typename
     }
 
-data ToResolverProps = ToResolverProps
+data ToResolverProps :: forall k. k -> Type
+data ToResolverProps m = ToResolverProps
 
 newtype FieldMap m = FieldMap (Map String (Field m))
 
@@ -146,7 +161,7 @@ instance
   ( IsSymbol sym
   , GetArgResolver a m
   ) =>
-  FoldingWithIndex ToResolverProps (Proxy sym) (FieldMap m) a (FieldMap m) where
+  FoldingWithIndex (ToResolverProps m) (Proxy sym) (FieldMap m) a (FieldMap m) where
   foldingWithIndex ToResolverProps prop (FieldMap fieldMap) a =
     FieldMap $ Map.insert name field fieldMap
     where
@@ -174,3 +189,13 @@ else instance argResolverAllFn :: (DecodeJson a, ToResolver b m) => GetArgResolv
 
 else instance argResolverAny :: ToResolver a m => GetArgResolver a m where
   getArgResolver a = \_ -> toResolver a
+
+genericResolver
+  :: forall r name m a
+   . Generic r (Constructor name (Argument a))
+  => ToResolver (WithTypeName name a) m
+  => r
+  -> Resolver m
+genericResolver a = toResolver $ (WithTypeName arg :: WithTypeName name a)
+  where
+  (Constructor (Argument arg)) = from a

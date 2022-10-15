@@ -27,6 +27,3 @@ newtype Introspection = Introspection
   }
 
 derive instance Generic Introspection _
-
-instance Applicative m => ToResolver Introspection m where
-  toResolver a = genericResolver a

@@ -23,9 +23,6 @@ newtype ISchema = ISchema
 
 derive instance Generic ISchema _
 
-instance Applicative m => ToResolver ISchema m where
-  toResolver a = genericResolver a
-
 newtype IType = IType IType_T
 
 type IType_T =
@@ -56,9 +53,6 @@ defaultIType =
 derive instance Generic IType _
 derive instance Newtype IType _
 
-instance Applicative m => ToResolver IType m where
-  toResolver a = genericResolver a
-
 data ITypeKind
   = SCALAR
   | OBJECT
@@ -85,9 +79,6 @@ instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
 
-instance Applicative m => ToResolver ITypeKind m where
-  toResolver = resolveNode
-
 newtype IField = IField IField_T
 
 type IField_T =
@@ -112,9 +103,6 @@ defaultIField =
 derive instance Generic IField _
 derive instance Newtype IField _
 
-instance Applicative m => ToResolver IField m where
-  toResolver a = genericResolver a
-
 newtype IInputValue = IInputValue
   { name :: String
   , description :: Maybe String
@@ -125,9 +113,6 @@ newtype IInputValue = IInputValue
 derive instance Generic IInputValue _
 
 derive instance Newtype IInputValue _
-
-instance Applicative m => ToResolver IInputValue m where
-  toResolver a = genericResolver a
 
 newtype IEnumValue = IEnumValue
   { name :: String
@@ -141,9 +126,6 @@ derive instance Generic IEnumValue _
 instance Show IEnumValue where
   show = genericShow
 
-instance Applicative m => ToResolver IEnumValue m where
-  toResolver a = genericResolver a
-
 newtype IDirective = IDirective
   { name :: String
   , description :: Maybe String
@@ -152,6 +134,3 @@ newtype IDirective = IDirective
   }
 
 derive instance Generic IDirective _
-
-instance Applicative m => ToResolver IDirective m where
-  toResolver a = genericResolver a

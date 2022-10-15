@@ -52,9 +52,6 @@ newtype SimpleQuery = SimpleQuery { books :: GqlIo Aff (Array Book) }
 
 derive instance Generic SimpleQuery _
 
-instance ToResolver SimpleQuery (GqlIo Aff) where
-  toResolver a = genericResolver a
-
 newtype Book = Book
   { name :: String
   , price :: Number
@@ -63,18 +60,12 @@ newtype Book = Book
 
 derive instance Generic Book _
 
-instance ToResolver Book (GqlIo Aff) where
-  toResolver a = genericResolver a
-
 newtype Author = Author
   { name :: String
   , books :: { maxPrice :: Number } -> GqlIo Aff (Array Book)
   }
 
 derive instance Generic Author _
-
-instance ToResolver Author (GqlIo Aff) where
-  toResolver a = genericResolver a
 
 io :: forall a. a -> GqlIo Aff a
 io = GqlIo <<< (pure :: _ -> Aff _)
