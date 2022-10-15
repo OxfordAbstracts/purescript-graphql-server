@@ -20,8 +20,11 @@ class Nat n <= GetIType n a where
   getITypeImpl :: Proxy a -> Proxy n -> IType
   gqlNullable :: Proxy a -> Proxy n -> Boolean
 
-getIType :: forall a. GetIType D32 a => Proxy a -> IType
-getIType a = getITypeWithNullable a (Proxy :: Proxy D32)
+
+type DepthLimit = D32
+
+getIType :: forall a. GetIType DepthLimit a => Proxy a -> IType
+getIType a = getITypeWithNullable a (Proxy :: Proxy DepthLimit)
 
 nodeITypes :: forall a n. GetIType n a => Proxy a -> Proxy n -> List IType
 nodeITypes a n = pure $ getITypeWithNullable a n
@@ -146,10 +149,3 @@ scalar name _ = IType defaultIType { name = Just name }
 
 unnamed :: IT.ITypeKind -> IType
 unnamed kind = IType defaultIType { kind = kind }
-
-genericGetRecordITypes
-  :: forall a name r
-   . Generic a (Constructor name (Argument { | r }))
-  => Proxy a
-  -> List IType
-genericGetRecordITypes proxy = Nil

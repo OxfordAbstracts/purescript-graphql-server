@@ -1,31 +1,55 @@
 module GraphQL.Server.Schema.Introspection.GetTypes where
 
-import Data.List (List)
-import GraphQL.Server.Schema.Introspection.Types (IType(..))
+import Prelude
 
--- import Prelude
+import Data.Foldable (length)
+import Data.List (List, any, foldl, (:))
+import Data.List.NonEmpty as NonEmpty
+import Data.List.Types (NonEmptyList)
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Maybe (Maybe(..))
+import Data.Typelevel.Num (toInt')
+import GraphQL.Server.Schema.Introspection.GetType (DepthLimit)
+import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..))
+import Type.Proxy (Proxy(..))
 
--- import Data.Generic.Rep (class Generic, Argument(..), Constructor, from)
--- import Data.List (List(..))
--- import Data.Maybe (Maybe(..))
--- import GraphQL.Resolver.Root (GqlRoot(..))
--- import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getIType)
--- import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..), IType_T, defaultIType)
--- import GraphQL.Server.Schema.Introspection.Types as IT
--- import Safe.Coerce (coerce)
--- import Type.Proxy (Proxy(..))
--- import Unsafe.Coerce (unsafeCoerce)
+-- hasDuplicateTypes :: IType -> Boolean
+-- hasDuplicateTypes = getDescendantITypes >>> any (\ts -> length ts > 1)
 
--- class GetITypes a where
---   getITypes :: Proxy a -> List IType
+-- unlistTypes :: TypeLists -> Map String IType
+-- unlistTypes = map NonEmpty.head
 
--- instance GetIType a => GetITypes a where
---   getITypes = pure <<< getIType
+getDescendantITypes :: IType -> TypeLists
+getDescendantITypes = go depthLimit mempty
+  where
+  depthLimit = toInt' (Proxy :: Proxy DepthLimit)
 
--- genericGetITypes :: forall a name r. 
---   Generic a (Constructor name (Argument {|r})) => 
---   Proxy a -> 
---   List IType
--- genericGetITypes proxy = Nil
+  go :: Int -> TypeLists -> IType -> TypeLists
+  go 0 result _ = result
+  go n result (IType t) =
+    result
+      # insertSelf
+      # insertOfType
+      # getFieldsITypes
 
--- getITypes :: IType -> List ITypes
+    where
+    insertSelf = (:) (IType t)
+    insertOfType r = case t.ofType of
+      Nothing -> r
+      Just ofType -> go n r ofType
+
+    getFieldsITypes r = case t.fields { includeDeprecated: Just true } of
+      Just fields -> foldl (getFieldITypes (n - 1)) r fields
+      _ -> r
+
+  getFieldITypes :: Int -> TypeLists -> IField -> TypeLists
+  getFieldITypes n result (IField f) =
+    go n result f.type
+      # \r -> foldl (getInputValueITypes n) r f.args
+
+  getInputValueITypes :: Int -> TypeLists -> IInputValue -> TypeLists
+  getInputValueITypes n result (IInputValue i) =
+    go n result i.type
+
+type TypeLists = List IType
