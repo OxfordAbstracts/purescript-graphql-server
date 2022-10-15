@@ -6,7 +6,7 @@ import Data.Generic.Rep (class Generic, Argument, Constructor, from)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import Data.Typelevel.Num (class Nat, class Succ, D0, D32)
+import Data.Typelevel.Num (class Nat, class Succ, D0, D32, toInt')
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
@@ -19,7 +19,6 @@ class GetIType :: forall k. Type -> k -> Constraint
 class Nat n <= GetIType n a where
   getITypeImpl :: Proxy a -> Proxy n -> IType
   gqlNullable :: Proxy a -> Proxy n -> Boolean
-
 
 type DepthLimit = D32
 
@@ -105,7 +104,7 @@ instance
   ( IsSymbol label
   ) =>
   FoldingWithIndex (GetIFieldsProps D0) (Proxy label) (List IField) (Proxy a) (List IField) where
-  foldingWithIndex (GetIFieldsProps) sym (defs) a = def : defs
+  foldingWithIndex (GetIFieldsProps) sym (defs) _ = def : defs
     where
     def = IField
       { args: Nil
@@ -113,7 +112,12 @@ instance
       , description: Nothing
       , isDeprecated: false
       , name: reflectSymbol sym
-      , type: IType defaultIType { name = Just "Depth limit exceeded" }
+      , type: IType defaultIType
+          { name = Just "Depth limit exceeded"
+          , description = Just $
+              "You have exceeded the maximum introspection depth of "
+                <> show (toInt' (Proxy :: Proxy DepthLimit))
+          }
       }
 else instance
   ( IsSymbol label
