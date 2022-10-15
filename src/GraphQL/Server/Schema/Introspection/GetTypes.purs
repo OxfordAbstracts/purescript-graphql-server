@@ -1,5 +1,8 @@
 module GraphQL.Server.Schema.Introspection.GetTypes where
 
+import Data.List (List)
+import GraphQL.Server.Schema.Introspection.Types (IType(..))
+
 -- import Prelude
 
 -- import Data.Generic.Rep (class Generic, Argument(..), Constructor, from)
@@ -13,7 +16,6 @@ module GraphQL.Server.Schema.Introspection.GetTypes where
 -- import Type.Proxy (Proxy(..))
 -- import Unsafe.Coerce (unsafeCoerce)
 
-
 -- class GetITypes a where
 --   getITypes :: Proxy a -> List IType
 
@@ -25,3 +27,5 @@ module GraphQL.Server.Schema.Introspection.GetTypes where
 --   Proxy a -> 
 --   List IType
 -- genericGetITypes proxy = Nil
+
+-- getITypes :: IType -> List ITypes

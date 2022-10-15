@@ -293,5 +293,3 @@ lookupType { namedTypes } (AST.NamedType name) =
   Map.lookup name namedTypes
     # note (pure $ NamedTypeNotDefined name)
 
-
- 

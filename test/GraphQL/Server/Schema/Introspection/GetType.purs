@@ -4,13 +4,15 @@ import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Generic.Rep (class Generic)
-import Data.List (List(..), (:))
+import Data.List (List(..), find, (:))
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (unwrap)
+import Data.Typelevel.Num (D8, D32, (*))
 import Effect.Exception (Error)
 import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getIType)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIField, defaultIType)
 import Test.Spec (Spec, describe, it)
-import Test.Spec.Assertions (shouldEqual)
+import Test.Spec.Assertions (fail, shouldEqual)
 import Type.Proxy (Proxy(..))
 
 spec :: Spec Unit
@@ -49,30 +51,38 @@ spec =
             }
 
       it "should return the gql type of a recursive record" do
-        -- let _ = getIType (Proxy :: Proxy (Maybe TRec1))
-        pure unit
-        
-      --   (Proxy :: Proxy (Maybe TRec1)) `shouldBeGqlType`
-      --     defaultIType
-      --       { kind = OBJECT
-      --       , name = Just "T1"
-      --       , fields = \_ -> Just $
-      --           IField defaultIField
-      --             { name = "query"
-      --             , type = IType $ defaultIType { name = Just "String" }
-      --             }
-      --             : Nil
-      --       }
+        let
+          testObjField expectedName t =
+            case find (unwrap >>> _.name >>> eq "query") =<< t.fields { includeDeprecated: Nothing } of
+              Just (IField f) -> do
+                f.name `shouldEqual` "query"
+                case f.type of
+                  IType t' -> do
+                    t'.kind `shouldEqual` OBJECT
+                    t'.name `shouldEqual` Just expectedName
+                    pure t'
+              Nothing -> do
+                fail "query field not found"
+                pure defaultIType
+
+          (IType t1) = getIType (Proxy :: Proxy (Maybe TRec1))
+
+        t1.kind `shouldEqual` OBJECT
+        t1.name `shouldEqual` Just "TRec1"
+
+        t2 <- testObjField "TRec2" t1
+
+        void $ testObjField "TRec1" t2
 
 data T1 = T1 { query :: Maybe String }
 
 derive instance Generic T1 _
 
-data TRec1 = TRec1 { query :: Maybe TRec2 }
+newtype TRec1 = TRec1 { query :: Maybe TRec2 }
 
 derive instance Generic TRec1 _
 
-data TRec2 = TRec2 { query :: Maybe TRec1 }
+newtype TRec2 = TRec2 { query :: Maybe TRec1 }
 
 derive instance Generic TRec2 _
 
@@ -85,13 +95,13 @@ notNull fn = defaultIType
 shouldBeGqlType
   :: forall m a
    . MonadThrow Error m
-  => GetIType a
+  => GetIType D32 a
   => Proxy a
   -> IType_T
   -> m Unit
 shouldBeGqlType proxy itype = do
-  eqOn_ \{name} -> {name}
-  eqOn_ \{kind} -> {kind}
+  eqOn_ \{ name } -> { name }
+  eqOn_ \{ kind } -> { kind }
   displayIType (getIType proxy) `shouldEqual` displayIType (IType itype)
   where
   (IType result) = getIType proxy

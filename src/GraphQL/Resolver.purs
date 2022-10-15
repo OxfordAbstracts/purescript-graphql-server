@@ -14,11 +14,8 @@ import GraphQL.Server.Schema.GetDocument (class GetDocument)
 import GraphQL.Server.Schema.Introspection (makeIntrospectionResolver)
 import GraphQL.Server.Schema.Introspection.Schema (introspectSchema)
 
-
-
 -- resolveRoot :: forall m. Applicative m => Resolver m -> String -> Either GqlError Json
 -- resolveRoot = 
-
 
 -- | Create a root resolver from a root record
 rootResolver

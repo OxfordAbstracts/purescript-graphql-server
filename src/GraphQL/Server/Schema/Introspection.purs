@@ -12,16 +12,16 @@ import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, toResolve
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..))
 
 makeIntrospectionResolver :: forall m. Applicative m => ISchema -> Resolver m
-makeIntrospectionResolver schema@(ISchema {types}) = toResolver introspection
-   where 
-   introspection = Introspection 
-     { __schema:  schema 
-     , __type: \{name}  -> lookup (Just name) typeMap
-     }
+makeIntrospectionResolver schema@(ISchema { types }) = toResolver introspection
+  where
+  introspection = Introspection
+    { __schema: schema
+    , __type: \{ name } -> lookup (Just name) typeMap
+    }
 
-   typeMap = Map.fromFoldable $ types <#> \iType@(IType {name})  -> Tuple name iType
+  typeMap = Map.fromFoldable $ types <#> \iType@(IType { name }) -> Tuple name iType
 
-newtype Introspection = Introspection 
+newtype Introspection = Introspection
   { __schema :: ISchema
   , __type :: { name :: String } -> Maybe IType
   }

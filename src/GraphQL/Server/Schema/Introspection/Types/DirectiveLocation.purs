@@ -36,7 +36,7 @@ instance EncodeJson IDirectiveLocation where
 instance Applicative m => ToResolver IDirectiveLocation m where
   toResolver = resolveNode
 
-instance Show IDirectiveLocation where 
+instance Show IDirectiveLocation where
   show a = genericShow a
 
 derive instance Eq IDirectiveLocation

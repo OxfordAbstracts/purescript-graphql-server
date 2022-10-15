@@ -1,6 +1,5 @@
 module GraphQL.Server.Schema.Introspection.TypeName where
 
-
 import Data.Argonaut (Json)
 import Data.List (List)
 import Data.List.Lazy as Lazy
@@ -24,13 +23,14 @@ instance
   , Append left "]!" result
   ) =>
   GqlTypeName (Array a) result
+
 instance
   ( GqlTypeName a name
   , Append "[" name left
   , Append left "]!" result
   ) =>
   GqlTypeName (List a) result
-  
+
 instance
   ( GqlTypeName a name
   , Append "[" name left

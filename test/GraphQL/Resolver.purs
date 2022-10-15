@@ -1,6 +1,5 @@
 module Test.GraphQL.Resolver where
 
-
 import Prelude
 
 import Data.Either (Either(..))
@@ -18,14 +17,12 @@ import Partial.Unsafe (unsafeCrashWith)
 import Test.Spec (Spec, describe, it)
 import Type.Proxy (Proxy(..))
 
-
 spec :: Spec Unit
 spec =
   describe "GraphQL.Resolver" do
     describe "rootResolver" do
       it "should resolve with a simple resolver" do
         pure unit
-
 
 -- simpleResolver :: Resolver (GqlIo Aff)
 -- simpleResolver =

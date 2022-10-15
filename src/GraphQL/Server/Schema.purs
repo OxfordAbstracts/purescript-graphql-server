@@ -12,7 +12,6 @@ import GraphQL.Server.Schema.GetDefinitions (class GetDefinitions, getDefinition
 import GraphQL.Server.Schema.Introspection.TypeName (class GqlTypeName)
 import Type.Proxy (Proxy(..))
 
-
 class PrintAst s <= GqlSchema a s | a -> s where
   gqlSchema :: a -> s
 

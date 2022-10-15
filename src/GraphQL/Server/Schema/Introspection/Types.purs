@@ -7,7 +7,8 @@ import Data.Enum (class Enum)
 import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import GraphQL.Resolver.ToResolver (class ToResolver, genericResolver, resolveNode)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
@@ -53,6 +54,7 @@ defaultIType =
   }
 
 derive instance Generic IType _
+derive instance Newtype IType _
 
 instance Applicative m => ToResolver IType m where
   toResolver a = genericResolver a
@@ -108,6 +110,8 @@ defaultIField =
   }
 
 derive instance Generic IField _
+derive instance Newtype IField _
+
 instance Applicative m => ToResolver IField m where
   toResolver a = genericResolver a
 
@@ -119,6 +123,8 @@ newtype IInputValue = IInputValue
   }
 
 derive instance Generic IInputValue _
+
+derive instance Newtype IInputValue _
 
 instance Applicative m => ToResolver IInputValue m where
   toResolver a = genericResolver a

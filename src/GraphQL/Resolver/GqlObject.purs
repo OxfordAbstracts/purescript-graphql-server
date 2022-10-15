@@ -7,4 +7,3 @@ newtype GqlObj name rec = GqlObj rec
 
 derive instance Newtype (GqlObj name a) _
 
-
