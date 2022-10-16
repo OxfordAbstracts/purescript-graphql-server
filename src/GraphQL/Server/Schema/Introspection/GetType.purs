@@ -22,10 +22,10 @@ class GqlNullable a <= GetIType a where
 getIType :: forall a. GetIType a => Proxy a -> IType
 getIType a = getITypeWithNullable a
 
-nodeITypes :: forall a n. GetIType a => Proxy a -> List IType
+nodeITypes :: forall a. GetIType a => Proxy a -> List IType
 nodeITypes a = pure $ getITypeWithNullable a
 
-getITypeWithNullable :: forall n a. GetIType a => Proxy a -> IType
+getITypeWithNullable :: forall a. GetIType a => Proxy a -> IType
 getITypeWithNullable a =
   if isNullable a then
     t
@@ -56,28 +56,7 @@ instance (GetIType a) => GetIType (List a) where
 
 instance (GetIType a) => GetIType (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
-
--- else instance (Generic a rep, CustomGetIType rep) => GetIType a where
---   getITypeImpl a = customGetIType $ map from a
---   
-
--- class CustomGetIType a where
---   customGetIType :: Proxy a -> IType
-
--- instance (IsSymbol name, GetIFields { | r }) => CustomGetIType (Constructor name (Argument { | r })) where
---   customGetIType _ =
---     IType defaultIType
---       { name = Just $ reflectSymbol (Proxy :: Proxy name)
---       , kind = IT.OBJECT
---       , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r }) 
---       }
-
--- instance CustomGetIType ITypeKind where
---   customGetIType kind = enumType "Kind" $ map from kind
-
--- instance CustomGetIType IDirectiveLocation where
---   customGetIType kind = enumType "DirectiveLocation" $ map from kind
-
+  
 genericGetIType
   :: forall name r a
    . Generic a (Constructor name (Argument { | r }))

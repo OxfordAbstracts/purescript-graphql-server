@@ -1,15 +1,15 @@
 module GraphQL.Resolver.ToResolver
-  ( class ToResolver
-  , class GetArgResolver
-  -- , class ToResolverCustom
-  -- , toResolverCustom
+  ( FieldMap(..)
   , ToResolverProps(..)
-  , FieldMap(..)
+  , class GetArgResolver
+  , class ToResolver
   , getArgResolver
-  , toResolver
-  , resolveNode
+  , makeFields
   , objectResolver
-  ) where
+  , resolveNode
+  , toResolver
+  )
+  where
 
 import Prelude
 
@@ -26,10 +26,7 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
-import GraphQL.Resolver.Root (GqlRoot(..))
 import GraphQL.Server.GqlError (ResolverError(..))
--- import GraphQL.Server.Schema.Introspection.Types (ITypeKind)
--- import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy(..))
 
@@ -66,12 +63,6 @@ instance (Applicative m) => ToResolver Unit m where
 instance (Applicative m) => ToResolver Void m where
   toResolver a = resolveNode a
 
--- instance (Applicative m) => ToResolver IDirectiveLocation m where
---   toResolver a = resolveNode a
-
--- instance (Applicative m) => ToResolver ITypeKind m where
---   toResolver a = resolveNode a
-
 instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ toResolver <$> a
 
@@ -84,21 +75,7 @@ instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
 instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
 
--- instance
---   Applicative m =>
---   ToResolver D0 a m where
---   toResolver _ _ = FailedResolver MaximumDepthExceeded
 
-instance
-  ( Applicative m
-  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
-  , IsSymbol "root"
-  ) =>
-  ToResolver (GqlRoot q mut) m where
-  toResolver (GqlRoot root) = Fields
-    { fields: makeFields (reflectSymbol (Proxy :: Proxy "root")) root
-    , typename: "root"
-    }
 
 objectResolver
   :: forall m a arg name
@@ -113,30 +90,6 @@ objectResolver = from >>> \(Constructor (Argument arg)) ->
     { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
     , typename: reflectSymbol (Proxy :: Proxy name)
     }
-
--- instance
---   ( Generic r rep
---   , ToResolverCustom rep m
---   ) =>
---   ToResolver r m where
---   toResolver a = toResolverCustom $ from a
-
--- class ToResolverCustom a m where
---   toResolverCustom :: a -> JsonResolver.Resolver m
-
--- instance
---   ( Applicative m
---   , Nat nat
---   , Succ pred nat
---   , IsSymbol name
---   , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
---   ) =>
---   ToResolverCustom (Constructor name (Argument { | arg })) m where
---   toResolverCustom (Constructor (Argument arg)) =
--- Fields
---   { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
---   , typename: reflectSymbol (Proxy :: Proxy name)
---   }
 
 makeFields
   :: forall r m
