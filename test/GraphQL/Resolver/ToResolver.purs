@@ -100,7 +100,6 @@ instance (Applicative m  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | 
 
 instance GetIFields { | a  } => GetIType (TestGqlObj {|a}) where
   getITypeImpl a = genericGetIType a
-  gqlNullable _ = false
 
 resolverParent
   :: TestGqlObj

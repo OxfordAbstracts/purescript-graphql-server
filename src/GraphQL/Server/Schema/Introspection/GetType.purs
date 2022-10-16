@@ -2,25 +2,22 @@ module GraphQL.Server.Schema.Introspection.GetType where
 
 import Prelude
 
-import Data.Generic.Rep (class Generic, Argument, Constructor, from)
+import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import Data.Typelevel.Num (class Nat, class Succ, D0, toInt')
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
-import GraphQL.Server.MaxDepth (MaxDepth, maxDepth)
-import GraphQL.Server.Schema.Introspection.GetEnumValues (enumType)
-import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), ITypeKind, IType_T, defaultIType)
+import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
+import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
-import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Safe.Coerce (coerce)
 import Type.Proxy (Proxy(..))
 
 -- class GetIType :: forall k.  k -> Constraint
-class GetIType a where
+class GetIType :: forall k. k -> Constraint
+class GqlNullable a <= GetIType a where
   getITypeImpl :: Proxy a -> IType
-  gqlNullable :: Proxy a -> Boolean
 
 getIType :: forall a. GetIType a => Proxy a -> IType
 getIType a = getITypeWithNullable a
@@ -30,7 +27,7 @@ nodeITypes a = pure $ getITypeWithNullable a
 
 getITypeWithNullable :: forall n a. GetIType a => Proxy a -> IType
 getITypeWithNullable a =
-  if gqlNullable a then
+  if isNullable a then
     t
   else
     unnamed IT.NON_NULL # modifyIType _ { ofType = Just t }
@@ -39,37 +36,30 @@ getITypeWithNullable a =
 
 instance GetIType Boolean where
   getITypeImpl = scalar "Boolean"
-  gqlNullable _ = false
 
 instance GetIType Int where
   getITypeImpl = scalar "Int"
-  gqlNullable _ = false
 
 instance GetIType Number where
   getITypeImpl = scalar "Float"
-  gqlNullable _ = false
 
 instance GetIType String where
   getITypeImpl = scalar "String"
-  gqlNullable _ = false
 
 instance (GetIType a) => GetIType (Array a) where
   getITypeImpl _ = unnamed IT.LIST # modifyIType _
     { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a)
     }
-  gqlNullable _ = false
 
 instance (GetIType a) => GetIType (List a) where
   getITypeImpl _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) }
-  gqlNullable _ = false
 
 instance (GetIType a) => GetIType (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
-  gqlNullable _ = true
 
 -- else instance (Generic a rep, CustomGetIType rep) => GetIType a where
 --   getITypeImpl a = customGetIType $ map from a
---   gqlNullable _ = false
+--   
 
 -- class CustomGetIType a where
 --   customGetIType :: Proxy a -> IType
@@ -102,6 +92,7 @@ genericGetIType _ =
     , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r })
     }
 
+class GetIFields :: forall k. k -> Constraint
 class GetIFields a where
   getIFields :: Proxy a -> List IField
 
