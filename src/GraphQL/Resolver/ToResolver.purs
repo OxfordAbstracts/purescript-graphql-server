@@ -103,7 +103,7 @@ instance
 objectResolver
   :: forall m a arg name
    . Applicative m
-  => Generic a (Constructor name (Argument {| arg}))
+  => Generic a (Constructor name (Argument { | arg }))
   => IsSymbol name
   => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
   => a

@@ -16,7 +16,7 @@ import Type.Proxy (Proxy(..))
 
 -- | Boot up the server
 start
-  :: forall query m f 
+  :: forall query m f
    . Gqlable f m
   => ToResolver (GqlRoot query Unit) f
   => { root :: GqlRoot query Unit

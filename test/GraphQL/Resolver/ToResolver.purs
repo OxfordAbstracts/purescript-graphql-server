@@ -95,10 +95,10 @@ newtype TestGqlObj a = TestGqlObj a
 
 derive instance Generic (TestGqlObj a) _
 
-instance (Applicative m  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m))=> ToResolver (TestGqlObj {| a}) m where
+instance (Applicative m, HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)) => ToResolver (TestGqlObj { | a }) m where
   toResolver a = objectResolver a
 
-instance GetIFields { | a  } => GetIType (TestGqlObj {|a}) where
+instance GetIFields { | a } => GetIType (TestGqlObj { | a }) where
   getITypeImpl a = genericGetIType a
 
 resolverParent
