@@ -16,9 +16,8 @@ import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, toResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
-import GraphQL.Server.MaxDepth (maxDepth)
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -151,7 +150,7 @@ mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
 booksResolver :: Resolver (GqlIo EffFiber)
 booksResolver =
-  toResolver maxDepth $ gqlObj
+  toResolver $ gqlObj
     { books
     }
   where
@@ -188,6 +187,9 @@ newtype Book m = Book
 
 derive instance Generic (Book m) _
 
+instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
+  toResolver a = objectResolver a
+
 newtype Author m = Author
   { name :: String
   , bio :: m String
@@ -195,6 +197,9 @@ newtype Author m = Author
   }
 
 derive instance Generic (Author m) _
+
+instance Applicative m => ToResolver (Author (GqlIo m)) (GqlIo m) where
+  toResolver a = objectResolver a
 
 io :: forall a. a -> GqlFiber a
 io = GqlIo <<< pure

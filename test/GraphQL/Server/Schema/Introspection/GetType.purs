@@ -8,8 +8,9 @@ import Data.List (List(..), find, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Effect.Exception (Error)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
 import GraphQL.Server.MaxDepth (MaxDepth)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getIType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType, getIType)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIField, defaultIType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
@@ -78,13 +79,34 @@ data T1 = T1 { query :: Maybe String }
 
 derive instance Generic T1 _
 
+instance Applicative m => ToResolver T1 m where
+  toResolver a = objectResolver a
+
+instance GetIType T1 where
+  getITypeImpl a = genericGetIType a
+  gqlNullable _ = false
+
 newtype TRec1 = TRec1 { query :: Maybe TRec2 }
 
 derive instance Generic TRec1 _
 
+instance Applicative m => ToResolver TRec1 m where
+  toResolver a = objectResolver a
+
+instance GetIType TRec1 where
+  getITypeImpl a = genericGetIType a
+  gqlNullable _ = false
+
 newtype TRec2 = TRec2 { query :: Maybe TRec1 }
 
 derive instance Generic TRec2 _
+
+instance Applicative m => ToResolver TRec2 m where
+  toResolver a = objectResolver a
+
+instance GetIType TRec2 where
+  getITypeImpl a = genericGetIType a
+  gqlNullable _ = false
 
 notNull :: (IType_T -> IType_T) -> IType_T
 notNull fn = defaultIType
@@ -95,7 +117,7 @@ notNull fn = defaultIType
 shouldBeGqlType
   :: forall m a
    . MonadThrow Error m
-  => GetIType MaxDepth a
+  => GetIType a
   => Proxy a
   -> IType_T
   -> m Unit

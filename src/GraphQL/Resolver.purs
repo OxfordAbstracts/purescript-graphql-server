@@ -12,9 +12,9 @@ import GraphQL.Resolver.ToResolver (class ToResolver)
 
 -- | Create a root resolver from a root record
 rootResolver
-  :: forall query mutation m n
+  :: forall query mutation m
    . Applicative m
-  => ToResolver n (GqlRoot query mutation) m
+  => ToResolver (GqlRoot query mutation) m
   -- => GetDocument (GqlRoot query mutation)
   => { query :: query, mutation :: mutation }
   -> Either String (Resolver m)

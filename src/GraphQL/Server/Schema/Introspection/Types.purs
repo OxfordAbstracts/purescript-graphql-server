@@ -10,6 +10,7 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveNode)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
@@ -21,6 +22,12 @@ newtype ISchema = ISchema
   }
 
 derive instance Generic ISchema _
+
+instance Applicative m => ToResolver ISchema m where 
+  toResolver = objectResolver
+
+
+
 
 newtype IType = IType IType_T
 
@@ -52,6 +59,9 @@ defaultIType =
 derive instance Generic IType _
 derive instance Newtype IType _
 
+instance Applicative m => ToResolver IType m where 
+  toResolver a = objectResolver a
+
 data ITypeKind
   = SCALAR
   | OBJECT
@@ -73,10 +83,13 @@ instance Show ITypeKind where
 
 instance EncodeJson ITypeKind where
   encodeJson = show >>> encodeJson
-
 instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
+
+
+instance (Applicative m) => ToResolver ITypeKind m where
+  toResolver a = resolveNode a
 
 newtype IField = IField IField_T
 
@@ -101,6 +114,8 @@ defaultIField =
 
 derive instance Generic IField _
 derive instance Newtype IField _
+instance (Applicative m) => ToResolver IField m where
+  toResolver a = objectResolver a
 
 newtype IInputValue = IInputValue
   { name :: String
@@ -113,6 +128,9 @@ derive instance Generic IInputValue _
 
 derive instance Newtype IInputValue _
 
+instance (Applicative m) => ToResolver IInputValue m where
+  toResolver a = objectResolver a
+
 newtype IEnumValue = IEnumValue
   { name :: String
   , description :: Maybe String
@@ -121,6 +139,9 @@ newtype IEnumValue = IEnumValue
   }
 
 derive instance Generic IEnumValue _
+
+instance Applicative m => ToResolver IEnumValue m where 
+  toResolver a = objectResolver a
 
 instance Show IEnumValue where
   show = genericShow
@@ -133,3 +154,6 @@ newtype IDirective = IDirective
   }
 
 derive instance Generic IDirective _
+
+instance Applicative m => ToResolver IDirective m where 
+  toResolver a = objectResolver a

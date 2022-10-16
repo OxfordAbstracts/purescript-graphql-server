@@ -16,9 +16,9 @@ import Type.Proxy (Proxy(..))
 
 -- | Boot up the server
 start
-  :: forall query m f n
+  :: forall query m f 
    . Gqlable f m
-  => ToResolver n (GqlRoot query Unit) f
+  => ToResolver (GqlRoot query Unit) f
   => { root :: GqlRoot query Unit
      , runsOn :: Proxy (f Unit)
      }
@@ -26,7 +26,7 @@ start
 start { root } = serve port (handleRequest resolvers >>> toResponse) onStart
   where
   resolvers :: Resolver f
-  resolvers = toResolver (Proxy :: Proxy n) root
+  resolvers = toResolver root
 
   port = 9000
   onStart = do

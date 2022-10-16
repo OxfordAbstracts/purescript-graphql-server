@@ -17,9 +17,11 @@ import GraphQL.Resolver.GqlIo (GqlFiber)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, objectResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError)
 import GraphQL.Server.MaxDepth (MaxDepth, maxDepth)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetIType, genericGetIType)
+import Heterogeneous.Folding (class HFoldlWithIndex)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -93,6 +95,13 @@ newtype TestGqlObj a = TestGqlObj a
 
 derive instance Generic (TestGqlObj a) _
 
+instance (Applicative m  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m))=> ToResolver (TestGqlObj {| a}) m where
+  toResolver a = objectResolver a
+
+instance GetIFields { | a  } => GetIType (TestGqlObj {|a}) where
+  getITypeImpl a = genericGetIType a
+  gqlNullable _ = false
+
 resolverParent
   :: TestGqlObj
        { async :: { str :: String } -> GqlFiber String
@@ -140,8 +149,8 @@ leaf = ResultLeaf <<< encodeJson
 aff :: forall a. a -> GqlFiber a
 aff = pure
 
-resolveTypedFiber :: forall a. ToResolver MaxDepth a GqlFiber => a -> String -> GqlFiber (Either GqlError Result)
-resolveTypedFiber resolver query = resolveQueryString (toResolver maxDepth resolver) query
+resolveTypedFiber :: forall a. ToResolver a GqlFiber => a -> String -> GqlFiber (Either GqlError Result)
+resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) query
 
-resolveTyped :: forall a. ToResolver MaxDepth a GqlFiber => a -> String -> Aff (Either GqlError Result)
+resolveTyped :: forall a. ToResolver a GqlFiber => a -> String -> Aff (Either GqlError Result)
 resolveTyped resolver query = toAff $ resolveTypedFiber resolver query

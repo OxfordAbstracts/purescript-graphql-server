@@ -18,128 +18,107 @@ import Safe.Coerce (coerce)
 import Type.Proxy (Proxy(..))
 
 -- class GetIType :: forall k.  k -> Constraint
-class GetIType :: forall k. Type -> k -> Constraint
-class Nat n <= GetIType n a where
-  getITypeImpl :: Proxy a -> Proxy n -> IType
-  gqlNullable :: Proxy a -> Proxy n -> Boolean
+class GetIType a where
+  getITypeImpl :: Proxy a -> IType
+  gqlNullable :: Proxy a -> Boolean
 
-getIType :: forall a. GetIType MaxDepth a => Proxy a -> IType
-getIType a = getITypeWithNullable a (Proxy :: Proxy MaxDepth)
+getIType :: forall a. GetIType a => Proxy a -> IType
+getIType a = getITypeWithNullable a
 
-nodeITypes :: forall a n. GetIType n a => Proxy a -> Proxy n -> List IType
-nodeITypes a n = pure $ getITypeWithNullable a n
+nodeITypes :: forall a n. GetIType a => Proxy a -> List IType
+nodeITypes a = pure $ getITypeWithNullable a
 
-getITypeWithNullable :: forall n a. GetIType n a => Proxy a -> Proxy n -> IType
-getITypeWithNullable a n =
-  if gqlNullable a n then
+getITypeWithNullable :: forall n a. GetIType a => Proxy a -> IType
+getITypeWithNullable a =
+  if gqlNullable a then
     t
   else
     unnamed IT.NON_NULL # modifyIType _ { ofType = Just t }
   where
-  t = getITypeImpl a n
+  t = getITypeImpl a
 
-instance Nat n => GetIType n Boolean where
-  getITypeImpl _ = scalar "Boolean"
-  gqlNullable _ _ = false
+instance GetIType Boolean where
+  getITypeImpl = scalar "Boolean"
+  gqlNullable _ = false
 
-else instance Nat n => GetIType n Int where
-  getITypeImpl _ = scalar "Int"
-  gqlNullable _ _ = false
+instance GetIType Int where
+  getITypeImpl = scalar "Int"
+  gqlNullable _ = false
 
-else instance Nat n => GetIType n Number where
-  getITypeImpl _ = scalar "Float"
-  gqlNullable _ _ = false
+instance GetIType Number where
+  getITypeImpl = scalar "Float"
+  gqlNullable _ = false
 
-else instance Nat n => GetIType n String where
-  getITypeImpl _ = scalar "String"
-  gqlNullable _ _ = false
+instance GetIType String where
+  getITypeImpl = scalar "String"
+  gqlNullable _ = false
 
-else instance (Nat n, GetIType n a) => GetIType n (Array a) where
-  getITypeImpl _ _ = unnamed IT.LIST # modifyIType _
-    { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) (Proxy :: Proxy n)
+instance (GetIType a) => GetIType (Array a) where
+  getITypeImpl _ = unnamed IT.LIST # modifyIType _
+    { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a)
     }
-  gqlNullable _ _ = false
+  gqlNullable _ = false
 
-else instance (Nat n, GetIType n a) => GetIType n (List a) where
-  getITypeImpl _ _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) (Proxy :: Proxy n) }
-  gqlNullable _ _ = false
+instance (GetIType a) => GetIType (List a) where
+  getITypeImpl _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) }
+  gqlNullable _ = false
 
-else instance (Nat n, GetIType n a) => GetIType n (Maybe a) where
+instance (GetIType a) => GetIType (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
-  gqlNullable _ _ = true
+  gqlNullable _ = true
 
-else instance (Nat n) => GetIType n IType where
-  getITypeImpl a n =
-    IType defaultIType
-      { name = Just "Type"
-      , kind = IT.OBJECT
-      , fields = \_ -> Nothing -- Just $ getIFields (Proxy :: Proxy { | r }) (Proxy :: Proxy n)
-      }
+-- else instance (Generic a rep, CustomGetIType rep) => GetIType a where
+--   getITypeImpl a = customGetIType $ map from a
+--   gqlNullable _ = false
 
-  gqlNullable _ _ = false
+-- class CustomGetIType a where
+--   customGetIType :: Proxy a -> IType
 
-else instance (Nat n, Generic a rep, CustomGetIType n rep) => GetIType n a where
-  getITypeImpl a = customGetIType $ map from a
-  gqlNullable _ _ = false
+-- instance (IsSymbol name, GetIFields { | r }) => CustomGetIType (Constructor name (Argument { | r })) where
+--   customGetIType _ =
+--     IType defaultIType
+--       { name = Just $ reflectSymbol (Proxy :: Proxy name)
+--       , kind = IT.OBJECT
+--       , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r }) 
+--       }
 
-class CustomGetIType :: forall k. Type -> k -> Constraint
-class Nat n <= CustomGetIType n a where
-  customGetIType :: Proxy a -> Proxy n -> IType
+-- instance CustomGetIType ITypeKind where
+--   customGetIType kind = enumType "Kind" $ map from kind
 
-instance (IsSymbol name, Nat n, GetIFields n { | r }) => CustomGetIType n (Constructor name (Argument { | r })) where
-  customGetIType _ _ =
-    IType defaultIType
-      { name = Just $ reflectSymbol (Proxy :: Proxy name)
-      , kind = IT.OBJECT
-      , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r }) (Proxy :: Proxy n)
-      }
+-- instance CustomGetIType IDirectiveLocation where
+--   customGetIType kind = enumType "DirectiveLocation" $ map from kind
 
-instance Nat n => CustomGetIType n ITypeKind where
-  customGetIType kind _n = enumType "Kind" $ map from kind
+genericGetIType
+  :: forall name r a
+   . Generic a (Constructor name (Argument { | r }))
+  => GetIFields { | r }
+  => IsSymbol name
+  => Proxy a
+  -> IType
+genericGetIType _ =
+  IType defaultIType
+    { name = Just $ reflectSymbol (Proxy :: Proxy name)
+    , kind = IT.OBJECT
+    , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r })
+    }
 
-instance Nat n => CustomGetIType n IDirectiveLocation where
-  customGetIType kind _n = enumType "DirectiveLocation" $ map from kind
-
-class GetIFields :: forall k. Type -> k -> Constraint
-class Nat n <= GetIFields n a where
-  getIFields :: Proxy a -> Proxy n -> List IField
+class GetIFields a where
+  getIFields :: Proxy a -> List IField
 
 instance
-  ( HFoldlWithIndex (GetIFieldsProps n) (List IField) { | p } (List IField)
+  ( HFoldlWithIndex (GetIFieldsProps) (List IField) { | p } (List IField)
   , UnsequenceProxies { | r } { | p }
-  , Nat n
   ) =>
-  GetIFields n { | r } where
-  getIFields r _ = getRecordIFields (Proxy :: Proxy n) ((unsequenceProxies r) :: { | p })
+  GetIFields { | r } where
+  getIFields r = getRecordIFields ((unsequenceProxies r) :: { | p })
 
-data GetIFieldsProps :: forall k. k -> Type
-data GetIFieldsProps n = GetIFieldsProps
+data GetIFieldsProps = GetIFieldsProps
 
 instance
   ( IsSymbol label
+  , GetIType a
   ) =>
-  FoldingWithIndex (GetIFieldsProps D0) (Proxy label) (List IField) (Proxy a) (List IField) where
-  foldingWithIndex (GetIFieldsProps) sym (defs) _ = def : defs
-    where
-    def = IField
-      { args: Nil
-      , deprecationReason: Nothing
-      , description: Nothing
-      , isDeprecated: false
-      , name: reflectSymbol sym
-      , type: IType defaultIType
-          { name = Just "Depth limit exceeded"
-          , description = Just $
-              "You have exceeded the maximum introspection depth of "
-                <> show (toInt' maxDepth)
-          }
-      }
-else instance
-  ( IsSymbol label
-  , GetIType pred a
-  , Succ pred n
-  ) =>
-  FoldingWithIndex (GetIFieldsProps n) (Proxy label) (List IField) (Proxy a) (List IField) where
+  FoldingWithIndex (GetIFieldsProps) (Proxy label) (List IField) (Proxy a) (List IField) where
   foldingWithIndex (GetIFieldsProps) sym (defs) a = def : defs
     where
     def = IField
@@ -148,17 +127,16 @@ else instance
       , description: Nothing
       , isDeprecated: false
       , name: reflectSymbol sym
-      , type: getITypeWithNullable a (Proxy :: Proxy pred)
+      , type: getITypeWithNullable a
       }
 
 getRecordIFields
-  :: forall r n
-   . HFoldlWithIndex (GetIFieldsProps n) (List IField) { | r } (List IField)
-  => Proxy n
-  -> { | r }
+  :: forall r
+   . HFoldlWithIndex (GetIFieldsProps) (List IField) { | r } (List IField)
+  => { | r }
   -> (List IField)
-getRecordIFields _ =
-  hfoldlWithIndex (GetIFieldsProps :: GetIFieldsProps n) (mempty :: List IField) >>> reverse
+getRecordIFields =
+  hfoldlWithIndex (GetIFieldsProps :: GetIFieldsProps) (mempty :: List IField) >>> reverse
 
 modifyIType :: (IType_T -> IType_T) -> IType -> IType
 modifyIType = coerce

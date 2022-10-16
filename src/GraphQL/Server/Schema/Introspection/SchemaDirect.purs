@@ -14,7 +14,7 @@ import Type.Proxy (Proxy(..))
 class SchemaDirect a where
   schemaDirect :: a -> ISchema
 
-instance (GetIType MaxDepth q) => SchemaDirect (GqlRoot q Unit) where
+instance (GetIType q) => SchemaDirect (GqlRoot q Unit) where
   schemaDirect _ = ISchema
     { types: getDescendantITypes queryType
     , queryType

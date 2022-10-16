@@ -8,13 +8,13 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import GraphQL.Resolver.JsonResolver (Resolver)
-import GraphQL.Resolver.ToResolver (toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, toResolver)
 import GraphQL.Server.MaxDepth (maxIntrospectionDepth)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..))
 import Type.Proxy (Proxy(..))
 
 makeIntrospectionResolver :: forall n m. Applicative m => ISchema -> Resolver m
-makeIntrospectionResolver schema@(ISchema { types }) = toResolver maxIntrospectionDepth introspection
+makeIntrospectionResolver schema@(ISchema { types }) = toResolver introspection
   where
   introspection = Introspection
     { __schema: schema
@@ -32,6 +32,9 @@ newtype Introspection = Introspection
   }
 
 derive instance Generic Introspection _
+
+instance Applicative m => ToResolver Introspection m where 
+  toResolver a = objectResolver a
 
 -- x
 --   :: Proxy
