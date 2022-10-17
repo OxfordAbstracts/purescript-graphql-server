@@ -7,6 +7,7 @@ import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Resolver.JsonResolver (Resolver(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, objectResolver)
+import GraphQL.Server.GqlError (ResolverError(..))
 import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetIType, genericGetIType)
 import Heterogeneous.Folding (class HFoldlWithIndex)
 import Type.Proxy (Proxy(..))
@@ -54,6 +55,11 @@ instance
   ToResolver (MutationRoot { | a }) m where
   toResolver a = objectResolver a
 
+instance
+  ( Applicative m
+  ) =>
+  ToResolver (MutationRoot Unit) m where
+  toResolver _ = FailedResolver NoMutationRoot
 
 instance
   ( GetIFields { | r }

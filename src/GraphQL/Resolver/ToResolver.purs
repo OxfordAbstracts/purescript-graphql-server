@@ -8,8 +8,7 @@ module GraphQL.Resolver.ToResolver
   , objectResolver
   , resolveNode
   , toResolver
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -74,8 +73,6 @@ instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
 
 instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
-
-
 
 objectResolver
   :: forall m a arg name

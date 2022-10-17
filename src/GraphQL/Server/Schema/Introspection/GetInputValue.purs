@@ -4,9 +4,6 @@ import Prelude
 
 import GraphQL.Server.Schema.Introspection.Types (IInputValue(..))
 
-class GetIInputValue a where 
+class GetIInputValue a where
   getIInputValue :: a -> IInputValue
 
-
-
-  

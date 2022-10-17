@@ -2,51 +2,39 @@ module GraphQL.Resolver (rootResolver) where
 
 import Prelude
 
-import Data.Bifunctor (lmap)
-import Data.Either (Either(..), note)
-import Data.Maybe (Maybe)
 import GraphQL.Resolver.JsonResolver (Resolver)
-import GraphQL.Resolver.Merge (mergeResolvers)
-import GraphQL.Resolver.Root (GqlRoot(..), QueryRoot)
+import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.Schema (class GetSchema, getSchema)
-import GraphQL.Server.Schema.Introspection (makeIntrospectionResolver)
-
+import GraphQL.Server.Schema.Introspection (IntrospectionRow, getIntrospection)
+import Prim.Row (class Nub)
+import Record as Record
 
 -- | Create a root resolver from a root record
 rootResolver
-  :: forall query mutation m
+  :: forall query mutation m withIntrospection
    . Applicative m
-  => ToResolver (GqlRoot (QueryRoot {|query})  mutation) m
-  => GetSchema (GqlRoot (QueryRoot {|query}) mutation)
-  => { query :: {|query}, mutation :: mutation }
-  -> Either String (Resolver m)
-rootResolver root = do
-  let
-    introspectionResolver  = makeIntrospectionResolver schema
-    dataResolver = toResolver root'
-  note "Root or schema root is not of `Fields` contructor"
-    $ mergeResolvers dataResolver introspectionResolver
-
+  => Nub (IntrospectionRow query) withIntrospection
+  => ToResolver (GqlRoot (QueryRoot { | withIntrospection }) (MutationRoot mutation)) m
+  => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
+  => { query :: { | query }, mutation :: mutation }
+  -> (Resolver m)
+rootResolver root =
+  toResolver $ GqlRoot root
+    { query = QueryRoot (Record.merge introspection query :: { | withIntrospection })
+    , mutation = MutationRoot root.mutation
+    }
   where
-  root' = GqlRoot root
+  root'@(GqlRoot { query: QueryRoot query }) = GqlRoot root
+    { query = QueryRoot root.query
+    , mutation = MutationRoot root.mutation
+    }
   schema = getSchema root'
 
+  introspection = getIntrospection schema
 
+test0 :: forall m. Applicative m => Resolver m
+test0 = rootResolver { query: { foo: "bar" }, mutation: unit }
 
--- class RootResolverTypes a where
---   rootResolverTypes
---     :: a
---     -> { query :: IType
---        , mutation :: Maybe IType
---        }
-
-
--- instance RootResolverTypes (GqlRoot query Unit) where
---   rootResolverTypes _ = 
---   { query: queryType, mutation: Just mutationType }
---     where
---     queryType = IType { name: "Query", description: Nothing, kind: IKObject }
---     mutationType = IType { name: "Mutation", description: Nothing, kind: IKObject }
-
-
+test1 :: forall m. Applicative m => Resolver m
+test1 = rootResolver { query: { foo: "bar" }, mutation: { x: 1 } }

@@ -56,7 +56,7 @@ instance (GetIType a) => GetIType (List a) where
 
 instance (GetIType a) => GetIType (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
-  
+
 genericGetIType
   :: forall name r a
    . Generic a (Constructor name (Argument { | r }))
