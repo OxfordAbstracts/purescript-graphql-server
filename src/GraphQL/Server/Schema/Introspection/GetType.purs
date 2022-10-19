@@ -7,6 +7,8 @@ import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
+import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Server.Schema.Introspection.GetInputValue (getIInputValues)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
@@ -57,6 +59,12 @@ instance (GetIType a) => GetIType (List a) where
 instance (GetIType a) => GetIType (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
 
+instance (GetIType b) => GetIType (a -> b) where
+  getITypeImpl _ = getITypeImpl (Proxy :: Proxy b)
+
+instance (GetIType a) => GetIType (GqlIo m a) where
+  getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
+
 genericGetIType
   :: forall name r a
    . Generic a (Constructor name (Argument { | r }))
@@ -89,10 +97,10 @@ instance
   , GetIType a
   ) =>
   FoldingWithIndex (GetIFieldsProps) (Proxy label) (List IField) (Proxy a) (List IField) where
-  foldingWithIndex (GetIFieldsProps) sym (defs) a = def : defs
+  foldingWithIndex (GetIFieldsProps) sym defs a = def : defs
     where
     def = IField
-      { args: Nil -- :: List IInputValue
+      { args: getIInputValues a
       , deprecationReason: Nothing
       , description: Nothing
       , isDeprecated: false

@@ -5,8 +5,11 @@ import Prelude
 import Data.Filterable (filter)
 import Data.Generic.Rep (class Generic)
 import Effect.Aff (Aff)
+import GraphQL.Resolver (rootResolver)
 import GraphQL.Resolver.GqlIo (GqlIo(..))
-import GraphQL.Resolver.ToResolver (class ToResolver)
+import GraphQL.Resolver.JsonResolver (Resolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType)
 import Test.Spec (Spec, describe, it)
 
 spec :: Spec Unit
@@ -16,16 +19,15 @@ spec =
       it "should resolve with a simple resolver" do
         pure unit
 
--- simpleResolver :: Resolver (GqlIo Aff)
--- simpleResolver =
---   unsafeRootResolver
---     { query: simpleQuery
---     , mutation: unit
---     }
+simpleResolver :: Resolver (GqlIo Aff)
+simpleResolver =
+  rootResolver
+    { query: 
+       { books: io [ book1, book2 ] 
+       }
+    , mutation: unit
+    }
 
-simpleQuery :: SimpleQuery
-simpleQuery = SimpleQuery
-  { books: io [ book1, book2 ] }
 
 book1 :: Book
 book1 = Book
@@ -48,10 +50,6 @@ author = Author
       [ book1, book2 ] # filter \(Book b) -> b.price <= maxPrice
   }
 
-newtype SimpleQuery = SimpleQuery { books :: GqlIo Aff (Array Book) }
-
-derive instance Generic SimpleQuery _
-
 newtype Book = Book
   { name :: String
   , price :: Number
@@ -60,6 +58,12 @@ newtype Book = Book
 
 derive instance Generic Book _
 
+instance ToResolver Book (GqlIo Aff) where
+  toResolver a = objectResolver a
+
+instance GetIType Book where
+  getITypeImpl a = genericGetIType a
+
 newtype Author = Author
   { name :: String
   , books :: { maxPrice :: Number } -> GqlIo Aff (Array Book)
@@ -67,6 +71,12 @@ newtype Author = Author
 
 derive instance Generic Author _
 
+instance ToResolver Author (GqlIo Aff) where
+  toResolver a = objectResolver a
+
+instance GetIType Author where
+  getITypeImpl a = genericGetIType a
+  
 io :: forall a. a -> GqlIo Aff a
 io = GqlIo <<< (pure :: _ -> Aff _)
 
