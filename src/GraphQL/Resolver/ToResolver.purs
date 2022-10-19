@@ -8,7 +8,7 @@ module GraphQL.Resolver.ToResolver
   , objectResolver
   , resolveNode
   , toResolver
-  , resolveGenericNode
+  , resolveEnum
   ) where
 
 import Prelude
@@ -37,13 +37,11 @@ class ToResolver a m | m -> m where
 resolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
 resolveNode a = Node $ pure $ encodeJson a
 
-
 resolveNodeWith :: forall a m. Applicative m => (a -> Json) -> a -> Resolver m
 resolveNodeWith encode a =  Node $ pure $ encode a
 
-
-resolveGenericNode :: forall m a rep. Applicative m => Generic a rep => EncodeLiteral rep => a -> Resolver m
-resolveGenericNode = resolveNodeWith encodeLiteralSum
+resolveEnum :: forall m a rep. Applicative m => Generic a rep => EncodeLiteral rep => a -> Resolver m
+resolveEnum = resolveNodeWith encodeLiteralSum
 
 resolveAsync :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
 resolveAsync a = ResolveAsync $ toResolver <$> a

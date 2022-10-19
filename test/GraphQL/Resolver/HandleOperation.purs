@@ -14,7 +14,7 @@ import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveGenericNode)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveEnum)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
 import GraphQL.Server.Schema.Introspection.GetEnumValues (enumType)
@@ -280,7 +280,7 @@ data BookType = Paperback | Hardback | Ebook
 derive instance Generic BookType _
 
 instance ToResolver BookType GqlAff where
-  toResolver a = resolveGenericNode a
+  toResolver a = resolveEnum a
 
 instance GetIType BookType where
   getITypeImpl a = enumType "BookType" a
