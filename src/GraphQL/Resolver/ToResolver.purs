@@ -14,7 +14,7 @@ module GraphQL.Resolver.ToResolver
 import Prelude
 
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
-import Data.Argonaut.Encode.Generic (class EncodeLiteral, class EncodeRep, encodeLiteralSum, genericEncodeJson)
+import Data.Argonaut.Encode.Generic (class EncodeLiteral, encodeLiteralSum)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), from)
 import Data.List (List)

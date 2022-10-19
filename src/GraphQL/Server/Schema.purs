@@ -5,7 +5,7 @@ import Prelude
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getIType, getITypeImpl)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getITypeImpl)
 import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
 import Type.Proxy (Proxy(..))

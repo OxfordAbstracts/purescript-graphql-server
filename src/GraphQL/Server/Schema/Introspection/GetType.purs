@@ -154,7 +154,7 @@ instance
   , GetIType a
   ) =>
   FoldingWithIndex (GetIInputValuesProps) (Proxy label) (List IInputValue) (Proxy (Maybe a)) (List IInputValue) where
-  foldingWithIndex (GetIInputValuesProps) sym defs a = def : defs
+  foldingWithIndex (GetIInputValuesProps) sym defs _a = def : defs
     where
     def = IInputValue
       { name: reflectSymbol sym

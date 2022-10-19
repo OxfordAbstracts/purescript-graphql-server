@@ -2,7 +2,7 @@ module GraphQL.Server.Schema.Introspection.GetEnumValues where
 
 import Prelude
 
-import Data.Generic.Rep (class Generic, Constructor, NoArguments, Sum, to)
+import Data.Generic.Rep (class Generic, Constructor, NoArguments, Sum)
 import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
