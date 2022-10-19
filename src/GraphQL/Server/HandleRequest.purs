@@ -9,17 +9,16 @@ import Data.Filterable (filterMap)
 import Data.Foldable (findMap)
 import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (document)
-import Data.List (List(..), foldM, (:))
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
 import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
-import GraphQL.Resolver.HandleQuery (handleOperationDefinition)
-import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
+import GraphQL.Resolver.HandleOperation (handleOperation)
+import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
-import GraphQL.Server.Value.Encode (encodeValue)
 import HTTPure (Request, toString)
 import Parsing (runParser)
 
@@ -37,8 +36,7 @@ handleRequest resolvers req = do
     ( liftAff
         $ toAff
         $ map (map encodeJson)
-        $ handleOperationDefinition resolvers op
-        $ fromMaybe Object.empty variables
+        $ handleOperation resolvers op (fromMaybe Object.empty variables)
     )
 
 parseGqlRequest
@@ -95,18 +93,4 @@ getOperationDefinition operationName (AST.Document doc) = case operationName of
           _ -> Nothing
       # note (NoOperationDefinitionWithGivenName name)
 
-makeVariables :: Object Json -> List AST.VariableDefinition -> Either VariableInputError (Object Json)
-makeVariables vars = foldM makeVar Object.empty
-  where
-  makeVar :: Object Json -> AST.VariableDefinition -> Either VariableInputError (Object Json)
-  makeVar coercedVars (AST.VariableDefinition varDef@{ variable: AST.Variable varName }) =
-    case Object.lookup varName vars, varDef of
-
-      Just var, _ -> Right $ Object.insert varName var coercedVars
-
-      Nothing, { defaultValue: Just (AST.DefaultValue defaultValue) } ->
-        Right
-          $ Object.insert varName (encodeValue defaultValue) coercedVars
-
-      _, _ -> Left $ VariableNotFound varName
 

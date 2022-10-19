@@ -3,7 +3,7 @@ module GraphQL.Server.Schema.Introspection.GetType where
 import Prelude
 
 import Data.Generic.Rep (class Generic, Argument, Constructor)
-import Data.List (List(..), reverse, (:))
+import Data.List (List, reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)

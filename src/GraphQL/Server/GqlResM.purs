@@ -1,13 +1,13 @@
-module GraphQL.Server.GqlResM (GqlResM(..), toAff, toResponse) where
+module GraphQL.Server.GqlResM (GqlResM(..), toAff, toAff', toResponse) where
 
 import Prelude
 
-import Control.Monad.Error.Class (class MonadThrow)
+import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Control.Monad.Except (ExceptT, runExceptT)
 import Data.Argonaut (Json, stringify)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Newtype (class Newtype, unwrap)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, error)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import GraphQL.Server.GqlError (GqlError(..))
@@ -38,3 +38,6 @@ toResponse (GqlResM gqlResM) = do
 
 toAff :: forall a. GqlResM a -> Aff (Either GqlError a)
 toAff = unwrap >>> runExceptT
+
+toAff' :: forall a. GqlResM a -> Aff a
+toAff' = toAff >=> either (show >>> error >>> throwError) pure

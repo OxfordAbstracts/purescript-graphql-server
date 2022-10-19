@@ -29,7 +29,7 @@ import GraphQL.Server.GqlError (ResolverError(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Type.Proxy (Proxy(..))
 
-class ToResolver a m where
+class ToResolver a m | m -> m where
   toResolver :: a -> JsonResolver.Resolver m
 
 resolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
@@ -38,7 +38,7 @@ resolveNode a = Node $ pure $ encodeJson a
 resolveAsync :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
 resolveAsync a = ResolveAsync $ toResolver <$> a
 
-instance (ToResolver a (GqlIo m), Applicative m) => ToResolver (GqlIo m a) (GqlIo m) where
+instance (ToResolver a (GqlIo m), Functor m) => ToResolver (GqlIo m a) (GqlIo m) where
   toResolver a = resolveAsync a
 
 instance (Applicative m) => ToResolver Boolean m where
