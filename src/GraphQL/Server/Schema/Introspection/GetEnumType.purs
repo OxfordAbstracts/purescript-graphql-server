@@ -2,18 +2,18 @@ module GraphQL.Server.Schema.Introspection.GetEnumValues where
 
 import Prelude
 
-import Data.Generic.Rep (Constructor, NoArguments(..), Sum)
+import Data.Generic.Rep (class Generic, Constructor, NoArguments, Sum, to)
 import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IType(..), ITypeKind(..), defaultIType)
 import Type.Proxy (Proxy(..))
 
-enumType :: forall a. GetEnumValues a => String -> a -> IType
+enumType :: forall a rep. Generic a rep => GetEnumValues rep => String -> Proxy a -> IType
 enumType typeName _ = IType defaultIType
   { kind = ENUM
   , name = Just typeName
-  , enumValues = \_ -> Just $ getEnumValues (Proxy :: Proxy a) <#>
+  , enumValues = \_ -> Just $ getEnumValues (Proxy :: Proxy rep) <#>
       IEnumValue <<<
         { name: _
         , description: Nothing
@@ -25,9 +25,6 @@ enumType typeName _ = IType defaultIType
 class GetEnumValues :: forall k. k -> Constraint
 class GetEnumValues a where
   getEnumValues :: Proxy a -> List String
-
-instance GetEnumValues a => GetEnumValues (Proxy a) where
-  getEnumValues _ = getEnumValues (Proxy :: Proxy a)
 
 instance IsSymbol name => GetEnumValues (Constructor name NoArguments) where
   getEnumValues _ = pure $ reflectSymbol (Proxy :: Proxy name)

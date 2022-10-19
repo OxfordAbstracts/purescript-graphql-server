@@ -8,11 +8,13 @@ module GraphQL.Resolver.ToResolver
   , objectResolver
   , resolveNode
   , toResolver
+  , resolveGenericNode
   ) where
 
 import Prelude
 
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
+import Data.Argonaut.Encode.Generic (class EncodeLiteral, class EncodeRep, encodeLiteralSum, genericEncodeJson)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), from)
 import Data.List (List)
@@ -22,7 +24,6 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import Debug (spy)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
@@ -35,6 +36,14 @@ class ToResolver a m | m -> m where
 
 resolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
 resolveNode a = Node $ pure $ encodeJson a
+
+
+resolveNodeWith :: forall a m. Applicative m => (a -> Json) -> a -> Resolver m
+resolveNodeWith encode a =  Node $ pure $ encode a
+
+
+resolveGenericNode :: forall m a rep. Applicative m => Generic a rep => EncodeLiteral rep => a -> Resolver m
+resolveGenericNode = resolveNodeWith encodeLiteralSum
 
 resolveAsync :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
 resolveAsync a = ResolveAsync $ toResolver <$> a

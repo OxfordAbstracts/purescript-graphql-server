@@ -13,9 +13,10 @@ import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveGenericNode)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
+import GraphQL.Server.Schema.Introspection.GetEnumValues (enumType)
 import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -25,8 +26,11 @@ spec =
   describe "GraphQL.Resolver.HandleOperation" do
     describe "handleOperation" do
       it "should resolve a simple query" do
-        "query { books { id } }" `shouldResolveTo`
-          { books: [ { id: 1 }, { id: 2 } ]
+        "query { books { id type } }" `shouldResolveTo`
+          { books:
+              [ { "id": 1, "type": "Paperback" }
+              , { "id": 2, "type": "Ebook" }
+              ]
           }
       it "should resolve a nested query with typenames" do
         """
@@ -129,31 +133,38 @@ spec =
               { "name": "Book"
               , "fields":
                   [ { "name": "author"
-                    , "type":
+                    , "type": encodeJson
                         { "name": jsonNull
                         , "kind": "NON_NULL"
                         , "ofType": { "name": "Author", "kind": "OBJECT" }
                         }
                     }
                   , { "name": "id"
-                    , "type":
+                    , "type": encodeJson
                         { "name": jsonNull
                         , "kind": "NON_NULL"
                         , "ofType": { "name": "Int", "kind": "SCALAR" }
                         }
                     }
                   , { "name": "name"
-                    , "type":
+                    , "type": encodeJson
                         { "name": jsonNull
                         , "kind": "NON_NULL"
                         , "ofType": { "name": "String", "kind": "SCALAR" }
                         }
                     }
                   , { "name": "price"
-                    , "type":
+                    , "type": encodeJson
                         { "name": jsonNull
                         , "kind": "NON_NULL"
                         , "ofType": { "name": "Float", "kind": "SCALAR" }
+                        }
+                    }
+                  , { "name": "type"
+                    , "type": encodeJson
+                        { "name": "BookType"
+                        , "kind": "ENUM"
+                        , "ofType": jsonNull
                         }
                     }
                   ]
@@ -196,6 +207,7 @@ book1 = Book
   { name: pure "book name 1"
   , id: 1
   , price: 1.0
+  , type: Just Paperback
   , author: \_ -> pure author
   }
 
@@ -204,6 +216,7 @@ book2 = Book
   { name: pure "book name 2"
   , id: 2
   , price: 2.0
+  , type: Just Ebook
   , author: \_ -> pure author
   }
 
@@ -218,6 +231,7 @@ newtype Book = Book
   { name :: GqlIo Aff String
   , id :: Int
   , price :: Number
+  , type :: Maybe BookType
   , author :: Unit -> GqlIo Aff Author
   }
 
@@ -241,3 +255,13 @@ instance ToResolver Author GqlAff where
 
 instance GetIType Author where
   getITypeImpl a = genericGetIType a
+
+data BookType = Paperback | Hardback | Ebook
+
+derive instance Generic BookType _
+
+instance ToResolver BookType GqlAff where
+  toResolver a = resolveGenericNode a
+
+instance GetIType BookType where
+  getITypeImpl a = enumType "BookType" a

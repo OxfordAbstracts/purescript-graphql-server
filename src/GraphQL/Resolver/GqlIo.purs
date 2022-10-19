@@ -24,6 +24,9 @@ hoistGql f (GqlIo m) = GqlIo $ f m
 
 type GqlAff = GqlIo Aff
 
+gqlAff :: forall a. a -> GqlAff a
+gqlAff = io
+
 type GqlFiber = GqlIo EffFiber
 
 type GqlParAff = GqlIo ParAff
