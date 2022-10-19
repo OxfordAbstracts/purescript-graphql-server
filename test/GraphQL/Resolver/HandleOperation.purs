@@ -5,6 +5,7 @@ import Prelude
 import Data.Argonaut (class EncodeJson, Json, encodeJson, jsonNull, stringify)
 import Data.Either (either)
 import Data.Filterable (filter)
+import Data.Foldable (find)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
@@ -90,6 +91,9 @@ spec =
                   name
                   type {
                     name
+                    ofType {
+                      name
+                    }
                   }
                 }
               }
@@ -100,10 +104,23 @@ spec =
               { "queryType":
                   { "name": "QueryRoot"
                   , "fields":
-                      [ { "name": "books"
-                        , "args":
+                      [ { "name": "book"
+                        , "args": encodeJson
+                            [ { "name": "id"
+                              , "type":
+                                  { "name": jsonNull
+                                  , "ofType": { "name": "Int" }
+                                  }
+                              }
+                            ]
+                        }
+                      , { "name": "books"
+                        , "args": encodeJson
                             [ { "name": "maxPrice"
-                              , "type": { "name": "Float" }
+                              , "type":
+                                  { "name": "Float"
+                                  , "ofType": jsonNull
+                                  }
                               }
                             ]
                         }
@@ -196,6 +213,8 @@ simpleResolver =
     { query:
         { books: \(args :: { maxPrice :: Maybe Number }) -> io $ [ book1, book2 ]
             # filter (\(Book b) -> maybe true ((<=) b.price) args.maxPrice)
+        , book: \(args :: { id :: Int }) ->
+            find (\(Book b) -> b.id == args.id) [ book1, book2 ]
         }
     , mutation:
         { action1: io "action1"
