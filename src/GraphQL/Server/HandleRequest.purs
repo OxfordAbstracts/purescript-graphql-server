@@ -3,7 +3,7 @@ module GraphQL.Server.HandleRequest where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow, throwError)
-import Data.Argonaut (Json, decodeJson, parseJson)
+import Data.Argonaut (Json, decodeJson, encodeJson, parseJson)
 import Data.Either (Either(..), either, note)
 import Data.Filterable (filterMap)
 import Data.Foldable (findMap)
@@ -14,26 +14,32 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
+import GraphQL.Resolver (RootResolver)
 import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
 import GraphQL.Resolver.HandleQuery (handleOperationDefinition)
-import GraphQL.Resolver.JsonResolver (Resolver)
-import GraphQL.Server.Value.Encode (encodeValue)
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
 import GraphQL.Server.GqlResM (GqlResM)
+import GraphQL.Server.Value.Encode (encodeValue)
 import HTTPure (Request, toString)
 import Parsing (runParser)
 
 handleRequest
   :: forall m f
    . Gqlable f m
-  => Resolver f
+  => RootResolver f
   -> Request
   -> GqlResM Json
 handleRequest resolvers req = do
   bodyStr <- liftAff $ toString req.body
   { operationName, operation, variables } <- parseGqlRequest bodyStr
   op <- parseOperation operationName operation
-  either throwError pure =<< (liftAff $ toAff $ handleOperationDefinition resolvers op $ fromMaybe Object.empty variables)
+  either throwError pure =<<
+    ( liftAff
+        $ toAff
+        $ map (map encodeJson)
+        $ handleOperationDefinition resolvers op
+        $ fromMaybe Object.empty variables
+    )
 
 parseGqlRequest
   :: forall m

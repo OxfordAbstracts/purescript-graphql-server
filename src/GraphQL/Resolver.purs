@@ -19,7 +19,7 @@ rootResolver
   => ToResolver (MutationRoot mutation) m
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { query :: { | query }, mutation :: mutation }
-  -> { query :: Resolver m, mutation :: Resolver m }
+  -> RootResolver m
 rootResolver root =
   { query: toResolver $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
   , mutation: toResolver $ MutationRoot root.mutation

@@ -14,6 +14,7 @@ data GqlError
   | NoOperationDefinitionWithGivenName String
   | MultipleOperationDefinitions
   | VariableInputError VariableInputError
+  | SubscriptionsNotSupported
   | OtherError String
   | ResolverError ResolverError
 
