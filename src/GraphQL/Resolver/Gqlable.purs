@@ -14,7 +14,6 @@ class (Applicative a, Monad m) <= Gqlable a m | a -> m where
   gqlParallel :: m ~> a
   toAff :: a ~> Aff
 
-
 instance Gqlable (GqlIo Effect) (GqlIo Effect) where
   gqlSequential = identity
   gqlParallel = identity

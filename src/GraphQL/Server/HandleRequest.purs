@@ -1,4 +1,4 @@
-module GraphQL.Server.HandleRequest where
+module GraphQL.Server.HandleRequest (handleRequest, parseOperation) where
 
 import Prelude
 
@@ -92,5 +92,4 @@ getOperationDefinition operationName (AST.Document doc) = case operationName of
           AST.Definition_ExecutableDefinition (AST.ExecutableDefinition_OperationDefinition opDef) -> pure opDef
           _ -> Nothing
       # note (NoOperationDefinitionWithGivenName name)
-
 

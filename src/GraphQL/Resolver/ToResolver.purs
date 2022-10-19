@@ -22,6 +22,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import Debug (spy)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
@@ -127,7 +128,7 @@ instance
       , resolver: getArgResolver a
       }
 
-class GetArgResolver a m where
+class GetArgResolver a m | m -> m where
   getArgResolver
     :: a
     -> { args :: Json }

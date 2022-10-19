@@ -16,6 +16,9 @@ import GraphQL.Resolver.EffFiber (EffFiber)
 newtype GqlIo :: forall k. (k -> Type) -> k -> Type
 newtype GqlIo m a = GqlIo (m a)
 
+io :: forall m a. Applicative m => a -> GqlIo m a
+io = GqlIo <<< pure
+
 hoistGql :: forall m n a. (m ~> n) -> GqlIo m a -> GqlIo n a
 hoistGql f (GqlIo m) = GqlIo $ f m
 

@@ -2,19 +2,19 @@ module Test.GraphQL.Resolver.HandleOperation (spec) where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson, Json, encodeJson, stringify)
+import Data.Argonaut (class EncodeJson, Json, encodeJson, jsonNull, stringify)
 import Data.Either (either)
 import Data.Filterable (filter)
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
+import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Resolver.GqlIo (GqlIo(..))
+import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
+import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
 import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
-import GraphQL.Server.GqlResM (toAff')
+import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
 import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType)
 import Test.Spec (Spec, describe, it)
@@ -24,17 +24,19 @@ spec :: Spec Unit
 spec =
   describe "GraphQL.Resolver.HandleOperation" do
     describe "handleOperation" do
-      it "should resolve with a simple resolver" do
+      it "should resolve a simple query" do
         "query { books { id } }" `shouldResolveTo`
           { books: [ { id: 1 }, { id: 2 } ]
           }
-      it "should resolve with a nested resolver" do
+      it "should resolve a nested query with typenames" do
         """
         query { 
           books { 
+            __typename
             id 
             name
             author { 
+              __typename
               name 
             }
           } 
@@ -42,13 +44,120 @@ spec =
           { books:
               [ { id: 1
                 , name: "book name 1"
-                , author: { name: "author name" }
+                , author:
+                    { name: "author name"
+                    , __typename: "Author"
+                    }
+                , __typename: "Book"
                 }
               , { id: 2
                 , name: "book name 2"
-                , author: { name: "author name" }
+                , author:
+                    { name: "author name"
+                    , __typename: "Author"
+                    }
+                , __typename: "Book"
                 }
               ]
+          }
+      it "should resolve a query with arguments" do
+        """
+        query { 
+          books (maxPrice: 1) { 
+            id 
+            name
+          } 
+        }""" `shouldResolveTo`
+          { books:
+              [ { id: 1
+                , name: "book name 1"
+                }
+              ]
+          }
+      it "should resolve a schema introspection query" do
+        """
+        query { 
+          __schema { 
+            queryType { 
+              name
+              fields {
+                name
+                args {
+                  name
+                  type {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }""" `shouldResolveTo`
+          { "__schema":
+              { "queryType":
+                  { "name": "QueryRoot"
+                  , "fields":
+                      [ { "name": "books"
+                        , "args":
+                            [ { "name": "maxPrice"
+                              , "type": { "name": "Float" }
+                              }
+                            ]
+                        }
+                      ]
+                  }
+              }
+          }
+      it "should resolve a type introspection query" do
+        """
+        query { 
+          __type (name: "Book") {
+            name
+            fields {
+              name
+              type {
+                name
+                kind
+                ofType {
+                  name
+                  kind
+                }
+              }
+            }
+          } 
+        }""" `shouldResolveTo`
+          { "__type":
+              { "name": "Book"
+              , "fields":
+                  [ { "name": "author"
+                    , "type":
+                        { "name": jsonNull
+                        , "kind": "NON_NULL"
+                        , "ofType": { "name": "Author", "kind": "OBJECT" }
+                        }
+                    }
+                  , { "name": "id"
+                    , "type":
+                        { "name": jsonNull
+                        , "kind": "NON_NULL"
+                        , "ofType": { "name": "Int", "kind": "SCALAR" }
+                        }
+                    }
+                  , { "name": "name"
+                    , "type":
+                        { "name": jsonNull
+                        , "kind": "NON_NULL"
+                        , "ofType": { "name": "String", "kind": "SCALAR" }
+                        }
+                    }
+                  , { "name": "price"
+                    , "type":
+                        { "name": jsonNull
+                        , "kind": "NON_NULL"
+                        , "ofType": { "name": "Float", "kind": "SCALAR" }
+                        }
+                    }
+                  ]
+              }
           }
 
 shouldResolveTo :: forall a. EncodeJson a => String -> a -> Aff Unit
@@ -65,18 +174,21 @@ instance Show JsonShow where
 
 resolveAsJson :: String -> Aff Json
 resolveAsJson query = do
-  op <- toAff' $ parseOperation Nothing query
-  eit <- (unwrap $ handleOperation simpleResolver op Object.empty)
+  op <- GqlM.toAff' $ parseOperation Nothing query
+  eit <- toAff $ handleOperation simpleResolver op Object.empty
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver :: RootResolver (GqlIo Aff)
+simpleResolver :: RootResolver GqlAff
 simpleResolver =
   rootResolver
     { query:
-        { books: GqlIo $ pure [ book1, book2 ]
+        { books: \(args :: { maxPrice :: Maybe Number }) -> io $ [ book1, book2 ]
+            # filter (\(Book b) -> maybe true ((<=) b.price) args.maxPrice)
         }
-    , mutation: {}
+    , mutation:
+        { action1: io "action1"
+        }
     }
 
 book1 :: Book
@@ -111,7 +223,7 @@ newtype Book = Book
 
 derive instance Generic Book _
 
-instance ToResolver Book (GqlIo Aff) where
+instance ToResolver Book GqlAff where
   toResolver a = objectResolver a
 
 instance GetIType Book where
@@ -124,7 +236,7 @@ newtype Author = Author
 
 derive instance Generic Author _
 
-instance ToResolver Author (GqlIo Aff) where
+instance ToResolver Author GqlAff where
   toResolver a = objectResolver a
 
 instance GetIType Author where

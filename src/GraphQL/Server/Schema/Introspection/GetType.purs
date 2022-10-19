@@ -1,16 +1,32 @@
-module GraphQL.Server.Schema.Introspection.GetType where
+module GraphQL.Server.Schema.Introspection.GetType
+  ( GetIFieldsProps(..)
+  , GetIInputValuesProps(..)
+  , class GetIFields
+  , class GetIInputValues
+  , class GetIType
+  , getIFields
+  , genericGetIType
+  , getIInputValues
+  , getIType
+  , getITypeImpl
+  , getITypeWithNullable
+  , getRecordIFields
+  , modifyIType
+  , nodeITypes
+  , scalar
+  , unnamed
+  ) where
 
 import Prelude
 
 import Data.Generic.Rep (class Generic, Argument, Constructor)
-import Data.List (List, reverse, (:))
+import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Server.Schema.Introspection.GetInputValue (getIInputValues)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
-import GraphQL.Server.Schema.Introspection.Types (IField(..), IType(..), IType_T, defaultIType)
+import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Safe.Coerce (coerce)
@@ -84,7 +100,7 @@ class GetIFields a where
   getIFields :: Proxy a -> List IField
 
 instance
-  ( HFoldlWithIndex (GetIFieldsProps) (List IField) { | p } (List IField)
+  ( HFoldlWithIndex GetIFieldsProps (List IField) { | p } (List IField)
   , UnsequenceProxies { | r } { | p }
   ) =>
   GetIFields { | r } where
@@ -95,9 +111,10 @@ data GetIFieldsProps = GetIFieldsProps
 instance
   ( IsSymbol label
   , GetIType a
+  , GetIInputValues a
   ) =>
-  FoldingWithIndex (GetIFieldsProps) (Proxy label) (List IField) (Proxy a) (List IField) where
-  foldingWithIndex (GetIFieldsProps) sym defs a = def : defs
+  FoldingWithIndex GetIFieldsProps (Proxy label) (List IField) (Proxy a) (List IField) where
+  foldingWithIndex GetIFieldsProps sym defs a = def : defs
     where
     def = IField
       { args: getIInputValues a
@@ -110,11 +127,62 @@ instance
 
 getRecordIFields
   :: forall r
-   . HFoldlWithIndex (GetIFieldsProps) (List IField) { | r } (List IField)
+   . HFoldlWithIndex GetIFieldsProps (List IField) { | r } (List IField)
   => { | r }
   -> (List IField)
 getRecordIFields =
   hfoldlWithIndex (GetIFieldsProps :: GetIFieldsProps) (mempty :: List IField) >>> reverse
+
+class GetIInputValues :: forall k. k -> Constraint
+class GetIInputValues a where
+  getIInputValues :: Proxy a -> List IInputValue
+
+instance
+  ( HFoldlWithIndex (GetIInputValuesProps) (List IInputValue) { | p } (List IInputValue)
+  , UnsequenceProxies { | r } { | p }
+  ) =>
+  GetIInputValues ({ | r } -> a) where
+  getIInputValues _r = getRecordIInputValues ((unsequenceProxies (Proxy :: Proxy { | r })) :: { | p })
+else instance
+  GetIInputValues a where
+  getIInputValues _r = Nil
+
+data GetIInputValuesProps = GetIInputValuesProps
+
+instance
+  ( IsSymbol label
+  , GetIType a
+  ) =>
+  FoldingWithIndex (GetIInputValuesProps) (Proxy label) (List IInputValue) (Proxy (Maybe a)) (List IInputValue) where
+  foldingWithIndex (GetIInputValuesProps) sym defs a = def : defs
+    where
+    def = IInputValue
+      { name: reflectSymbol sym
+      , description: Nothing
+      , type: getITypeWithNullable (Proxy :: Proxy (Maybe a))
+      , defaultValue: Nothing
+      }
+else instance
+  ( IsSymbol label
+  , GetIType a
+  ) =>
+  FoldingWithIndex (GetIInputValuesProps) (Proxy label) (List IInputValue) (Proxy a) (List IInputValue) where
+  foldingWithIndex (GetIInputValuesProps) sym defs a = def : defs
+    where
+    def = IInputValue
+      { name: reflectSymbol sym
+      , description: Nothing
+      , type: getITypeWithNullable a
+      , defaultValue: Nothing
+      }
+
+getRecordIInputValues
+  :: forall r
+   . HFoldlWithIndex GetIInputValuesProps (List IInputValue) { | r } (List IInputValue)
+  => { | r }
+  -> (List IInputValue)
+getRecordIInputValues =
+  hfoldlWithIndex (GetIInputValuesProps :: GetIInputValuesProps) (mempty :: List IInputValue) >>> reverse
 
 modifyIType :: (IType_T -> IType_T) -> IType -> IType
 modifyIType = coerce
