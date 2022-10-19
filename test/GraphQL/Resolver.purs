@@ -2,13 +2,20 @@ module Test.GraphQL.Resolver where
 
 import Prelude
 
+import Data.Either (Either(..))
 import Data.Filterable (filter)
 import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Effect.Aff (Aff)
-import GraphQL.Resolver (rootResolver)
+import Foreign.Object as Object
+import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlIo(..))
-import GraphQL.Resolver.JsonResolver (Resolver)
+import GraphQL.Resolver.Gqlable (toAff)
+import GraphQL.Resolver.JsonResolver (Resolver, resolve)
+import GraphQL.Resolver.Result (resultToData)
 import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
+import GraphQL.Server.HandleRequest (parseGqlRequest, parseOperation)
 import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType)
 import Test.Spec (Spec, describe, it)
 
@@ -19,7 +26,12 @@ spec =
       it "should resolve with a simple resolver" do
         pure unit
 
-simpleResolver :: Resolver (GqlIo Aff)
+
+-- resolveSimple query = do
+--   op <- parseOperation Nothing query
+--   resultToData <$> resolve simpleResolver Object.empty op Nothing
+
+simpleResolver :: RootResolver (GqlIo Aff)
 simpleResolver =
   rootResolver
     { query: 
@@ -79,15 +91,4 @@ instance GetIType Author where
   
 io :: forall a. a -> GqlIo Aff a
 io = GqlIo <<< (pure :: _ -> Aff _)
-
--- unsafeRootResolver
---   :: forall query mutation m
---    . Applicative m
---   => ToResolver (GqlRoot query mutation) m
---   => GetDocument (GqlRoot query mutation)
---   => { query :: query, mutation :: mutation }
---   -> Resolver m
--- unsafeRootResolver = rootResolver >>> case _ of
---   Left err -> unsafeCrashWith err
---   Right a -> a
 

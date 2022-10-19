@@ -48,7 +48,14 @@ parseGqlRequest =
   (parseJson >=> decodeJson) >>>
     either (ParseGqlRequestError >>> throwError) pure
 
-parseOperation :: Maybe String -> String -> GqlResM AST.OperationDefinition
+-- parseOperation :: Maybe String -> String -> GqlResM AST.OperationDefinition
+parseOperation
+  :: forall m
+   . MonadAff m
+  => MonadThrow GqlError m
+  => Maybe String
+  -> String
+  -> m AST.OperationDefinition
 parseOperation operationName body = do
   doc <- getDoc body
   either throwError pure $ getOperationDefinition operationName doc

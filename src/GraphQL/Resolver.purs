@@ -1,4 +1,4 @@
-module GraphQL.Resolver (rootResolver) where
+module GraphQL.Resolver (RootResolver, rootResolver) where
 
 import Prelude
 
@@ -15,15 +15,15 @@ rootResolver
   :: forall query mutation m withIntrospection
    . Applicative m
   => Nub (IntrospectionRow query) withIntrospection
-  => ToResolver (GqlRoot (QueryRoot { | withIntrospection }) (MutationRoot mutation)) m
+  => ToResolver ((QueryRoot { | withIntrospection })) m
+  => ToResolver (MutationRoot mutation) m
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { query :: { | query }, mutation :: mutation }
-  -> (Resolver m)
+  -> { query :: Resolver m, mutation :: Resolver m }
 rootResolver root =
-  toResolver $ GqlRoot root
-    { query = QueryRoot (Record.merge introspection query :: { | withIntrospection })
-    , mutation = MutationRoot root.mutation
-    }
+  { query: toResolver $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
+  , mutation: toResolver $ MutationRoot root.mutation
+  }
   where
   root'@(GqlRoot { query: QueryRoot query }) = GqlRoot root
     { query = QueryRoot root.query
@@ -33,8 +33,10 @@ rootResolver root =
 
   introspection = getIntrospection schema
 
-test0 :: forall m. Applicative m => Resolver m
+type RootResolver m = { query :: Resolver m, mutation :: Resolver m }
+
+test0 :: forall m. Applicative m => RootResolver m
 test0 = rootResolver { query: { foo: "bar" }, mutation: unit }
 
-test1 :: forall m. Applicative m => Resolver m
+test1 :: forall m. Applicative m => RootResolver m
 test1 = rootResolver { query: { foo: "bar" }, mutation: { x: 1 } }
