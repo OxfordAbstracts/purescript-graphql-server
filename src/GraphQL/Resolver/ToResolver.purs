@@ -38,7 +38,7 @@ resolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
 resolveNode a = Node $ pure $ encodeJson a
 
 resolveNodeWith :: forall a m. Applicative m => (a -> Json) -> a -> Resolver m
-resolveNodeWith encode a =  Node $ pure $ encode a
+resolveNodeWith encode a = Node $ pure $ encode a
 
 resolveEnum :: forall m a rep. Applicative m => Generic a rep => EncodeLiteral rep => a -> Resolver m
 resolveEnum = resolveNodeWith encodeLiteralSum
