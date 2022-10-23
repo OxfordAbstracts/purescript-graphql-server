@@ -10,6 +10,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
+import GraphQL.GqlRep (class GqlRep, GEnum)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
@@ -279,8 +280,10 @@ data BookType = Paperback | Hardback | Ebook
 
 derive instance Generic BookType _
 
+instance GqlRep BookType GEnum "BookType"
+
 instance ToResolver BookType GqlAff where
   toResolver a = resolveEnum a
 
 instance GetIType BookType where
-  getITypeImpl a = enumType "BookType" a
+  getITypeImpl a = enumType a

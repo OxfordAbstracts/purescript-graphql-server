@@ -24,6 +24,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import GraphQL.GqlRep (class GqlRep, GEnum)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
@@ -37,11 +38,23 @@ class ToResolver a m | m -> m where
 resolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
 resolveNode a = Node $ pure $ encodeJson a
 
-resolveNodeWith :: forall a m. Applicative m => (a -> Json) -> a -> Resolver m
-resolveNodeWith encode a = Node $ pure $ encode a
+unsafeResolveNodeWith
+  :: forall a m
+   . Applicative m
+  => (a -> Json)
+  -> a
+  -> Resolver m
+unsafeResolveNodeWith encode a = Node $ pure $ encode a
 
-resolveEnum :: forall m a rep. Applicative m => Generic a rep => EncodeLiteral rep => a -> Resolver m
-resolveEnum = resolveNodeWith encodeLiteralSum
+resolveEnum
+  :: forall m a rep name
+   . Applicative m
+  => Generic a rep
+  => EncodeLiteral rep
+  => GqlRep a GEnum name
+  => a
+  -> Resolver m
+resolveEnum = unsafeResolveNodeWith encodeLiteralSum
 
 resolveAsync :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
 resolveAsync a = ResolveAsync $ toResolver <$> a

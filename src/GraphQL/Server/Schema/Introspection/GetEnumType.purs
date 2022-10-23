@@ -6,13 +6,21 @@ import Data.Generic.Rep (class Generic, Constructor, NoArguments, Sum)
 import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import GraphQL.GqlRep (class GqlRep, GEnum)
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IType(..), ITypeKind(..), defaultIType)
 import Type.Proxy (Proxy(..))
 
-enumType :: forall a rep. Generic a rep => GetEnumValues rep => String -> Proxy a -> IType
-enumType typeName _ = IType defaultIType
+enumType
+  :: forall a rep name
+   . IsSymbol name
+  => Generic a rep
+  => GqlRep a GEnum name
+  => GetEnumValues rep
+  => Proxy a
+  -> IType
+enumType _ = IType defaultIType
   { kind = ENUM
-  , name = Just typeName
+  , name = Just $ reflectSymbol (Proxy :: Proxy name)
   , enumValues = \_ -> Just $ getEnumValues (Proxy :: Proxy rep) <#>
       IEnumValue <<<
         { name: _
