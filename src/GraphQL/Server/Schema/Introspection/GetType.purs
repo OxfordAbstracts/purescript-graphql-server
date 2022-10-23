@@ -7,7 +7,7 @@ module GraphQL.Server.Schema.Introspection.GetType
   , getIFields
   , genericGetGqlType
   , getIInputValues
-  , getITypeImpl
+  , getType
   , getITypeWithNullable
   , scalar
   ) where
@@ -30,7 +30,7 @@ import Type.Proxy (Proxy(..))
 
 class GetGqlType :: forall k. k -> Constraint
 class GqlNullable a <= GetGqlType a where
-  getITypeImpl :: Proxy a -> IType
+  getType :: Proxy a -> IType
 
 getITypeWithNullable :: forall a. GetGqlType a => Proxy a -> IType
 getITypeWithNullable a =
@@ -39,36 +39,36 @@ getITypeWithNullable a =
   else
     unnamed IT.NON_NULL # modifyIType _ { ofType = Just t }
   where
-  t = getITypeImpl a
+  t = getType a
 
 instance GetGqlType Boolean where
-  getITypeImpl = unsafeScalar "Boolean"
+  getType = unsafeScalar "Boolean"
 
 instance GetGqlType Int where
-  getITypeImpl = unsafeScalar "Int"
+  getType = unsafeScalar "Int"
 
 instance GetGqlType Number where
-  getITypeImpl = unsafeScalar "Float"
+  getType = unsafeScalar "Float"
 
 instance GetGqlType String where
-  getITypeImpl = unsafeScalar "String"
+  getType = unsafeScalar "String"
 
 instance (GetGqlType a) => GetGqlType (Array a) where
-  getITypeImpl _ = unnamed IT.LIST # modifyIType _
+  getType _ = unnamed IT.LIST # modifyIType _
     { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a)
     }
 
 instance (GetGqlType a) => GetGqlType (List a) where
-  getITypeImpl _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) }
+  getType _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) }
 
 instance (GetGqlType a) => GetGqlType (Maybe a) where
-  getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
+  getType _ = getType (Proxy :: Proxy a)
 
 instance (GetGqlType b) => GetGqlType (a -> b) where
-  getITypeImpl _ = getITypeImpl (Proxy :: Proxy b)
+  getType _ = getType (Proxy :: Proxy b)
 
 instance (GetGqlType a) => GetGqlType (GqlIo m a) where
-  getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
+  getType _ = getType (Proxy :: Proxy a)
 
 genericGetGqlType
   :: forall name ctrName r a

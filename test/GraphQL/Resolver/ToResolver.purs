@@ -101,7 +101,7 @@ instance (Applicative m, HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a 
   toResolver a = objectResolver a
 
 instance GetIFields { | a } => GetGqlType (TestGqlObj { | a }) where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 resolverParent
   :: TestGqlObj

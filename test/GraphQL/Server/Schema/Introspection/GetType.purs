@@ -85,7 +85,7 @@ instance Applicative m => ToResolver T1 m where
   toResolver a = objectResolver a
 
 instance GetGqlType T1 where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 newtype TRec1 = TRec1 { query :: Maybe TRec2 }
 
@@ -97,7 +97,7 @@ instance Applicative m => ToResolver TRec1 m where
   toResolver a = objectResolver a
 
 instance GetGqlType TRec1 where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 newtype TRec2 = TRec2 { query :: Maybe TRec1 }
 
@@ -109,7 +109,7 @@ instance Applicative m => ToResolver TRec2 m where
   toResolver a = objectResolver a
 
 instance GetGqlType TRec2 where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 notNull :: (IType_T -> IType_T) -> IType_T
 notNull fn = defaultIType

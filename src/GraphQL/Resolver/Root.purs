@@ -36,7 +36,7 @@ instance
   ( GetIFields { | r }
   ) =>
   GetGqlType (QueryRoot { | r }) where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 instance GqlRep (QueryRoot a) GObject "QueryRoot"
 
@@ -70,4 +70,4 @@ instance
   ( GetIFields { | r }
   ) =>
   GetGqlType (MutationRoot { | r }) where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a

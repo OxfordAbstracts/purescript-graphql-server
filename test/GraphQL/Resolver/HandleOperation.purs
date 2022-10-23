@@ -263,7 +263,7 @@ instance ToResolver Book GqlAff where
   toResolver a = objectResolver a
 
 instance GetGqlType Book where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 newtype Author = Author
   { name :: String
@@ -278,7 +278,7 @@ instance ToResolver Author GqlAff where
   toResolver a = objectResolver a
 
 instance GetGqlType Author where
-  getITypeImpl a = genericGetGqlType a
+  getType a = genericGetGqlType a
 
 data BookType = Paperback | Hardback | Ebook
 
@@ -290,4 +290,4 @@ instance ToResolver BookType GqlAff where
   toResolver a = resolveEnum a
 
 instance GetGqlType BookType where
-  getITypeImpl a = enumType a
+  getType a = enumType a
