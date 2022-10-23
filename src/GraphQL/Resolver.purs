@@ -6,7 +6,7 @@ import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
 import GraphQL.Server.Schema (class GetSchema, getSchema)
-import GraphQL.Server.Schema.Introspection (IntrospectionRow, getIntrospection)
+import GraphQL.Server.Schema.Introspection (Introspection(..), IntrospectionRow, getIntrospection)
 import Prim.Row (class Nub)
 import Record as Record
 
@@ -23,6 +23,7 @@ rootResolver
 rootResolver root =
   { query: toResolver $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
   , mutation: toResolver $ MutationRoot root.mutation
+  , introspection: Introspection introspection
   }
   where
   root'@(GqlRoot { query: QueryRoot query }) = GqlRoot root
@@ -33,7 +34,11 @@ rootResolver root =
 
   introspection = getIntrospection schema
 
-type RootResolver m = { query :: Resolver m, mutation :: Resolver m }
+type RootResolver m = 
+  { query :: Resolver m
+  , mutation :: Resolver m 
+  , introspection :: Introspection
+  }
 
 test0 :: forall m. Applicative m => RootResolver m
 test0 = rootResolver { query: { foo: "bar" }, mutation: unit }

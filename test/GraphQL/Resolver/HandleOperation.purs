@@ -79,6 +79,34 @@ spec =
                 }
               ]
           }
+
+      it "should resolve a query with variables" do
+    -- query getZuckProfile($devicePicSize: Int) {
+    --     user(id: 4) {
+    --       id
+    --       name
+    --       profilePic(size: $devicePicSize)
+    --     }
+    --   }
+        { query:
+            """query getBook($maxPrice: Int) ) { 
+            books(maxPrice: $maxPrice) { 
+              id 
+              name
+            } 
+          }"""
+        , vars: Object.fromHomogeneous
+            { maxPrice: encodeJson 1 }
+
+        }
+          `shouldResolveToWithVars`
+            { books:
+                [ { id: 1
+                  , name: "book name 1"
+                  }
+                ]
+            }
+
       it "should resolve a query with union types" do
         """
         query { 
@@ -231,6 +259,11 @@ shouldResolveTo query expected = do
   res <- resolveAsJson query
   JsonShow res `shouldEqual` JsonShow (encodeJson expected)
 
+shouldResolveToWithVars :: forall a. EncodeJson a => { query :: String, vars :: Object.Object Json } -> a -> Aff Unit
+shouldResolveToWithVars { vars, query } expected = do
+  res <- resolveAsJsonWithVars vars query
+  JsonShow res `shouldEqual` JsonShow (encodeJson expected)
+
 newtype JsonShow = JsonShow Json
 
 derive newtype instance Eq JsonShow
@@ -239,9 +272,12 @@ instance Show JsonShow where
   show (JsonShow j) = stringify j
 
 resolveAsJson :: String -> Aff Json
-resolveAsJson query = do
+resolveAsJson = resolveAsJsonWithVars Object.empty
+
+resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
+resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- toAff $ handleOperation simpleResolver op Object.empty
+  eit <- toAff $ handleOperation simpleResolver op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 

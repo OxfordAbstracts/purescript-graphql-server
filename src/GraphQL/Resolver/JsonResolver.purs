@@ -2,11 +2,11 @@ module GraphQL.Resolver.JsonResolver where
 
 import Prelude
 
-import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
+import Data.Argonaut (Json, jsonEmptyObject)
 import Data.Either (Either(..))
 import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (selectionSet)
-import Data.List (List(..), foldl)
+import Data.List (List(..))
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
@@ -14,6 +14,7 @@ import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object (Object)
 import Foreign.Object as Object
+import GraphQL.Resolver.EncodeValue (encodeArguments)
 import GraphQL.Resolver.Gqlable (class Gqlable, gqlParallel, gqlSequential)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
@@ -91,7 +92,7 @@ resolve resolver vars = case resolver, _ of
             Nothing -> pure $ ResultError FieldNotFound
             Just field ->
               let
-                args = maybe jsonEmptyObject (encodeArguments <<< unwrap) arguments
+                args = maybe jsonEmptyObject (encodeArguments vars <<< unwrap) arguments
               in
                 resolve (field.resolver { args }) vars selectionSet
   where
@@ -113,22 +114,5 @@ resolve resolver vars = case resolver, _ of
       ) ->
       getSelectionFields typename =<< selectionSet
     _ -> Nil
-
-  encodeArguments :: List AST.Argument -> Json
-  encodeArguments = fromObject <<< foldl insertArg Object.empty
-    where
-    insertArg obj (AST.Argument { name, value }) = Object.insert name (encodeValue value) obj
-
-  encodeValue :: AST.Value -> Json
-  encodeValue = case _ of
-    AST.Value_Variable (AST.Variable varName) -> Object.lookup varName vars # encodeJson
-    AST.Value_IntValue (AST.IntValue a) -> encodeJson a
-    AST.Value_FloatValue (AST.FloatValue a) -> encodeJson a
-    AST.Value_StringValue (AST.StringValue a) -> encodeJson a
-    AST.Value_BooleanValue (AST.BooleanValue a) -> encodeJson a
-    AST.Value_NullValue _ -> jsonNull
-    AST.Value_EnumValue (AST.EnumValue a) -> encodeJson a
-    AST.Value_ListValue (AST.ListValue l) -> encodeJson $ map encodeValue l
-    AST.Value_ObjectValue (AST.ObjectValue args) -> encodeArguments args
 
   err = pure <<< ResultError

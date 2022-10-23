@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Argonaut (JsonDecodeError)
 import Data.Generic.Rep (class Generic)
+import Data.GraphQL.AST as AST
 import Data.Show.Generic (genericShow)
 import Parsing (ParseError)
 
@@ -38,7 +39,10 @@ derive instance Generic ResolverError _
 instance Show ResolverError where
   show = genericShow
 
-data VariableInputError = VariableNotFound String
+data VariableInputError 
+  = VariableNotProvided String
+  | VariableIsNotInputType String
+  | VariableHasNoValue String
 
 derive instance Eq VariableInputError
 derive instance Generic VariableInputError _

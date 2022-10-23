@@ -2,19 +2,27 @@ module GraphQL.Resolver.HandleOperation where
 
 import Prelude
 
+import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
+import Data.Foldable (foldM)
 import Data.GraphQL.AST (OperationType(..))
 import Data.GraphQL.AST as AST
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types (NonEmptyList)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (unwrap)
 import Foreign.Object (Object)
+import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
+import GraphQL.Resolver.EncodeValue (encodeValue)
 import GraphQL.Resolver.Gqlable (class Gqlable)
 import GraphQL.Resolver.JsonResolver (resolve)
 import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
-import GraphQL.Server.GqlError (GqlError(..), VariableInputError)
+import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
+import GraphQL.Server.Schema.Introspection (Introspection(..))
+import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 handleOperation
   :: forall m f
@@ -28,46 +36,65 @@ handleOperation
            , errors :: Maybe (NonEmptyList Json)
            }
        )
-handleOperation { mutation, query } opDef rawVars = do
-  case coerceVars rawVars of
-    Left err -> pure $ Left $ VariableInputError err
-    Right vars -> do
-      case opDef of
-        AST.OperationDefinition_SelectionSet selectionSet ->
-          resolveToJson query selectionSet
-        AST.OperationDefinition_OperationType
-          { operationType
-          -- , variableDefinitions --  ∷ (Maybe VariableDefinitions)
-          -- , directives --  ∷ (Maybe Directives)
-          , selectionSet
-          } -> case operationType of
-          Query -> resolveToJson query selectionSet
-          Mutation -> resolveToJson mutation selectionSet
-          Subscription -> pure $ Left $ SubscriptionsNotSupported
-      where
-      resolveToJson r selectionSet = getJson <$> resolve r vars (Just selectionSet)
-
+handleOperation { mutation, query, introspection: Introspection introspection } opDef rawVars = do
+  case opDef of
+    AST.OperationDefinition_SelectionSet selectionSet ->
+      resolveToJson Object.empty query selectionSet
+    AST.OperationDefinition_OperationType
+      { operationType
+      , variableDefinitions
+      , selectionSet
+      } ->
+      case coerceVars variableDefinitions of
+        Left err -> pure $ Left $ VariableInputError err
+        Right vars -> do
+          case operationType of
+            Query -> resolveToJson vars query selectionSet
+            Mutation -> resolveToJson vars mutation selectionSet
+            Subscription -> pure $ Left $ SubscriptionsNotSupported
   where
+  resolveToJson vars r selectionSet = getJson <$> resolve r vars (Just selectionSet)
+
   getJson result = pure
     { data: resultToData result
     , errors: NonEmpty.fromList $ encodeLocatedError <$> getLocatedErrors result
     }
 
-  coerceVars :: Object Json -> Either VariableInputError (Object Json)
-  coerceVars = pure -- TODO: implement
+  coerceVars :: Maybe AST.VariableDefinitions -> Either VariableInputError (Object Json)
+  coerceVars Nothing = pure Object.empty
+  coerceVars (Just (AST.VariableDefinitions varDefs)) = foldM go Object.empty varDefs
+    where
+    go :: Object Json -> AST.VariableDefinition -> Either VariableInputError (Object Json)
+    go
+      result
+      ( AST.VariableDefinition
+          { variable: AST.Variable variable
+          , type: tipe
+          , defaultValue
+          }
+      ) = do
+      when (not isInputType tipe) $ throwError $ VariableIsNotInputType variable
+      let
+        hasValue = Object.member variable rawVars
+        value = Object.lookup variable rawVars
 
--- makeVariables :: Object Json -> List AST.VariableDefinition -> Either VariableInputError (Object Json)
--- makeVariables vars = foldM makeVar Object.empty
--- where
--- makeVar :: Object Json -> AST.VariableDefinition -> Either VariableInputError (Object Json)
--- makeVar coercedVars (AST.VariableDefinition varDef@{ variable: AST.Variable varName }) =
---   case Object.lookup varName vars, varDef of
+      case hasValue, value, tipe, defaultValue of
+        false, _, _, (Just (AST.DefaultValue default)) ->
+          pure $ Object.insert variable (encodeValue result default) result
+        _, Just val, _, _ -> 
+          pure $ Object.insert variable val result
+        _, _, AST.Type_NonNullType _, _  -> 
+          throwError $ VariableHasNoValue variable
+        _, _, _, _ -> pure result
 
---     Just var, _ -> Right $ Object.insert varName var coercedVars
+    isInputType = case _ of 
+      AST.Type_ListType (AST.ListType t) -> isInputType t 
+      AST.Type_NonNullType (AST.NonNullType_ListType (AST.ListType t)) -> isInputType t
+      AST.Type_NonNullType (AST.NonNullType_NamedType t) -> isInputNamedType t
+      AST.Type_NamedType t -> isInputNamedType t 
 
---     Nothing, { defaultValue: Just (AST.DefaultValue defaultValue) } ->
---       Right
---         $ Object.insert varName (encodeValue defaultValue) coercedVars
+    isInputNamedType (AST.NamedType name) = 
+      lookupType name # maybe false \t -> (eq SCALAR || eq INPUT_OBJECT)  t.kind 
 
---     _, _ -> Left $ VariableNotFound varName
+    lookupType name = introspection.__type { name } <#> unwrap
 
