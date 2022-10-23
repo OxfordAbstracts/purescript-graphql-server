@@ -79,6 +79,37 @@ spec =
                 }
               ]
           }
+      it "should resolve a query with union types" do
+        """
+        query { 
+          books { 
+            id 
+            packaging {
+              __typename
+              ... on PackagingBoxed {
+                note
+              }
+              ... on PackagingGiftWrapped {
+                colour
+              }
+            }
+          }
+        }""" `shouldResolveTo`
+          { "books":
+              [ { "id": 1
+                , "packaging": encodeJson
+                    { "__typename": "PackagingBoxed"
+                    , "note": "Custom note"
+                    }
+                }
+              , { "id": 2
+                , "packaging": encodeJson
+                    { "__typename": "PackagingGiftWrapped"
+                    , "colour": "Blue"
+                    }
+                }
+              ]
+          }
       it "should resolve a schema introspection query" do
         """
         query { 
@@ -234,7 +265,7 @@ book1 = Book
   , id: 1
   , price: 1.0
   , type: Just Paperback
-  , packaging: Just $ PackagingBoxed $ Boxed { note: "Custom note" }
+  , packaging: Just $ Boxed { note: "Custom note" }
   , author: \_ -> pure author
   }
 
@@ -244,7 +275,7 @@ book2 = Book
   , id: 2
   , price: 2.0
   , type: Just Ebook
-  , packaging: Just $ PackagingBoxed $ Boxed { note: "Custom note" }
+  , packaging: Just $ GiftWrapped { colour: "Blue", withCard: true }
   , author: \_ -> pure author
   }
 
@@ -302,8 +333,13 @@ instance GetGqlType BookType where
   getType a = getEnumType a
 
 data Packaging
-  = PackagingGiftWrapped GiftWrapped
-  | PackagingBoxed Boxed
+  = GiftWrapped
+      { colour :: String
+      , withCard :: Boolean
+      }
+  | Boxed
+      { note :: String
+      }
 
 derive instance Generic Packaging _
 
@@ -314,31 +350,3 @@ instance ToResolver Packaging GqlAff where
 
 instance GetGqlType Packaging where
   getType a = getUnionType a
-
-newtype GiftWrapped = GiftWrapped
-  { colour :: String
-  }
-
-derive instance Generic GiftWrapped _
-
-instance GqlRep GiftWrapped GObject "GiftWrapped"
-
-instance ToResolver GiftWrapped GqlAff where
-  toResolver a = toObjectResolver a
-
-instance GetGqlType GiftWrapped where
-  getType a = getObjectType a
-
-newtype Boxed = Boxed
-  { note :: String
-  }
-
-derive instance Generic Boxed _
-
-instance GqlRep Boxed GObject "Boxed"
-
-instance ToResolver Boxed GqlAff where
-  toResolver a = toObjectResolver a
-
-instance GetGqlType Boxed where
-  getType a = getObjectType a

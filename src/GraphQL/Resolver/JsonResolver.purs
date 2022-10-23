@@ -4,7 +4,6 @@ import Prelude
 
 import Data.Argonaut (Json, encodeJson, fromObject, jsonEmptyObject, jsonNull)
 import Data.Either (Either(..))
-import Data.GraphQL.AST (Selection(..), SelectionSet(..))
 import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (selectionSet)
 import Data.List (List(..), foldl)
@@ -19,6 +18,7 @@ import GraphQL.Resolver.Gqlable (class Gqlable, gqlParallel, gqlSequential)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), ResolverError(..))
 import Parsing (runParser)
+import Safe.Coerce (coerce)
 
 type TopLevelJsonResolver m =
   { query :: Resolver m
@@ -65,7 +65,7 @@ resolve
   => Gqlable f m
   => Resolver f
   -> Object Json
-  -> (Maybe SelectionSet)
+  -> (Maybe AST.SelectionSet)
   -> f Result
 resolve resolver vars = case resolver, _ of
   ResolveAsync resolverM, a -> gqlParallel do
@@ -79,8 +79,8 @@ resolve resolver vars = case resolver, _ of
   NullableResolver resolvers, selectionSet ->
     ResultNullable <$> traverse (\r -> resolve r vars selectionSet) resolvers
   Fields _, Nothing -> err MissingSelectionSet
-  (Fields { fields }), Just (SelectionSet selections) ->
-    case getSelectionFields =<< selections of
+  (Fields { fields, typename }), Just (AST.SelectionSet selections) ->
+    case getSelectionFields typename =<< selections of
       Nil -> err NoFields
       selectedFields -> ResultObject <$> for selectedFields
         \{ arguments
@@ -95,9 +95,16 @@ resolve resolver vars = case resolver, _ of
               in
                 resolve (field.resolver { args }) vars selectionSet
   where
-  getSelectionFields :: Selection -> List AST.T_Field
-  getSelectionFields = case _ of
-    (Selection_Field (AST.Field sf)) -> pure sf
+  getSelectionFields :: String -> AST.Selection -> List AST.T_Field
+  getSelectionFields typename = case _ of
+    AST.Selection_Field (AST.Field sf) -> pure sf
+    AST.Selection_InlineFragment
+      ( AST.InlineFragment
+          { typeCondition: Just typeCondition
+          , selectionSet: (AST.SelectionSet selectionSet)
+          }
+      ) | coerce typename == typeCondition ->
+      getSelectionFields typename =<< selectionSet
     _ -> Nil
 
   encodeArguments :: List AST.Argument -> Json

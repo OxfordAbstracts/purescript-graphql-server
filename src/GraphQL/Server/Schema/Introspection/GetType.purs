@@ -30,6 +30,7 @@ import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNul
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
+import Prim.Symbol (class Append)
 import Safe.Coerce (coerce)
 import Type.Proxy (Proxy(..))
 
@@ -115,31 +116,43 @@ getUnionType
    . IsSymbol name
   => Generic a rep
   => GqlRep a GUnion name
-  => GetUnionPossibleTypes rep
+  => GetUnionPossibleTypes name rep
   => Proxy a
   -> IType
 getUnionType _ = IType defaultIType
   { kind = UNION
   , name = Just $ reflectSymbol (Proxy :: Proxy name)
-  , possibleTypes = Just $ getUnionPossibleTypes (Proxy :: Proxy rep)
+  , possibleTypes = Just $ getUnionPossibleTypes (Proxy :: Proxy name) (Proxy :: Proxy rep)
   }
 
 getScalarType :: forall a name. GqlRep a GScalar name => IsSymbol name => Proxy a -> IType
 getScalarType a = unsafeScalar (reflectSymbol (Proxy :: Proxy name)) a
 
-class GetUnionPossibleTypes :: forall k. k -> Constraint
-class GetUnionPossibleTypes a where
-  getUnionPossibleTypes :: Proxy a -> List IType
+class GetUnionPossibleTypes :: forall k. Symbol -> k -> Constraint
+class GetUnionPossibleTypes sym a where
+  getUnionPossibleTypes :: Proxy sym -> Proxy a -> List IType
 
 instance
+  ( Append typeName name fullName
+  , IsSymbol fullName
+  , GetIFields { | r }
+  ) =>
+  GetUnionPossibleTypes typeName (Constructor name (Argument { | r })) where
+  getUnionPossibleTypes _ _ = pure $ IType defaultIType
+    { name = Just $ reflectSymbol (Proxy :: Proxy fullName)
+    , kind = IT.OBJECT
+    , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r })
+    }
+
+else instance
   ( GetGqlType t
   , GqlRep t GObject name
   ) =>
-  GetUnionPossibleTypes (Constructor ctrName (Argument t)) where
-  getUnionPossibleTypes _ = pure $ getType (Proxy :: Proxy t)
+  GetUnionPossibleTypes sym (Constructor ctrName (Argument t)) where
+  getUnionPossibleTypes _ _ = pure $ getType (Proxy :: Proxy t)
 
-instance (GetUnionPossibleTypes a, GetUnionPossibleTypes b) => GetUnionPossibleTypes (Sum a b) where
-  getUnionPossibleTypes _ = getUnionPossibleTypes (Proxy :: Proxy a) <> getUnionPossibleTypes (Proxy :: Proxy b)
+instance (GetUnionPossibleTypes sym a, GetUnionPossibleTypes sym b) => GetUnionPossibleTypes sym (Sum a b) where
+  getUnionPossibleTypes sym _ = getUnionPossibleTypes sym (Proxy :: Proxy a) <> getUnionPossibleTypes sym (Proxy :: Proxy b)
 
 class GetIFields :: forall k. k -> Constraint
 class GetIFields a where

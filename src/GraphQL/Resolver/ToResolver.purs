@@ -33,6 +33,7 @@ import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Server.GqlError (ResolverError(..))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
+import Prim.Symbol (class Append)
 import Type.Proxy (Proxy(..))
 
 class ToResolver a m | m -> m where
@@ -60,7 +61,17 @@ toObjectResolver
   => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
   => a
   -> Resolver m
-toObjectResolver = from >>> \(Constructor (Argument arg)) ->
+toObjectResolver = from >>> unsafeToObjectResolverRep (Proxy :: Proxy name)
+
+unsafeToObjectResolverRep
+  :: forall m arg name ctrName
+   . Applicative m
+  => IsSymbol name
+  => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
+  => Proxy name
+  -> (Constructor ctrName (Argument { | arg }))
+  -> Resolver m
+unsafeToObjectResolverRep _ (Constructor (Argument arg)) =
   Fields
     { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
     , typename: reflectSymbol (Proxy :: Proxy name)
@@ -70,11 +81,11 @@ toUnionResolver
   :: forall m a rep name
    . Applicative m
   => Generic a rep
-  => GenericUnionResolver rep m
+  => GenericUnionResolver name rep m
   => GqlRep a GUnion name
   => a
   -> Resolver m
-toUnionResolver a = genericUnionResolver $ from a
+toUnionResolver a = genericUnionResolver (Proxy :: Proxy name) $ from a
 
 unsafeResolveNodeWith
   :: forall a m
@@ -182,19 +193,28 @@ else instance argResolverAllFn :: (DecodeJson a, ToResolver b m) => GetArgResolv
 else instance argResolverAny :: ToResolver a m => GetArgResolver a m where
   getArgResolver a = \_ -> toResolver a
 
-class GenericUnionResolver rep m where
-  genericUnionResolver :: rep -> JsonResolver.Resolver m
+class GenericUnionResolver :: Symbol -> Type -> (Type -> Type) -> Constraint
+class GenericUnionResolver sym rep m where
+  genericUnionResolver :: Proxy sym -> rep -> JsonResolver.Resolver m
 
 instance
-  ( GenericUnionResolver a m
-  , GenericUnionResolver b m
+  ( GenericUnionResolver sym a m
+  , GenericUnionResolver sym b m
   ) =>
-  GenericUnionResolver (Sum a b) m where
-  genericUnionResolver (Inl a) = genericUnionResolver a
-  genericUnionResolver (Inr b) = genericUnionResolver b
+  GenericUnionResolver sym (Sum a b) m where
+  genericUnionResolver sym (Inl a) = genericUnionResolver sym a
+  genericUnionResolver sym (Inr b) = genericUnionResolver sym b
 
 instance
+  ( Applicative m
+  , IsSymbol fullName
+  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
+  , Append sym name fullName
+  ) =>
+  GenericUnionResolver sym (Constructor name (Argument { | arg })) m where
+  genericUnionResolver _sym a = unsafeToObjectResolverRep (Proxy :: Proxy fullName) a
+else instance
   ( ToResolver arg m
   ) =>
-  GenericUnionResolver (Constructor name (Argument arg)) m where
-  genericUnionResolver (Constructor (Argument arg)) = toResolver arg
+  GenericUnionResolver _sym (Constructor name (Argument arg)) m where
+  genericUnionResolver _sym (Constructor (Argument arg)) = toResolver arg
