@@ -38,7 +38,7 @@ class ToResolver a m | m -> m where
 unsafeResolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
 unsafeResolveNode a = Node $ pure $ encodeJson a
 
-resolveNode :: forall m a name. GqlRep a GScalar name =>  Applicative m => EncodeJson a => a -> Resolver m
+resolveNode :: forall m a name. GqlRep a GScalar name => Applicative m => EncodeJson a => a -> Resolver m
 resolveNode = unsafeResolveNode
 
 unsafeResolveNodeWith

@@ -5,7 +5,7 @@ module GraphQL.GqlRep where
 class GqlRep :: Type -> Type -> Symbol -> Constraint
 class
 
-  GqlRep a gqlType name 
+  GqlRep a gqlType name
   | a -> name
   , a -> gqlType
   , name -> gqlType
