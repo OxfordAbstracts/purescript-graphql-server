@@ -81,15 +81,8 @@ spec =
           }
 
       it "should resolve a query with variables" do
-    -- query getZuckProfile($devicePicSize: Int) {
-    --     user(id: 4) {
-    --       id
-    --       name
-    --       profilePic(size: $devicePicSize)
-    --     }
-    --   }
         { query:
-            """query getBook($maxPrice: Int) ) { 
+            """query getBook($maxPrice: Int) { 
             books(maxPrice: $maxPrice) { 
               id 
               name

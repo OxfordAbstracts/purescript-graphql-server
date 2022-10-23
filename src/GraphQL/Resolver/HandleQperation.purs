@@ -81,20 +81,20 @@ handleOperation { mutation, query, introspection: Introspection introspection } 
       case hasValue, value, tipe, defaultValue of
         false, _, _, (Just (AST.DefaultValue default)) ->
           pure $ Object.insert variable (encodeValue result default) result
-        _, Just val, _, _ -> 
+        _, Just val, _, _ ->
           pure $ Object.insert variable val result
-        _, _, AST.Type_NonNullType _, _  -> 
+        _, _, AST.Type_NonNullType _, _ ->
           throwError $ VariableHasNoValue variable
         _, _, _, _ -> pure result
 
-    isInputType = case _ of 
-      AST.Type_ListType (AST.ListType t) -> isInputType t 
+    isInputType = case _ of
+      AST.Type_ListType (AST.ListType t) -> isInputType t
       AST.Type_NonNullType (AST.NonNullType_ListType (AST.ListType t)) -> isInputType t
       AST.Type_NonNullType (AST.NonNullType_NamedType t) -> isInputNamedType t
-      AST.Type_NamedType t -> isInputNamedType t 
+      AST.Type_NamedType t -> isInputNamedType t
 
-    isInputNamedType (AST.NamedType name) = 
-      lookupType name # maybe false \t -> (eq SCALAR || eq INPUT_OBJECT)  t.kind 
+    isInputNamedType (AST.NamedType name) =
+      lookupType name # maybe false \t -> (eq SCALAR || eq INPUT_OBJECT) t.kind
 
     lookupType name = introspection.__type { name } <#> unwrap
 
