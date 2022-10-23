@@ -5,7 +5,7 @@ import Prelude
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, getITypeImpl)
+import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getITypeImpl)
 import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
 import Type.Proxy (Proxy(..))
@@ -13,7 +13,7 @@ import Type.Proxy (Proxy(..))
 class GetSchema a where
   getSchema :: a -> ISchema
 
-instance (GetIType (QueryRoot { | q })) => GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot Unit)) where
+instance (GetGqlType (QueryRoot { | q })) => GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot Unit)) where
   getSchema _ = ISchema
     { types: getDescendantITypes queryType
     , queryType
@@ -23,7 +23,7 @@ instance (GetIType (QueryRoot { | q })) => GetSchema (GqlRoot (QueryRoot { | q }
     }
     where
     queryType = getITypeImpl (Proxy :: Proxy (QueryRoot { | q }))
-else instance (GetIType (QueryRoot { | q }), GetIType (MutationRoot { | m })) => GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot { | m })) where
+else instance (GetGqlType (QueryRoot { | q }), GetGqlType (MutationRoot { | m })) => GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot { | m })) where
   getSchema _ = ISchema
     { types: getDescendantITypes queryType <> getDescendantITypes mutationType
     , queryType

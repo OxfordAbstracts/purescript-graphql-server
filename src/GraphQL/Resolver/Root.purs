@@ -9,7 +9,7 @@ import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, objectResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
-import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetIType, genericGetIType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, genericGetGqlType)
 import Heterogeneous.Folding (class HFoldlWithIndex)
 import Type.Proxy (Proxy(..))
 
@@ -35,8 +35,8 @@ derive instance Generic (QueryRoot a) _
 instance
   ( GetIFields { | r }
   ) =>
-  GetIType (QueryRoot { | r }) where
-  getITypeImpl a = genericGetIType a
+  GetGqlType (QueryRoot { | r }) where
+  getITypeImpl a = genericGetGqlType a
 
 instance GqlRep (QueryRoot a) GObject "QueryRoot"
 
@@ -69,5 +69,5 @@ instance
 instance
   ( GetIFields { | r }
   ) =>
-  GetIType (MutationRoot { | r }) where
-  getITypeImpl a = genericGetIType a
+  GetGqlType (MutationRoot { | r }) where
+  getITypeImpl a = genericGetGqlType a

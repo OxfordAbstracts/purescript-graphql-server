@@ -3,11 +3,10 @@ module GraphQL.Server.Schema.Introspection.GetType
   , GetIInputValuesProps(..)
   , class GetIFields
   , class GetIInputValues
-  , class GetIType
+  , class GetGqlType
   , getIFields
-  , genericGetIType
+  , genericGetGqlType
   , getIInputValues
-  , getIType
   , getITypeImpl
   , getITypeWithNullable
   , scalar
@@ -29,15 +28,11 @@ import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfo
 import Safe.Coerce (coerce)
 import Type.Proxy (Proxy(..))
 
--- class GetIType :: forall k.  k -> Constraint
-class GetIType :: forall k. k -> Constraint
-class GqlNullable a <= GetIType a where
+class GetGqlType :: forall k. k -> Constraint
+class GqlNullable a <= GetGqlType a where
   getITypeImpl :: Proxy a -> IType
 
-getIType :: forall a. GetIType a => Proxy a -> IType
-getIType a = getITypeWithNullable a
-
-getITypeWithNullable :: forall a. GetIType a => Proxy a -> IType
+getITypeWithNullable :: forall a. GetGqlType a => Proxy a -> IType
 getITypeWithNullable a =
   if isNullable a then
     t
@@ -46,36 +41,36 @@ getITypeWithNullable a =
   where
   t = getITypeImpl a
 
-instance GetIType Boolean where
+instance GetGqlType Boolean where
   getITypeImpl = unsafeScalar "Boolean"
 
-instance GetIType Int where
+instance GetGqlType Int where
   getITypeImpl = unsafeScalar "Int"
 
-instance GetIType Number where
+instance GetGqlType Number where
   getITypeImpl = unsafeScalar "Float"
 
-instance GetIType String where
+instance GetGqlType String where
   getITypeImpl = unsafeScalar "String"
 
-instance (GetIType a) => GetIType (Array a) where
+instance (GetGqlType a) => GetGqlType (Array a) where
   getITypeImpl _ = unnamed IT.LIST # modifyIType _
     { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a)
     }
 
-instance (GetIType a) => GetIType (List a) where
+instance (GetGqlType a) => GetGqlType (List a) where
   getITypeImpl _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) }
 
-instance (GetIType a) => GetIType (Maybe a) where
+instance (GetGqlType a) => GetGqlType (Maybe a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
 
-instance (GetIType b) => GetIType (a -> b) where
+instance (GetGqlType b) => GetGqlType (a -> b) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy b)
 
-instance (GetIType a) => GetIType (GqlIo m a) where
+instance (GetGqlType a) => GetGqlType (GqlIo m a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
 
-genericGetIType
+genericGetGqlType
   :: forall name ctrName r a
    . Generic a (Constructor ctrName (Argument { | r }))
   => GqlRep a GObject name
@@ -83,7 +78,7 @@ genericGetIType
   => IsSymbol name
   => Proxy a
   -> IType
-genericGetIType _ =
+genericGetGqlType _ =
   IType defaultIType
     { name = Just $ reflectSymbol (Proxy :: Proxy name)
     , kind = IT.OBJECT
@@ -105,7 +100,7 @@ data GetIFieldsProps = GetIFieldsProps
 
 instance
   ( IsSymbol label
-  , GetIType a
+  , GetGqlType a
   , GetIInputValues a
   ) =>
   FoldingWithIndex GetIFieldsProps (Proxy label) (List IField) (Proxy a) (List IField) where
@@ -146,7 +141,7 @@ data GetIInputValuesProps = GetIInputValuesProps
 
 instance
   ( IsSymbol label
-  , GetIType a
+  , GetGqlType a
   ) =>
   FoldingWithIndex (GetIInputValuesProps) (Proxy label) (List IInputValue) (Proxy (Maybe a)) (List IInputValue) where
   foldingWithIndex (GetIInputValuesProps) sym defs _a = def : defs
@@ -159,7 +154,7 @@ instance
       }
 else instance
   ( IsSymbol label
-  , GetIType a
+  , GetGqlType a
   ) =>
   FoldingWithIndex (GetIInputValuesProps) (Proxy label) (List IInputValue) (Proxy a) (List IInputValue) where
   foldingWithIndex (GetIInputValuesProps) sym defs a = def : defs

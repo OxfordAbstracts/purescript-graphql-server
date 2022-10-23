@@ -10,7 +10,7 @@ import Data.Newtype (unwrap)
 import Effect.Exception (Error)
 import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType, getIType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, genericGetGqlType, getITypeWithNullable)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIField, defaultIType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
@@ -19,7 +19,7 @@ import Type.Proxy (Proxy(..))
 spec :: Spec Unit
 spec =
   describe "Server.Schema.Introspection.GetType" do
-    describe "getIType" do
+    describe "getITypeWithNullable" do
 
       it "should return the gql type of scalars" do
         (Proxy :: Proxy Int) `shouldBeGqlType` notNull _ { name = Just "Int" }
@@ -66,7 +66,7 @@ spec =
                 fail "query field not found"
                 pure defaultIType
 
-          (IType t1) = getIType (Proxy :: Proxy (Maybe TRec1))
+          (IType t1) = getITypeWithNullable (Proxy :: Proxy (Maybe TRec1))
 
         t1.kind `shouldEqual` OBJECT
         t1.name `shouldEqual` Just "TRec1"
@@ -84,8 +84,8 @@ instance GqlRep T1 GObject "T1"
 instance Applicative m => ToResolver T1 m where
   toResolver a = objectResolver a
 
-instance GetIType T1 where
-  getITypeImpl a = genericGetIType a
+instance GetGqlType T1 where
+  getITypeImpl a = genericGetGqlType a
 
 newtype TRec1 = TRec1 { query :: Maybe TRec2 }
 
@@ -96,8 +96,8 @@ instance GqlRep TRec1 GObject "TRec1"
 instance Applicative m => ToResolver TRec1 m where
   toResolver a = objectResolver a
 
-instance GetIType TRec1 where
-  getITypeImpl a = genericGetIType a
+instance GetGqlType TRec1 where
+  getITypeImpl a = genericGetGqlType a
 
 newtype TRec2 = TRec2 { query :: Maybe TRec1 }
 
@@ -108,8 +108,8 @@ instance GqlRep TRec2 GObject "TRec2"
 instance Applicative m => ToResolver TRec2 m where
   toResolver a = objectResolver a
 
-instance GetIType TRec2 where
-  getITypeImpl a = genericGetIType a
+instance GetGqlType TRec2 where
+  getITypeImpl a = genericGetGqlType a
 
 notNull :: (IType_T -> IType_T) -> IType_T
 notNull fn = defaultIType
@@ -120,16 +120,16 @@ notNull fn = defaultIType
 shouldBeGqlType
   :: forall m a
    . MonadThrow Error m
-  => GetIType a
+  => GetGqlType a
   => Proxy a
   -> IType_T
   -> m Unit
 shouldBeGqlType proxy itype = do
   eqOn_ \{ name } -> { name }
   eqOn_ \{ kind } -> { kind }
-  displayIType (getIType proxy) `shouldEqual` displayIType (IType itype)
+  displayIType (getITypeWithNullable proxy) `shouldEqual` displayIType (IType itype)
   where
-  (IType result) = getIType proxy
+  (IType result) = getITypeWithNullable proxy
 
   eqOn_ :: forall p. Show p => Eq p => (IType_T -> p) -> m Unit
   eqOn_ = eqOn result itype

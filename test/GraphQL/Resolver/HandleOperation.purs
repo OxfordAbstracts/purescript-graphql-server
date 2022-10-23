@@ -19,7 +19,7 @@ import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveEnu
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
 import GraphQL.Server.Schema.Introspection.GetEnumValues (enumType)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, genericGetGqlType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -262,8 +262,8 @@ instance GqlRep Book GObject "Book"
 instance ToResolver Book GqlAff where
   toResolver a = objectResolver a
 
-instance GetIType Book where
-  getITypeImpl a = genericGetIType a
+instance GetGqlType Book where
+  getITypeImpl a = genericGetGqlType a
 
 newtype Author = Author
   { name :: String
@@ -277,8 +277,8 @@ instance GqlRep Author GObject "Author"
 instance ToResolver Author GqlAff where
   toResolver a = objectResolver a
 
-instance GetIType Author where
-  getITypeImpl a = genericGetIType a
+instance GetGqlType Author where
+  getITypeImpl a = genericGetGqlType a
 
 data BookType = Paperback | Hardback | Ebook
 
@@ -289,5 +289,5 @@ instance GqlRep BookType GEnum "BookType"
 instance ToResolver BookType GqlAff where
   toResolver a = resolveEnum a
 
-instance GetIType BookType where
+instance GetGqlType BookType where
   getITypeImpl a = enumType a
