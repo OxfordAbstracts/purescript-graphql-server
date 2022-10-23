@@ -10,7 +10,8 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveNode)
+import GraphQL.GqlRep (class GqlRep, GEnum)
+import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveEnum)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
@@ -85,8 +86,10 @@ instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
 
+instance GqlRep ITypeKind GEnum "ITypeKind"
+
 instance (Applicative m) => ToResolver ITypeKind m where
-  toResolver a = resolveNode a
+  toResolver a = resolveEnum a
 
 newtype IField = IField IField_T
 

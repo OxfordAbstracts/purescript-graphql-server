@@ -24,7 +24,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GEnum)
+import GraphQL.GqlRep (class GqlRep, GEnum, GScalar)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
@@ -35,8 +35,11 @@ import Type.Proxy (Proxy(..))
 class ToResolver a m | m -> m where
   toResolver :: a -> JsonResolver.Resolver m
 
-resolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
-resolveNode a = Node $ pure $ encodeJson a
+unsafeResolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
+unsafeResolveNode a = Node $ pure $ encodeJson a
+
+resolveNode :: forall m a name. GqlRep a GScalar name =>  Applicative m => EncodeJson a => a -> Resolver m
+resolveNode = unsafeResolveNode
 
 unsafeResolveNodeWith
   :: forall a m
@@ -63,25 +66,25 @@ instance (ToResolver a (GqlIo m), Functor m) => ToResolver (GqlIo m a) (GqlIo m)
   toResolver a = resolveAsync a
 
 instance (Applicative m) => ToResolver Boolean m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m) => ToResolver Int m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m) => ToResolver Number m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m) => ToResolver String m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m) => ToResolver Json m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m) => ToResolver Unit m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m) => ToResolver Void m where
-  toResolver a = resolveNode a
+  toResolver a = unsafeResolveNode a
 
 instance (Applicative m, ToResolver a m) => ToResolver (List a) m where
   toResolver a = ListResolver $ toResolver <$> a
@@ -122,7 +125,7 @@ makeFields typename r =
   resolveTypename :: FieldMap m
   resolveTypename = FieldMap $ Map.singleton "__typename"
     { name: "__typename"
-    , resolver: \_ -> resolveNode typename
+    , resolver: \_ -> unsafeResolveNode typename
     }
 
 data ToResolverProps :: forall k. k -> Type
