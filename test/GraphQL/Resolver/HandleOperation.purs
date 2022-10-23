@@ -10,15 +10,15 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
-import GraphQL.GqlRep (class GqlRep, GEnum, GObject)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GUnion)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toEnumResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver, toObjectResolver, toUnionResolver)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
-import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getEnumType, getObjectType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getEnumType, getObjectType, getUnionType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -170,6 +170,13 @@ spec =
                         , "ofType": { "name": "String", "kind": "SCALAR" }
                         }
                     }
+                  , { "name": "packaging"
+                    , "type": encodeJson
+                        { "name": "Packaging"
+                        , "kind": "UNION"
+                        , "ofType": jsonNull
+                        }
+                    }
                   , { "name": "price"
                     , "type": encodeJson
                         { "name": jsonNull
@@ -227,6 +234,7 @@ book1 = Book
   , id: 1
   , price: 1.0
   , type: Just Paperback
+  , packaging: Just $ PackagingBoxed $ Boxed { note: "Custom note" }
   , author: \_ -> pure author
   }
 
@@ -236,6 +244,7 @@ book2 = Book
   , id: 2
   , price: 2.0
   , type: Just Ebook
+  , packaging: Just $ PackagingBoxed $ Boxed { note: "Custom note" }
   , author: \_ -> pure author
   }
 
@@ -251,6 +260,7 @@ newtype Book = Book
   , id :: Int
   , price :: Number
   , type :: Maybe BookType
+  , packaging :: Maybe Packaging
   , author :: Unit -> GqlIo Aff Author
   }
 
@@ -290,3 +300,45 @@ instance ToResolver BookType GqlAff where
 
 instance GetGqlType BookType where
   getType a = getEnumType a
+
+data Packaging
+  = PackagingGiftWrapped GiftWrapped
+  | PackagingBoxed Boxed
+
+derive instance Generic Packaging _
+
+instance GqlRep Packaging GUnion "Packaging"
+
+instance ToResolver Packaging GqlAff where
+  toResolver a = toUnionResolver a
+
+instance GetGqlType Packaging where
+  getType a = getUnionType a
+
+newtype GiftWrapped = GiftWrapped
+  { colour :: String
+  }
+
+derive instance Generic GiftWrapped _
+
+instance GqlRep GiftWrapped GObject "GiftWrapped"
+
+instance ToResolver GiftWrapped GqlAff where
+  toResolver a = toObjectResolver a
+
+instance GetGqlType GiftWrapped where
+  getType a = getObjectType a
+
+newtype Boxed = Boxed
+  { note :: String
+  }
+
+derive instance Generic Boxed _
+
+instance GqlRep Boxed GObject "Boxed"
+
+instance ToResolver Boxed GqlAff where
+  toResolver a = toObjectResolver a
+
+instance GetGqlType Boxed where
+  getType a = getObjectType a

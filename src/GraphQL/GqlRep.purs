@@ -19,10 +19,10 @@ instance GqlRep Number GScalar "Float"
 
 instance GqlRep String GScalar "String"
 
-data GEnum
-
 data GScalar
 
 data GObject
+
+data GEnum
 
 data GUnion

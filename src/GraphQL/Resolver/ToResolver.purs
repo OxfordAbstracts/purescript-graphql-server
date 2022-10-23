@@ -3,12 +3,15 @@ module GraphQL.Resolver.ToResolver
   , ToResolverProps(..)
   , class GetArgResolver
   , class ToResolver
-  , getArgResolver
-  , makeFields
+  , class GenericUnionResolver
   , toObjectResolver
   , toScalarResolver
   , toEnumResolver
+  , toUnionResolver
   , toResolver
+  , genericUnionResolver
+  , getArgResolver
+  , makeFields
   ) where
 
 import Prelude
@@ -16,7 +19,7 @@ import Prelude
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
 import Data.Argonaut.Encode.Generic (class EncodeLiteral, encodeLiteralSum)
 import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), from)
+import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), Sum(..), from)
 import Data.List (List)
 import Data.List as List
 import Data.Map (Map)
@@ -24,7 +27,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GScalar)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GScalar, GUnion)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
@@ -35,19 +38,8 @@ import Type.Proxy (Proxy(..))
 class ToResolver a m | m -> m where
   toResolver :: a -> JsonResolver.Resolver m
 
-unsafeResolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
-unsafeResolveNode a = Node $ pure $ encodeJson a
-
 toScalarResolver :: forall m a name. GqlRep a GScalar name => Applicative m => EncodeJson a => a -> Resolver m
 toScalarResolver = unsafeResolveNode
-
-unsafeResolveNodeWith
-  :: forall a m
-   . Applicative m
-  => (a -> Json)
-  -> a
-  -> Resolver m
-unsafeResolveNodeWith encode a = Node $ pure $ encode a
 
 toEnumResolver
   :: forall m a rep name
@@ -59,11 +51,47 @@ toEnumResolver
   -> Resolver m
 toEnumResolver = unsafeResolveNodeWith encodeLiteralSum
 
-resolveAsync :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
-resolveAsync a = ResolveAsync $ toResolver <$> a
+toObjectResolver
+  :: forall m a arg name ctrName
+   . Applicative m
+  => Generic a (Constructor ctrName (Argument { | arg }))
+  => GqlRep a GObject name
+  => IsSymbol name
+  => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
+  => a
+  -> Resolver m
+toObjectResolver = from >>> \(Constructor (Argument arg)) ->
+  Fields
+    { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
+    , typename: reflectSymbol (Proxy :: Proxy name)
+    }
+
+toUnionResolver
+  :: forall m a rep name
+   . Applicative m
+  => Generic a rep
+  => GenericUnionResolver rep m
+  => GqlRep a GUnion name
+  => a
+  -> Resolver m
+toUnionResolver a = genericUnionResolver $ from a
+
+unsafeResolveNodeWith
+  :: forall a m
+   . Applicative m
+  => (a -> Json)
+  -> a
+  -> Resolver m
+unsafeResolveNodeWith encode a = Node $ pure $ encode a
+
+unsafeResolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
+unsafeResolveNode a = Node $ pure $ encodeJson a
+
+toAsyncResolver :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
+toAsyncResolver a = ResolveAsync $ toResolver <$> a
 
 instance (ToResolver a (GqlIo m), Functor m) => ToResolver (GqlIo m a) (GqlIo m) where
-  toResolver a = resolveAsync a
+  toResolver a = toAsyncResolver a
 
 instance (Applicative m) => ToResolver Boolean m where
   toResolver a = unsafeResolveNode a
@@ -97,21 +125,6 @@ instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
 
 instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
-
-toObjectResolver
-  :: forall m a arg name ctrName
-   . Applicative m
-  => Generic a (Constructor ctrName (Argument { | arg }))
-  => GqlRep a GObject name
-  => IsSymbol name
-  => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
-  => a
-  -> Resolver m
-toObjectResolver = from >>> \(Constructor (Argument arg)) ->
-  Fields
-    { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
-    , typename: reflectSymbol (Proxy :: Proxy name)
-    }
 
 makeFields
   :: forall r m
@@ -168,3 +181,20 @@ else instance argResolverAllFn :: (DecodeJson a, ToResolver b m) => GetArgResolv
 
 else instance argResolverAny :: ToResolver a m => GetArgResolver a m where
   getArgResolver a = \_ -> toResolver a
+
+class GenericUnionResolver rep m where
+  genericUnionResolver :: rep -> JsonResolver.Resolver m
+
+instance
+  ( GenericUnionResolver a m
+  , GenericUnionResolver b m
+  ) =>
+  GenericUnionResolver (Sum a b) m where
+  genericUnionResolver (Inl a) = genericUnionResolver a
+  genericUnionResolver (Inr b) = genericUnionResolver b
+
+instance
+  ( ToResolver arg m
+  ) =>
+  GenericUnionResolver (Constructor name (Argument arg)) m where
+  genericUnionResolver (Constructor (Argument arg)) = toResolver arg

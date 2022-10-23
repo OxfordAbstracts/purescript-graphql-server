@@ -4,22 +4,25 @@ module GraphQL.Server.Schema.Introspection.GetType
   , class GetIFields
   , class GetIInputValues
   , class GetGqlType
+  , class GetUnionPossibleTypes
   , getObjectType
   , getEnumType
   , getScalarType
+  , getUnionType
   , getIFields
   , getIInputValues
   , getType
   , getTypeWithNull
+  , getUnionPossibleTypes
   ) where
 
 import Prelude
 
-import Data.Generic.Rep (class Generic, Argument, Constructor)
+import Data.Generic.Rep (class Generic, Argument, Constructor, Sum)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GScalar)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GScalar, GUnion)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Server.Schema.Introspection.GetEnumValues (class GetEnumValues, getEnumValues)
@@ -107,8 +110,36 @@ getEnumType _ = IType defaultIType
         }
   }
 
+getUnionType
+  :: forall a rep name
+   . IsSymbol name
+  => Generic a rep
+  => GqlRep a GUnion name
+  => GetUnionPossibleTypes rep
+  => Proxy a
+  -> IType
+getUnionType _ = IType defaultIType
+  { kind = UNION
+  , name = Just $ reflectSymbol (Proxy :: Proxy name)
+  , possibleTypes = Just $ getUnionPossibleTypes (Proxy :: Proxy rep)
+  }
+
 getScalarType :: forall a name. GqlRep a GScalar name => IsSymbol name => Proxy a -> IType
 getScalarType a = unsafeScalar (reflectSymbol (Proxy :: Proxy name)) a
+
+class GetUnionPossibleTypes :: forall k. k -> Constraint
+class GetUnionPossibleTypes a where
+  getUnionPossibleTypes :: Proxy a -> List IType
+
+instance
+  ( GetGqlType t
+  , GqlRep t GObject name
+  ) =>
+  GetUnionPossibleTypes (Constructor ctrName (Argument t)) where
+  getUnionPossibleTypes _ = pure $ getType (Proxy :: Proxy t)
+
+instance (GetUnionPossibleTypes a, GetUnionPossibleTypes b) => GetUnionPossibleTypes (Sum a b) where
+  getUnionPossibleTypes _ = getUnionPossibleTypes (Proxy :: Proxy a) <> getUnionPossibleTypes (Proxy :: Proxy b)
 
 class GetIFields :: forall k. k -> Constraint
 class GetIFields a where
