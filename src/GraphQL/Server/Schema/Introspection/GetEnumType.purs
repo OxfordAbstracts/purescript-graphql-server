@@ -10,26 +10,6 @@ import GraphQL.GqlRep (class GqlRep, GEnum)
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IType(..), ITypeKind(..), defaultIType)
 import Type.Proxy (Proxy(..))
 
-enumType
-  :: forall a rep name
-   . IsSymbol name
-  => Generic a rep
-  => GqlRep a GEnum name
-  => GetEnumValues rep
-  => Proxy a
-  -> IType
-enumType _ = IType defaultIType
-  { kind = ENUM
-  , name = Just $ reflectSymbol (Proxy :: Proxy name)
-  , enumValues = \_ -> Just $ getEnumValues (Proxy :: Proxy rep) <#>
-      IEnumValue <<<
-        { name: _
-        , description: Nothing
-        , isDeprecated: false
-        , deprecationReason: Nothing
-        }
-  }
-
 class GetEnumValues :: forall k. k -> Constraint
 class GetEnumValues a where
   getEnumValues :: Proxy a -> List String

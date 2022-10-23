@@ -5,10 +5,10 @@ module GraphQL.Resolver.ToResolver
   , class ToResolver
   , getArgResolver
   , makeFields
-  , objectResolver
-  , resolveNode
+  , toObjectResolver
+  , toScalarResolver
+  , toEnumResolver
   , toResolver
-  , resolveEnum
   ) where
 
 import Prelude
@@ -38,8 +38,8 @@ class ToResolver a m | m -> m where
 unsafeResolveNode :: forall m a. Applicative m => EncodeJson a => a -> Resolver m
 unsafeResolveNode a = Node $ pure $ encodeJson a
 
-resolveNode :: forall m a name. GqlRep a GScalar name => Applicative m => EncodeJson a => a -> Resolver m
-resolveNode = unsafeResolveNode
+toScalarResolver :: forall m a name. GqlRep a GScalar name => Applicative m => EncodeJson a => a -> Resolver m
+toScalarResolver = unsafeResolveNode
 
 unsafeResolveNodeWith
   :: forall a m
@@ -49,7 +49,7 @@ unsafeResolveNodeWith
   -> Resolver m
 unsafeResolveNodeWith encode a = Node $ pure $ encode a
 
-resolveEnum
+toEnumResolver
   :: forall m a rep name
    . Applicative m
   => Generic a rep
@@ -57,7 +57,7 @@ resolveEnum
   => GqlRep a GEnum name
   => a
   -> Resolver m
-resolveEnum = unsafeResolveNodeWith encodeLiteralSum
+toEnumResolver = unsafeResolveNodeWith encodeLiteralSum
 
 resolveAsync :: forall m a. Functor m => ToResolver a m => m a -> Resolver m
 resolveAsync a = ResolveAsync $ toResolver <$> a
@@ -98,7 +98,7 @@ instance (Applicative m, ToResolver a m) => ToResolver (Array a) m where
 instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
 
-objectResolver
+toObjectResolver
   :: forall m a arg name ctrName
    . Applicative m
   => Generic a (Constructor ctrName (Argument { | arg }))
@@ -107,7 +107,7 @@ objectResolver
   => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
   => a
   -> Resolver m
-objectResolver = from >>> \(Constructor (Argument arg)) ->
+toObjectResolver = from >>> \(Constructor (Argument arg)) ->
   Fields
     { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
     , typename: reflectSymbol (Proxy :: Proxy name)

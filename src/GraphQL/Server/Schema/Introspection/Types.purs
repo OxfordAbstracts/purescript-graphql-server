@@ -11,7 +11,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import GraphQL.GqlRep (class GqlRep, GEnum, GObject)
-import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveEnum)
+import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toEnumResolver)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
@@ -27,7 +27,7 @@ derive instance Generic ISchema _
 instance GqlRep ISchema GObject "ISchema"
 
 instance Applicative m => ToResolver ISchema m where
-  toResolver = objectResolver
+  toResolver = toObjectResolver
 
 newtype IType = IType IType_T
 
@@ -63,7 +63,7 @@ derive instance Newtype IType _
 instance GqlRep IType GObject "IType"
 
 instance Applicative m => ToResolver IType m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 data ITypeKind
   = SCALAR
@@ -94,7 +94,7 @@ instance Enum ITypeKind where
 instance GqlRep ITypeKind GEnum "ITypeKind"
 
 instance (Applicative m) => ToResolver ITypeKind m where
-  toResolver a = resolveEnum a
+  toResolver a = toEnumResolver a
 
 newtype IField = IField IField_T
 
@@ -122,7 +122,7 @@ derive instance Newtype IField _
 instance GqlRep IField GObject "IField"
 
 instance (Applicative m) => ToResolver IField m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 newtype IInputValue = IInputValue
   { name :: String
@@ -138,7 +138,7 @@ derive instance Newtype IInputValue _
 instance GqlRep IInputValue GObject "IInputValue"
 
 instance (Applicative m) => ToResolver IInputValue m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 newtype IEnumValue = IEnumValue
   { name :: String
@@ -152,7 +152,7 @@ derive instance Generic IEnumValue _
 instance GqlRep IEnumValue GObject "IEnumValue"
 
 instance Applicative m => ToResolver IEnumValue m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 instance Show IEnumValue where
   show = genericShow
@@ -169,4 +169,4 @@ derive instance Generic IDirective _
 instance GqlRep IDirective GObject "IDirective"
 
 instance Applicative m => ToResolver IDirective m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a

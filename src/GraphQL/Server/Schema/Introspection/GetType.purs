@@ -4,12 +4,13 @@ module GraphQL.Server.Schema.Introspection.GetType
   , class GetIFields
   , class GetIInputValues
   , class GetGqlType
+  , getObjectType
+  , getEnumType
+  , getScalarType
   , getIFields
-  , genericGetGqlType
   , getIInputValues
   , getType
   , getTypeWithNull
-  , scalar
   ) where
 
 import Prelude
@@ -18,11 +19,12 @@ import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GObject, GScalar)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GScalar)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Server.Schema.Introspection.GetEnumValues (class GetEnumValues, getEnumValues)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
-import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), IType_T, defaultIType)
+import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Safe.Coerce (coerce)
@@ -70,7 +72,7 @@ instance (GetGqlType b) => GetGqlType (a -> b) where
 instance (GetGqlType a) => GetGqlType (GqlIo m a) where
   getType _ = getType (Proxy :: Proxy a)
 
-genericGetGqlType
+getObjectType
   :: forall name ctrName r a
    . Generic a (Constructor ctrName (Argument { | r }))
   => GqlRep a GObject name
@@ -78,12 +80,35 @@ genericGetGqlType
   => IsSymbol name
   => Proxy a
   -> IType
-genericGetGqlType _ =
+getObjectType _ =
   IType defaultIType
     { name = Just $ reflectSymbol (Proxy :: Proxy name)
     , kind = IT.OBJECT
     , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | r })
     }
+
+getEnumType
+  :: forall a rep name
+   . IsSymbol name
+  => Generic a rep
+  => GqlRep a GEnum name
+  => GetEnumValues rep
+  => Proxy a
+  -> IType
+getEnumType _ = IType defaultIType
+  { kind = ENUM
+  , name = Just $ reflectSymbol (Proxy :: Proxy name)
+  , enumValues = \_ -> Just $ getEnumValues (Proxy :: Proxy rep) <#>
+      IEnumValue <<<
+        { name: _
+        , description: Nothing
+        , isDeprecated: false
+        , deprecationReason: Nothing
+        }
+  }
+
+getScalarType :: forall a name. GqlRep a GScalar name => IsSymbol name => Proxy a -> IType
+getScalarType a = unsafeScalar (reflectSymbol (Proxy :: Proxy name)) a
 
 class GetIFields :: forall k. k -> Constraint
 class GetIFields a where
@@ -176,9 +201,6 @@ getRecordIInputValues =
 
 modifyIType :: (IType_T -> IType_T) -> IType -> IType
 modifyIType = coerce
-
-scalar :: forall a name. GqlRep a GScalar name => IsSymbol name => Proxy a -> IType
-scalar a = unsafeScalar (reflectSymbol (Proxy :: Proxy name)) a
 
 unsafeScalar :: forall n. String -> n -> IType
 unsafeScalar name _ = IType defaultIType { name = Just name }

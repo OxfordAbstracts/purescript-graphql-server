@@ -7,9 +7,9 @@ import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, objectResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, toObjectResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
-import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, genericGetGqlType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, getObjectType)
 import Heterogeneous.Folding (class HFoldlWithIndex)
 import Type.Proxy (Proxy(..))
 
@@ -36,7 +36,7 @@ instance
   ( GetIFields { | r }
   ) =>
   GetGqlType (QueryRoot { | r }) where
-  getType a = genericGetGqlType a
+  getType a = getObjectType a
 
 instance GqlRep (QueryRoot a) GObject "QueryRoot"
 
@@ -45,7 +45,7 @@ instance
   , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)
   ) =>
   ToResolver (QueryRoot { | a }) m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 newtype MutationRoot a = MutationRoot a
 
@@ -58,7 +58,7 @@ instance
   , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)
   ) =>
   ToResolver (MutationRoot { | a }) m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 instance
   ( Applicative m
@@ -70,4 +70,4 @@ instance
   ( GetIFields { | r }
   ) =>
   GetGqlType (MutationRoot { | r }) where
-  getType a = genericGetGqlType a
+  getType a = getObjectType a

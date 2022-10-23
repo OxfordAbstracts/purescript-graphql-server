@@ -17,7 +17,7 @@ import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
@@ -191,7 +191,7 @@ derive instance Generic (Book m) _
 instance GqlRep (Book a) GObject "Book"
 
 instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 newtype Author m = Author
   { name :: String
@@ -204,7 +204,7 @@ derive instance Generic (Author m) _
 instance GqlRep (Author a) GObject "Author"
 
 instance Applicative m => ToResolver (Author (GqlIo m)) (GqlIo m) where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 io :: forall a. a -> GqlFiber a
 io = GqlIo <<< pure

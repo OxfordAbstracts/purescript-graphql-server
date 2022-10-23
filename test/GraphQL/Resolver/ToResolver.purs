@@ -18,9 +18,9 @@ import GraphQL.Resolver.GqlIo (GqlFiber)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, objectResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, toObjectResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, genericGetGqlType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, getObjectType)
 import Heterogeneous.Folding (class HFoldlWithIndex)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -98,10 +98,10 @@ derive instance Generic (TestGqlObj a) _
 instance GqlRep (TestGqlObj a) GObject "TestGqlObj"
 
 instance (Applicative m, HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)) => ToResolver (TestGqlObj { | a }) m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
 
 instance GetIFields { | a } => GetGqlType (TestGqlObj { | a }) where
-  getType a = genericGetGqlType a
+  getType a = getObjectType a
 
 resolverParent
   :: TestGqlObj

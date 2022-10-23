@@ -9,7 +9,7 @@ import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver)
-import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, toResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..))
 
 makeIntrospectionResolver :: forall m. Applicative m => ISchema -> Resolver m
@@ -37,4 +37,4 @@ derive instance Generic Introspection _
 instance GqlRep Introspection GObject "Introspection"
 
 instance Applicative m => ToResolver Introspection m where
-  toResolver a = objectResolver a
+  toResolver a = toObjectResolver a
