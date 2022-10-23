@@ -105,6 +105,13 @@ resolve resolver vars = case resolver, _ of
           }
       ) | coerce typename == typeCondition ->
       getSelectionFields typename =<< selectionSet
+    AST.Selection_InlineFragment
+      ( AST.InlineFragment
+          { typeCondition: Nothing
+          , selectionSet: (AST.SelectionSet selectionSet)
+          }
+      ) ->
+      getSelectionFields typename =<< selectionSet
     _ -> Nil
 
   encodeArguments :: List AST.Argument -> Json
