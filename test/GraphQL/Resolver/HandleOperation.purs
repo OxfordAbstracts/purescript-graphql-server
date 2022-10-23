@@ -281,9 +281,9 @@ instance GetGqlType Author where
 
 data BookType = Paperback | Hardback | Ebook
 
-derive instance Generic BookType _
-
 instance GqlRep BookType GEnum "BookType"
+
+derive instance Generic BookType _
 
 instance ToResolver BookType GqlAff where
   toResolver a = toEnumResolver a

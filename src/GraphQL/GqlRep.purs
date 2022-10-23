@@ -24,3 +24,5 @@ data GEnum
 data GScalar
 
 data GObject
+
+data GUnion
