@@ -8,7 +8,7 @@ module GraphQL.Server.Schema.Introspection.GetType
   , genericGetGqlType
   , getIInputValues
   , getType
-  , getITypeWithNullable
+  , getTypeWithNull
   , scalar
   ) where
 
@@ -32,8 +32,8 @@ class GetGqlType :: forall k. k -> Constraint
 class GqlNullable a <= GetGqlType a where
   getType :: Proxy a -> IType
 
-getITypeWithNullable :: forall a. GetGqlType a => Proxy a -> IType
-getITypeWithNullable a =
+getTypeWithNull :: forall a. GetGqlType a => Proxy a -> IType
+getTypeWithNull a =
   if isNullable a then
     t
   else
@@ -55,11 +55,11 @@ instance GetGqlType String where
 
 instance (GetGqlType a) => GetGqlType (Array a) where
   getType _ = unnamed IT.LIST # modifyIType _
-    { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a)
+    { ofType = Just $ getTypeWithNull (Proxy :: Proxy a)
     }
 
 instance (GetGqlType a) => GetGqlType (List a) where
-  getType _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getITypeWithNullable (Proxy :: Proxy a) }
+  getType _ = unnamed IT.LIST # modifyIType _ { ofType = Just $ getTypeWithNull (Proxy :: Proxy a) }
 
 instance (GetGqlType a) => GetGqlType (Maybe a) where
   getType _ = getType (Proxy :: Proxy a)
@@ -112,7 +112,7 @@ instance
       , description: Nothing
       , isDeprecated: false
       , name: reflectSymbol sym
-      , type: getITypeWithNullable a
+      , type: getTypeWithNull a
       }
 
 getRecordIFields
@@ -149,7 +149,7 @@ instance
     def = IInputValue
       { name: reflectSymbol sym
       , description: Nothing
-      , type: getITypeWithNullable (Proxy :: Proxy (Maybe a))
+      , type: getTypeWithNull (Proxy :: Proxy (Maybe a))
       , defaultValue: Nothing
       }
 else instance
@@ -162,7 +162,7 @@ else instance
     def = IInputValue
       { name: reflectSymbol sym
       , description: Nothing
-      , type: getITypeWithNullable a
+      , type: getTypeWithNull a
       , defaultValue: Nothing
       }
 

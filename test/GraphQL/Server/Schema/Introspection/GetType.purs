@@ -10,7 +10,7 @@ import Data.Newtype (unwrap)
 import Effect.Exception (Error)
 import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
-import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, genericGetGqlType, getITypeWithNullable)
+import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, genericGetGqlType, getTypeWithNull)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIField, defaultIType)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
@@ -19,7 +19,7 @@ import Type.Proxy (Proxy(..))
 spec :: Spec Unit
 spec =
   describe "Server.Schema.Introspection.GetType" do
-    describe "getITypeWithNullable" do
+    describe "getTypeWithNull" do
 
       it "should return the gql type of scalars" do
         (Proxy :: Proxy Int) `shouldBeGqlType` notNull _ { name = Just "Int" }
@@ -66,7 +66,7 @@ spec =
                 fail "query field not found"
                 pure defaultIType
 
-          (IType t1) = getITypeWithNullable (Proxy :: Proxy (Maybe TRec1))
+          (IType t1) = getTypeWithNull (Proxy :: Proxy (Maybe TRec1))
 
         t1.kind `shouldEqual` OBJECT
         t1.name `shouldEqual` Just "TRec1"
@@ -127,9 +127,9 @@ shouldBeGqlType
 shouldBeGqlType proxy itype = do
   eqOn_ \{ name } -> { name }
   eqOn_ \{ kind } -> { kind }
-  displayIType (getITypeWithNullable proxy) `shouldEqual` displayIType (IType itype)
+  displayIType (getTypeWithNull proxy) `shouldEqual` displayIType (IType itype)
   where
-  (IType result) = getITypeWithNullable proxy
+  (IType result) = getTypeWithNull proxy
 
   eqOn_ :: forall p. Show p => Eq p => (IType_T -> p) -> m Unit
   eqOn_ = eqOn result itype
