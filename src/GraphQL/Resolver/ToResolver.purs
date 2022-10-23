@@ -24,7 +24,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GEnum, GScalar)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GScalar)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
@@ -99,9 +99,10 @@ instance ToResolver a m => ToResolver (Unit -> a) m where
   toResolver a = toResolver $ a unit
 
 objectResolver
-  :: forall m a arg name
+  :: forall m a arg name ctrName
    . Applicative m
-  => Generic a (Constructor name (Argument { | arg }))
+  => Generic a (Constructor ctrName (Argument { | arg }))
+  => GqlRep a GObject name
   => IsSymbol name
   => HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | arg } (FieldMap m)
   => a

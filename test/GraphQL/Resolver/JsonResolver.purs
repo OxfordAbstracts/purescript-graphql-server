@@ -11,6 +11,7 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
+import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.EffFiber (EffFiber)
 import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
 import GraphQL.Resolver.Gqlable (toAff)
@@ -187,6 +188,8 @@ newtype Book m = Book
 
 derive instance Generic (Book m) _
 
+instance GqlRep (Book a) GObject "Book"
+
 instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
   toResolver a = objectResolver a
 
@@ -197,6 +200,8 @@ newtype Author m = Author
   }
 
 derive instance Generic (Author m) _
+
+instance GqlRep (Author a) GObject "Author"
 
 instance Applicative m => ToResolver (Author (GqlIo m)) (GqlIo m) where
   toResolver a = objectResolver a

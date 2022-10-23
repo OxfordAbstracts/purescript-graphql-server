@@ -13,6 +13,7 @@ import Data.Maybe (Maybe, maybe)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
+import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.GqlIo (GqlFiber)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
@@ -93,6 +94,8 @@ gqlObj = TestGqlObj
 newtype TestGqlObj a = TestGqlObj a
 
 derive instance Generic (TestGqlObj a) _
+
+instance GqlRep (TestGqlObj a) GObject "TestGqlObj"
 
 instance (Applicative m, HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)) => ToResolver (TestGqlObj { | a }) m where
   toResolver a = objectResolver a

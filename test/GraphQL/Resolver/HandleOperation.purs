@@ -10,7 +10,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
-import GraphQL.GqlRep (class GqlRep, GEnum)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
@@ -257,6 +257,8 @@ newtype Book = Book
 
 derive instance Generic Book _
 
+instance GqlRep Book GObject "Book"
+
 instance ToResolver Book GqlAff where
   toResolver a = objectResolver a
 
@@ -269,6 +271,8 @@ newtype Author = Author
   }
 
 derive instance Generic Author _
+
+instance GqlRep Author GObject "Author"
 
 instance ToResolver Author GqlAff where
   toResolver a = objectResolver a

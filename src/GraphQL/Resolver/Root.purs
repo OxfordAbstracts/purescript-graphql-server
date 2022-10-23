@@ -2,9 +2,10 @@ module GraphQL.Resolver.Root (GqlRoot(..), QueryRoot(..), MutationRoot(..)) wher
 
 import Prelude
 
-import Data.Generic.Rep (class Generic, Argument, Constructor)
+import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, objectResolver)
 import GraphQL.Server.GqlError (ResolverError(..))
@@ -37,6 +38,8 @@ instance
   GetIType (QueryRoot { | r }) where
   getITypeImpl a = genericGetIType a
 
+instance GqlRep (QueryRoot a) GObject "QueryRoot"
+
 instance
   ( Applicative m
   , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)
@@ -47,6 +50,8 @@ instance
 newtype MutationRoot a = MutationRoot a
 
 derive instance Generic (MutationRoot a) _
+
+instance GqlRep (MutationRoot a) GObject "MutationRoot"
 
 instance
   ( Applicative m

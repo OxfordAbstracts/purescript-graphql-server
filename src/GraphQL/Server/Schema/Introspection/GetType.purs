@@ -10,7 +10,6 @@ module GraphQL.Server.Schema.Introspection.GetType
   , getIType
   , getITypeImpl
   , getITypeWithNullable
-  , modifyIType
   , scalar
   ) where
 
@@ -20,7 +19,7 @@ import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GScalar)
+import GraphQL.GqlRep (class GqlRep, GObject, GScalar)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
@@ -48,16 +47,16 @@ getITypeWithNullable a =
   t = getITypeImpl a
 
 instance GetIType Boolean where
-  getITypeImpl = scalarUnsafe "Boolean"
+  getITypeImpl = unsafeScalar "Boolean"
 
 instance GetIType Int where
-  getITypeImpl = scalarUnsafe "Int"
+  getITypeImpl = unsafeScalar "Int"
 
 instance GetIType Number where
-  getITypeImpl = scalarUnsafe "Float"
+  getITypeImpl = unsafeScalar "Float"
 
 instance GetIType String where
-  getITypeImpl = scalarUnsafe "String"
+  getITypeImpl = unsafeScalar "String"
 
 instance (GetIType a) => GetIType (Array a) where
   getITypeImpl _ = unnamed IT.LIST # modifyIType _
@@ -77,8 +76,9 @@ instance (GetIType a) => GetIType (GqlIo m a) where
   getITypeImpl _ = getITypeImpl (Proxy :: Proxy a)
 
 genericGetIType
-  :: forall name r a
-   . Generic a (Constructor name (Argument { | r }))
+  :: forall name ctrName r a
+   . Generic a (Constructor ctrName (Argument { | r }))
+  => GqlRep a GObject name
   => GetIFields { | r }
   => IsSymbol name
   => Proxy a
@@ -183,10 +183,10 @@ modifyIType :: (IType_T -> IType_T) -> IType -> IType
 modifyIType = coerce
 
 scalar :: forall a name. GqlRep a GScalar name => IsSymbol name => Proxy a -> IType
-scalar a = scalarUnsafe (reflectSymbol (Proxy :: Proxy name)) a
+scalar a = unsafeScalar (reflectSymbol (Proxy :: Proxy name)) a
 
-scalarUnsafe :: forall n. String -> n -> IType
-scalarUnsafe name _ = IType defaultIType { name = Just name }
+unsafeScalar :: forall n. String -> n -> IType
+unsafeScalar name _ = IType defaultIType { name = Just name }
 
 unnamed :: IT.ITypeKind -> IType
 unnamed kind = IType defaultIType { kind = kind }

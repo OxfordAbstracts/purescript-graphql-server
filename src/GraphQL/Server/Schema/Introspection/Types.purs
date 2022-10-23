@@ -10,7 +10,7 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import GraphQL.GqlRep (class GqlRep, GEnum)
+import GraphQL.GqlRep (class GqlRep, GEnum, GObject)
 import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver, resolveEnum)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
@@ -23,6 +23,8 @@ newtype ISchema = ISchema
   }
 
 derive instance Generic ISchema _
+
+instance GqlRep ISchema GObject "ISchema"
 
 instance Applicative m => ToResolver ISchema m where
   toResolver = objectResolver
@@ -55,7 +57,10 @@ defaultIType =
   }
 
 derive instance Generic IType _
+
 derive instance Newtype IType _
+
+instance GqlRep IType GObject "IType"
 
 instance Applicative m => ToResolver IType m where
   toResolver a = objectResolver a
@@ -114,6 +119,8 @@ defaultIField =
 
 derive instance Generic IField _
 derive instance Newtype IField _
+instance GqlRep IField GObject "IField"
+
 instance (Applicative m) => ToResolver IField m where
   toResolver a = objectResolver a
 
@@ -128,6 +135,8 @@ derive instance Generic IInputValue _
 
 derive instance Newtype IInputValue _
 
+instance GqlRep IInputValue GObject "IInputValue"
+
 instance (Applicative m) => ToResolver IInputValue m where
   toResolver a = objectResolver a
 
@@ -139,6 +148,8 @@ newtype IEnumValue = IEnumValue
   }
 
 derive instance Generic IEnumValue _
+
+instance GqlRep IEnumValue GObject "IEnumValue"
 
 instance Applicative m => ToResolver IEnumValue m where
   toResolver a = objectResolver a
@@ -154,6 +165,8 @@ newtype IDirective = IDirective
   }
 
 derive instance Generic IDirective _
+
+instance GqlRep IDirective GObject "IDirective"
 
 instance Applicative m => ToResolver IDirective m where
   toResolver a = objectResolver a

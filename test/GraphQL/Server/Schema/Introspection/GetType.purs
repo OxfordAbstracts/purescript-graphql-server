@@ -8,6 +8,7 @@ import Data.List (List(..), find, (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap)
 import Effect.Exception (Error)
+import GraphQL.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.ToResolver (class ToResolver, objectResolver)
 import GraphQL.Server.Schema.Introspection.GetType (class GetIType, genericGetIType, getIType)
 import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIField, defaultIType)
@@ -78,6 +79,8 @@ data T1 = T1 { query :: Maybe String }
 
 derive instance Generic T1 _
 
+instance GqlRep T1 GObject "T1"
+
 instance Applicative m => ToResolver T1 m where
   toResolver a = objectResolver a
 
@@ -88,6 +91,8 @@ newtype TRec1 = TRec1 { query :: Maybe TRec2 }
 
 derive instance Generic TRec1 _
 
+instance GqlRep TRec1 GObject "TRec1"
+
 instance Applicative m => ToResolver TRec1 m where
   toResolver a = objectResolver a
 
@@ -97,6 +102,8 @@ instance GetIType TRec1 where
 newtype TRec2 = TRec2 { query :: Maybe TRec1 }
 
 derive instance Generic TRec2 _
+
+instance GqlRep TRec2 GObject "TRec2"
 
 instance Applicative m => ToResolver TRec2 m where
   toResolver a = objectResolver a
