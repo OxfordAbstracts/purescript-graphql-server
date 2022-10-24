@@ -22,9 +22,9 @@ import Data.Generic.Rep (class Generic, Argument, Constructor, Sum)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GScalar, GUnion)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Server.GqlRep (class GqlRep, class Scalar, GEnum, GObject, GUnion)
 import GraphQL.Server.Schema.Introspection.GetEnumValues (class GetEnumValues, getEnumValues)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIType)
@@ -125,7 +125,7 @@ getUnionType _ = IType defaultIType
   , possibleTypes = Just $ getUnionPossibleTypes (Proxy :: Proxy name) (Proxy :: Proxy rep)
   }
 
-getScalarType :: forall a name. GqlRep a GScalar name => IsSymbol name => Proxy a -> IType
+getScalarType :: forall a name. Scalar a name => IsSymbol name => Proxy a -> IType
 getScalarType a = unsafeScalar (reflectSymbol (Proxy :: Proxy name)) a
 
 class GetUnionPossibleTypes :: forall k. Symbol -> k -> Constraint

@@ -27,11 +27,11 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GScalar, GUnion)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Server.GqlError (ResolverError(..))
+import GraphQL.Server.GqlRep (class GqlRep, class Scalar, GEnum, GObject, GUnion, encodeScalar)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Prim.Symbol (class Append)
 import Type.Proxy (Proxy(..))
@@ -39,8 +39,14 @@ import Type.Proxy (Proxy(..))
 class ToResolver a m | m -> m where
   toResolver :: a -> JsonResolver.Resolver m
 
-toScalarResolver :: forall m a name. GqlRep a GScalar name => Applicative m => EncodeJson a => a -> Resolver m
-toScalarResolver = unsafeResolveNode
+toScalarResolver
+  :: forall m a name
+   . Scalar a name
+  => Applicative m
+  => EncodeJson a
+  => a
+  -> Resolver m
+toScalarResolver = unsafeResolveNodeWith encodeScalar
 
 toEnumResolver
   :: forall m a rep name
