@@ -8,7 +8,7 @@ import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (selectionSet)
 import Data.List (List(..))
 import Data.Map (Map, lookup)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
@@ -86,9 +86,10 @@ resolve resolver vars = case resolver, _ of
       selectedFields -> ResultObject <$> for selectedFields
         \{ arguments
          , name
+         , alias
          , selectionSet
          } -> do
-          Tuple name <$> case lookup name fields of
+          Tuple (fromMaybe name alias) <$> case lookup name fields of
             Nothing -> pure $ ResultError FieldNotFound
             Just field ->
               let

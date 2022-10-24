@@ -34,9 +34,9 @@ rootResolver root =
 
   introspection = getIntrospection schema
 
-type RootResolver m = 
+type RootResolver m =
   { query :: Resolver m
-  , mutation :: Resolver m 
+  , mutation :: Resolver m
   , introspection :: Introspection
   }
 

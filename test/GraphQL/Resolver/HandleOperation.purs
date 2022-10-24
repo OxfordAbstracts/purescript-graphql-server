@@ -79,6 +79,20 @@ spec =
                 }
               ]
           }
+      it "should resolve a query with aliases" do
+        """
+        query { 
+          low_price_books: books (maxPrice: 1) { 
+            id 
+            name
+          } 
+        }""" `shouldResolveTo`
+          { low_price_books:
+              [ { id: 1
+                , name: "book name 1"
+                }
+              ]
+          }
 
       it "should resolve a query with variables" do
         { query:

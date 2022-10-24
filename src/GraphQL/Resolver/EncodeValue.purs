@@ -8,7 +8,6 @@ import Data.List (List, foldl)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 
-
 encodeArguments :: Object Json -> List AST.Argument -> Json
 encodeArguments vars = fromObject <<< foldl insertArg Object.empty
   where

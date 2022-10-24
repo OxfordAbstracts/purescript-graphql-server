@@ -39,7 +39,7 @@ derive instance Generic ResolverError _
 instance Show ResolverError where
   show = genericShow
 
-data VariableInputError 
+data VariableInputError
   = VariableNotProvided String
   | VariableIsNotInputType String
   | VariableHasNoValue String
