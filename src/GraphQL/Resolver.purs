@@ -39,9 +39,3 @@ type RootResolver m =
   , mutation :: Resolver m
   , introspection :: Introspection
   }
-
-test0 :: forall m. Applicative m => RootResolver m
-test0 = rootResolver { query: { foo: "bar" }, mutation: unit }
-
-test1 :: forall m. Applicative m => RootResolver m
-test1 = rootResolver { query: { foo: "bar" }, mutation: { x: 1 } }

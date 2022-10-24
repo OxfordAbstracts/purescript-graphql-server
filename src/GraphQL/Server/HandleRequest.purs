@@ -11,7 +11,6 @@ import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (document)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Debug (spy)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object

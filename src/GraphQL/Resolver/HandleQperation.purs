@@ -10,7 +10,7 @@ import Data.GraphQL.AST (OperationType(..))
 import Data.GraphQL.AST as AST
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types (NonEmptyList)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Foreign.Object (Object)
 import Foreign.Object as Object
@@ -22,7 +22,6 @@ import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToDa
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
 import GraphQL.Server.Schema.Introspection (Introspection(..))
 import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
-import Unsafe.Coerce (unsafeCoerce)
 
 handleOperation
   :: forall m f
@@ -73,7 +72,10 @@ handleOperation { mutation, query, introspection: Introspection introspection } 
           , defaultValue
           }
       ) = do
-      when (not isInputType tipe) $ throwError $ VariableIsNotInputType variable
+      case isInputType tipe of 
+        Just false  -> throwError $ VariableIsNotInputType variable
+        Nothing -> throwError $ VariableTypeNotFound variable
+        _ -> pure unit
       let
         hasValue = Object.member variable rawVars
         value = Object.lookup variable rawVars
@@ -94,7 +96,7 @@ handleOperation { mutation, query, introspection: Introspection introspection } 
       AST.Type_NamedType t -> isInputNamedType t
 
     isInputNamedType (AST.NamedType name) =
-      lookupType name # maybe false \t -> (eq SCALAR || eq INPUT_OBJECT) t.kind
+      lookupType name <#> \t -> (eq SCALAR || eq INPUT_OBJECT) t.kind
 
     lookupType name = introspection.__type { name } <#> unwrap
 
