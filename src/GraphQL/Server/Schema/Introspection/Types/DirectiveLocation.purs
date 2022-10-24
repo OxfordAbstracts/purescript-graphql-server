@@ -5,7 +5,7 @@ import Prelude
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import GraphQL.GqlRep (class GqlRep, GEnum)
+import GraphQL.Server.GqlRep (class GqlRep, GEnum)
 import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver)
 
 data IDirectiveLocation

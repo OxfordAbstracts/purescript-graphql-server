@@ -7,7 +7,7 @@ import Data.Map (lookup)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import GraphQL.GqlRep (class GqlRep, GObject)
+import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..))

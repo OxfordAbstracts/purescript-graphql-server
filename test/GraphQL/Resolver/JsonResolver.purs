@@ -11,7 +11,7 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
-import GraphQL.GqlRep (class GqlRep, GObject)
+import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.EffFiber (EffFiber)
 import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
 import GraphQL.Resolver.Gqlable (toAff)

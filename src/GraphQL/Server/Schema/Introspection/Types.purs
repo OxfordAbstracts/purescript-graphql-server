@@ -10,7 +10,7 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import GraphQL.GqlRep (class GqlRep, GEnum, GObject)
+import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject)
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toEnumResolver)
 import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 

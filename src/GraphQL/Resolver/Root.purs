@@ -5,7 +5,7 @@ import Prelude
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
-import GraphQL.GqlRep (class GqlRep, GObject)
+import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, toObjectResolver)
 import GraphQL.Server.GqlError (ResolverError(..))

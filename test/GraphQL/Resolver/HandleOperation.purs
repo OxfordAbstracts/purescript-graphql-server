@@ -10,7 +10,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
-import GraphQL.GqlRep (class GqlRep, GEnum, GObject, GUnion)
+import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
