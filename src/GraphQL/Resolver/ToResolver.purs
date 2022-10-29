@@ -18,6 +18,8 @@ import Prelude
 
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
 import Data.Argonaut.Encode.Generic (class EncodeLiteral, encodeLiteralSum)
+import Data.Date (Date)
+import Data.DateTime (DateTime(..))
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), Sum(..), from)
 import Data.List (List)
@@ -27,11 +29,14 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import Data.Time (Time(..))
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
+import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.GqlError (ResolverError(..))
-import GraphQL.Server.GqlRep (class GqlRep, class Scalar, GEnum, GObject, GUnion, encodeScalar)
+import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
+import GraphQL.Server.Schema.Scalar (class Scalar, encodeScalar)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Prim.Symbol (class Append)
 import Type.Proxy (Proxy(..))
@@ -43,7 +48,6 @@ toScalarResolver
   :: forall m a name
    . Scalar a name
   => Applicative m
-  => EncodeJson a
   => a
   -> Resolver m
 toScalarResolver = unsafeResolveNodeWith encodeScalar
@@ -121,6 +125,15 @@ instance (Applicative m) => ToResolver Number m where
 
 instance (Applicative m) => ToResolver String m where
   toResolver a = unsafeResolveNode a
+  
+instance (Applicative m) => ToResolver Date m where
+  toResolver a = unsafeResolveNodeWith encodeDate a
+
+instance (Applicative m) => ToResolver Time m where
+  toResolver a = unsafeResolveNodeWith encodeTime a
+
+instance (Applicative m) => ToResolver DateTime m where
+  toResolver a = unsafeResolveNodeWith encodeDateTime a
 
 instance (Applicative m) => ToResolver Json m where
   toResolver a = unsafeResolveNode a

@@ -19,6 +19,7 @@ to generate this file without the comments in this block.
   , "bifunctors"
   , "console"
   , "control"
+  , "datetime"
   , "debug"
   , "effect"
   , "either"
@@ -52,6 +53,7 @@ to generate this file without the comments in this block.
   , "tuples"
   , "typelevel"
   , "typelevel-prelude"
+  , "unicode"
   , "unsafe-coerce"
   , "variant"
   ]

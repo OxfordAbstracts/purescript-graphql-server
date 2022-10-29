@@ -2,7 +2,8 @@ module Test.GraphQL.Resolver.HandleOperation (spec) where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson, Json, encodeJson, jsonNull, stringify)
+import Data.Argonaut (class EncodeJson, Json, decodeJson, encodeJson, jsonNull, stringify)
+import Data.DateTime (DateTime)
 import Data.Either (either)
 import Data.Filterable (filter)
 import Data.Foldable (find)
@@ -10,15 +11,16 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
-import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
 import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver, toObjectResolver, toUnionResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver, toObjectResolver, toScalarResolver, toUnionResolver)
+import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
-import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getEnumType, getObjectType, getUnionType)
+import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getEnumType, getObjectType, getScalarType, getUnionType)
+import GraphQL.Server.Schema.Scalar (class Scalar)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -222,6 +224,20 @@ spec =
                         , "ofType": { "name": "Author", "kind": "OBJECT" }
                         }
                     }
+                  , { "name": "created_at"
+                    , "type": encodeJson
+                        { "name": "DateTime"
+                        , "kind": "SCALAR"
+                        , "ofType": jsonNull
+                        }
+                    }
+                  , { "name": "custom_scalar"
+                    , "type": encodeJson
+                        { "name": jsonNull
+                        , "kind": "NON_NULL"
+                        , "ofType": { "name": "CustomScalar", "kind": "SCALAR" }
+                        }
+                    }
                   , { "name": "id"
                     , "type": encodeJson
                         { "name": jsonNull
@@ -310,6 +326,8 @@ book1 = Book
   , type: Just Paperback
   , packaging: Just $ Boxed { note: "Custom note" }
   , author: \_ -> pure author
+  , created_at: Just bottom
+  , custom_scalar: CustomScalar "1" 1
   }
 
 book2 :: Book
@@ -320,6 +338,8 @@ book2 = Book
   , type: Just Ebook
   , packaging: Just $ GiftWrapped { colour: "Blue", withCard: true }
   , author: \_ -> pure author
+  , created_at: Just top
+  , custom_scalar: CustomScalar "2" 2
   }
 
 author :: Author
@@ -336,6 +356,8 @@ newtype Book = Book
   , type :: Maybe BookType
   , packaging :: Maybe Packaging
   , author :: Unit -> GqlIo Aff Author
+  , created_at :: Maybe DateTime
+  , custom_scalar :: CustomScalar
   }
 
 derive instance Generic Book _
@@ -393,3 +415,17 @@ instance ToResolver Packaging GqlAff where
 
 instance GetGqlType Packaging where
   getType a = getUnionType a
+
+data CustomScalar = CustomScalar String Int
+
+instance Scalar CustomScalar "CustomScalar" where
+  encodeScalar (CustomScalar s i) = encodeJson { s, i }
+  decodeScalar json = do
+    rec :: { s :: String, i :: Int } <- decodeJson json
+    pure $ CustomScalar rec.s rec.i
+
+instance ToResolver CustomScalar GqlAff where
+  toResolver a = toScalarResolver a
+
+instance GetGqlType CustomScalar where
+  getType a = getScalarType a

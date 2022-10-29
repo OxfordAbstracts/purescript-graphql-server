@@ -18,17 +18,21 @@ module GraphQL.Server.Schema.Introspection.GetType
 
 import Prelude
 
+import Data.Date (Date)
+import Data.DateTime (DateTime)
 import Data.Generic.Rep (class Generic, Argument, Constructor, Sum)
 import Data.List (List(..), reverse, (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
+import Data.Time (Time)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Server.GqlRep (class GqlRep, class Scalar, GEnum, GObject, GUnion)
+import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
 import GraphQL.Server.Schema.Introspection.GetEnumValues (class GetEnumValues, getEnumValues)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
+import GraphQL.Server.Schema.Scalar (class Scalar)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Prim.Symbol (class Append)
 import Safe.Coerce (coerce)
@@ -58,6 +62,15 @@ instance GetGqlType Number where
 
 instance GetGqlType String where
   getType = unsafeScalar "String"
+
+instance GetGqlType Date where
+  getType = unsafeScalar "Date"
+
+instance GetGqlType Time where
+  getType = unsafeScalar "Time"
+
+instance GetGqlType DateTime where
+  getType = unsafeScalar "DateTime"
 
 instance (GetGqlType a) => GetGqlType (Array a) where
   getType _ = unnamed IT.LIST # modifyIType _
