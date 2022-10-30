@@ -11,6 +11,7 @@ import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (document)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
@@ -25,10 +26,13 @@ import Parsing (runParser)
 handleRequest
   :: forall m f
    . Gqlable f m
-  => RootResolver f
+  => (Request -> Aff Boolean)
+  -> RootResolver f
   -> Request
   -> GqlResM Json
-handleRequest resolvers req = do
+handleRequest isAuthorized resolvers req = do
+  authorized <- liftAff $ isAuthorized req
+  when (not authorized) $ throwError NotAuthorized
   bodyStr <- liftAff $ toString req.body
   { operationName, operation, variables } <- parseGqlRequest bodyStr
   op <- parseOperation operationName operation

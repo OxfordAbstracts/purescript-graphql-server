@@ -11,7 +11,7 @@ import Effect.Aff (Aff, error)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import GraphQL.Server.GqlError (GqlError(..))
-import HTTPure (ResponseM, badRequest, ok)
+import HTTPure (ResponseM, badRequest, ok, unauthorized)
 import Parsing (parseErrorMessage)
 
 newtype GqlResM a = GqlResM (ExceptT GqlError Aff a)
@@ -32,6 +32,7 @@ toResponse (GqlResM gqlResM) = do
   case e of
     Left (ParseGqlDocumentError err) -> badRequest $ parseErrorMessage err
     Left NoOperationDefinition -> badRequest "No operation definition in request body"
+    Left NotAuthorized -> unauthorized
     Left (OtherError str) -> badRequest str
     Left err -> badRequest $ show err
     Right res -> ok $ stringify res
