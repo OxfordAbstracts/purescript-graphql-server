@@ -7,7 +7,6 @@ module GraphQL.Server
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError)
-import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class.Console (log)
 import GraphQL.Resolver (RootResolver, rootResolver)
@@ -54,9 +53,3 @@ newtype GqlServerM f = GqlServerM ServerM
 
 type GqlServer :: forall k. (k -> Type) -> Type
 type GqlServer f = GqlServerM (GqlIo f)
-
-test :: GqlServer Effect
-test = start
-  { root: { query: { hello: "world" }, mutation: {} }
-  , isAuthorized: \_ -> pure true
-  }

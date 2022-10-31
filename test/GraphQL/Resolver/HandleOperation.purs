@@ -304,7 +304,7 @@ resolveAsJsonWithVars vars query = do
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver ::  RootResolver Error GqlAff
+simpleResolver :: RootResolver Error GqlAff
 simpleResolver =
   rootResolver
     { query:

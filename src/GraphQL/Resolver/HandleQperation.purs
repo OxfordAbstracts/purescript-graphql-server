@@ -24,7 +24,7 @@ import GraphQL.Server.Schema.Introspection (Introspection(..))
 import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
 
 handleOperation
-  :: forall m f err 
+  :: forall m f err
    . Gqlable f m
   => RenderError err
   => MonadError err m
@@ -74,8 +74,8 @@ handleOperation { mutation, query, introspection: Introspection introspection } 
           , defaultValue
           }
       ) = do
-      case isInputType tipe of 
-        Just false  -> throwError $ VariableIsNotInputType variable
+      case isInputType tipe of
+        Just false -> throwError $ VariableIsNotInputType variable
         Nothing -> throwError $ VariableTypeNotFound variable
         _ -> pure unit
       let

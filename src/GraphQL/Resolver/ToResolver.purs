@@ -12,8 +12,7 @@ module GraphQL.Resolver.ToResolver
   , toResolver
   , toScalarResolver
   , toUnionResolver
-  )
-  where
+  ) where
 
 import Prelude
 

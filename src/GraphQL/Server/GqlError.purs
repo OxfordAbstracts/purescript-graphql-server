@@ -2,8 +2,7 @@ module GraphQL.Server.GqlError
   ( GqlError(..)
   , FailedToResolve(..)
   , VariableInputError(..)
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -23,7 +22,7 @@ data GqlError
   | SubscriptionsNotSupported
   | OtherError String
 
-derive instance  Eq GqlError
+derive instance Eq GqlError
 derive instance Generic GqlError _
 instance Show GqlError where
   show = genericShow

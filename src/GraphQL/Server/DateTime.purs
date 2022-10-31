@@ -5,8 +5,7 @@ module GraphQL.Server.DateTime
   , encodeDate
   , encodeDateTime
   , encodeTime
-  )
-  where
+  ) where
 
 import Prelude
 

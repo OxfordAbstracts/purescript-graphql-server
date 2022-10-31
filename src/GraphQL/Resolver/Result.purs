@@ -14,7 +14,7 @@ import Effect.Exception (Error, message)
 import Foreign.Object as Object
 import GraphQL.Server.GqlError (FailedToResolve)
 
-data Result err 
+data Result err
   = ResultLeaf Json
   | ResultError (FailedToResolve err)
   | ResultObject (List (Tuple String (Result err)))
@@ -51,10 +51,10 @@ newtype LocatedError = LocatedError
 class RenderError err where
   renderError :: err -> String
 
-instance RenderError String where 
+instance RenderError String where
   renderError = identity
 
-instance RenderError Error where 
+instance RenderError Error where
   renderError = message
 
 getLocatedErrors :: forall err. RenderError err => Result err -> List LocatedError
