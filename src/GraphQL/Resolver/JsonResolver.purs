@@ -2,7 +2,7 @@ module GraphQL.Resolver.JsonResolver where
 
 import Prelude
 
-import Control.Monad.Error.Class (class MonadError, catchError, try)
+import Control.Monad.Error.Class (class MonadError, catchError)
 import Data.Argonaut (Json, jsonEmptyObject)
 import Data.Either (Either(..))
 import Data.GraphQL.AST as AST
