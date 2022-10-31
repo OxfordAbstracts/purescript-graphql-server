@@ -1,4 +1,9 @@
-module GraphQL.Server.GqlError where
+module GraphQL.Server.GqlError
+  ( GqlError(..)
+  , FailedToResolve(..)
+  , VariableInputError(..)
+  )
+  where
 
 import Prelude
 
@@ -17,26 +22,28 @@ data GqlError
   | VariableInputError VariableInputError
   | SubscriptionsNotSupported
   | OtherError String
-  | ResolverError ResolverError
 
-derive instance Eq GqlError
+derive instance  Eq GqlError
 derive instance Generic GqlError _
 instance Show GqlError where
   show = genericShow
 
-data ResolverError
+data FailedToResolve err
   = SelectionSetAtNodeValue
   | MissingSelectionSet
   | NoFields
   | FieldNotFound
-  | OtherFailure
+  | ResolverError err
   | MaximumDepthExceeded
   | NoMutationRoot
   | ResolverDecodeError JsonDecodeError
+  | NotAuthorizedAtNode
 
-derive instance Eq ResolverError
-derive instance Generic ResolverError _
-instance Show ResolverError where
+derive instance Eq err => Eq (FailedToResolve err)
+derive instance Generic (FailedToResolve err) _
+derive instance Functor FailedToResolve
+
+instance Show err => Show (FailedToResolve err) where
   show = genericShow
 
 data VariableInputError

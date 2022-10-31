@@ -26,7 +26,7 @@ derive instance Generic ISchema _
 
 instance GqlRep ISchema GObject "ISchema"
 
-instance Applicative m => ToResolver ISchema m where
+instance Applicative m => ToResolver err ISchema m where
   toResolver = toObjectResolver
 
 newtype IType = IType IType_T
@@ -62,7 +62,7 @@ derive instance Newtype IType _
 
 instance GqlRep IType GObject "IType"
 
-instance Applicative m => ToResolver IType m where
+instance Applicative m => ToResolver err IType m where
   toResolver a = toObjectResolver a
 
 data ITypeKind
@@ -93,7 +93,7 @@ instance Enum ITypeKind where
 
 instance GqlRep ITypeKind GEnum "ITypeKind"
 
-instance (Applicative m) => ToResolver ITypeKind m where
+instance (Applicative m) => ToResolver err ITypeKind m where
   toResolver a = toEnumResolver a
 
 newtype IField = IField IField_T
@@ -121,7 +121,7 @@ derive instance Generic IField _
 derive instance Newtype IField _
 instance GqlRep IField GObject "IField"
 
-instance (Applicative m) => ToResolver IField m where
+instance (Applicative m) => ToResolver err IField m where
   toResolver a = toObjectResolver a
 
 newtype IInputValue = IInputValue
@@ -137,7 +137,7 @@ derive instance Newtype IInputValue _
 
 instance GqlRep IInputValue GObject "IInputValue"
 
-instance (Applicative m) => ToResolver IInputValue m where
+instance (Applicative m) => ToResolver err IInputValue m where
   toResolver a = toObjectResolver a
 
 newtype IEnumValue = IEnumValue
@@ -151,7 +151,7 @@ derive instance Generic IEnumValue _
 
 instance GqlRep IEnumValue GObject "IEnumValue"
 
-instance Applicative m => ToResolver IEnumValue m where
+instance Applicative m => ToResolver err IEnumValue m where
   toResolver a = toObjectResolver a
 
 instance Show IEnumValue where
@@ -168,5 +168,5 @@ derive instance Generic IDirective _
 
 instance GqlRep IDirective GObject "IDirective"
 
-instance Applicative m => ToResolver IDirective m where
+instance Applicative m => ToResolver err IDirective m where
   toResolver a = toObjectResolver a

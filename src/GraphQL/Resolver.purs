@@ -12,14 +12,14 @@ import Record as Record
 
 -- | Create a root resolver from a root record
 rootResolver
-  :: forall query mutation m withIntrospection
+  :: forall query mutation m withIntrospection err
    . Applicative m
   => Nub (IntrospectionRow query) withIntrospection
-  => ToResolver ((QueryRoot { | withIntrospection })) m
-  => ToResolver (MutationRoot mutation) m
+  => ToResolver err ((QueryRoot { | withIntrospection })) m
+  => ToResolver err (MutationRoot mutation) m
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { query :: { | query }, mutation :: mutation }
-  -> RootResolver m
+  -> RootResolver err m
 rootResolver root =
   { query: toResolver $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
   , mutation: toResolver $ MutationRoot root.mutation
@@ -34,8 +34,8 @@ rootResolver root =
 
   introspection = getIntrospection schema
 
-type RootResolver m =
-  { query :: Resolver m
-  , mutation :: Resolver m
+type RootResolver err m =
+  { query :: Resolver err m
+  , mutation :: Resolver err m
   , introspection :: Introspection
   }

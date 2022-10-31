@@ -2,7 +2,7 @@ module GraphQL.Server.HandleRequest (handleRequest, parseOperation) where
 
 import Prelude
 
-import Control.Monad.Error.Class (class MonadThrow, throwError)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
 import Data.Argonaut (Json, decodeJson, encodeJson, parseJson)
 import Data.Either (Either(..), either, note)
 import Data.Filterable (filterMap)
@@ -18,16 +18,19 @@ import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
 import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
+import GraphQL.Resolver.Result (class RenderError)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
 import HTTPure (Request, toString)
 import Parsing (runParser)
 
 handleRequest
-  :: forall m f
+  :: forall m f err
    . Gqlable f m
+  => RenderError err
+  => MonadError err m
   => (Request -> Aff Boolean)
-  -> RootResolver f
+  -> RootResolver err f
   -> Request
   -> GqlResM Json
 handleRequest isAuthorized resolvers req = do

@@ -9,7 +9,7 @@ import Data.Filterable (filter)
 import Data.Foldable (find)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
-import Effect.Aff (Aff, error, throwError)
+import Effect.Aff (Aff, Error, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
@@ -304,7 +304,7 @@ resolveAsJsonWithVars vars query = do
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver :: RootResolver GqlAff
+simpleResolver ::  RootResolver Error GqlAff
 simpleResolver =
   rootResolver
     { query:
@@ -364,7 +364,7 @@ derive instance Generic Book _
 
 instance GqlRep Book GObject "Book"
 
-instance ToResolver Book GqlAff where
+instance ToResolver err Book GqlAff where
   toResolver a = toObjectResolver a
 
 instance GetGqlType Book where
@@ -379,7 +379,7 @@ derive instance Generic Author _
 
 instance GqlRep Author GObject "Author"
 
-instance ToResolver Author GqlAff where
+instance ToResolver err Author GqlAff where
   toResolver a = toObjectResolver a
 
 instance GetGqlType Author where
@@ -391,7 +391,7 @@ instance GqlRep BookType GEnum "BookType"
 
 derive instance Generic BookType _
 
-instance ToResolver BookType GqlAff where
+instance ToResolver err BookType GqlAff where
   toResolver a = toEnumResolver a
 
 instance GetGqlType BookType where
@@ -410,7 +410,7 @@ derive instance Generic Packaging _
 
 instance GqlRep Packaging GUnion "Packaging"
 
-instance ToResolver Packaging GqlAff where
+instance ToResolver err Packaging GqlAff where
   toResolver a = toUnionResolver a
 
 instance GetGqlType Packaging where
@@ -424,7 +424,7 @@ instance Scalar CustomScalar "CustomScalar" where
     rec :: { s :: String, i :: Int } <- decodeJson json
     pure $ CustomScalar rec.s rec.i
 
-instance ToResolver CustomScalar GqlAff where
+instance ToResolver err CustomScalar GqlAff where
   toResolver a = toScalarResolver a
 
 instance GetGqlType CustomScalar where

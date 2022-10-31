@@ -6,12 +6,14 @@ module GraphQL.Server
 
 import Prelude
 
+import Control.Monad.Error.Class (class MonadError)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class.Console (log)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.Gqlable (class Gqlable)
+import GraphQL.Resolver.Result (class RenderError)
 import GraphQL.Resolver.Root (GqlRoot, MutationRoot, QueryRoot)
 import GraphQL.Resolver.ToResolver (class ToResolver)
 import GraphQL.Server.GqlResM (toResponse)
@@ -23,11 +25,13 @@ import Prim.Row (class Nub)
 
 -- | Boot up the server
 start
-  :: forall query mutation withIntrospection m f
+  :: forall query mutation withIntrospection m f err
    . Gqlable f m
+  => MonadError err m
+  => RenderError err
   => Nub (IntrospectionRow query) withIntrospection
-  => ToResolver ((QueryRoot { | withIntrospection })) f
-  => ToResolver (MutationRoot mutation) f
+  => ToResolver err ((QueryRoot { | withIntrospection })) f
+  => ToResolver err (MutationRoot mutation) f
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { root :: { query :: { | query }, mutation :: mutation }
      , isAuthorized :: Request -> Aff Boolean
@@ -38,7 +42,7 @@ start { root, isAuthorized } =
   where
   handler = handleRequest isAuthorized resolvers >>> toResponse
 
-  resolvers :: RootResolver f
+  resolvers :: RootResolver err f
   resolvers = rootResolver root
 
   port = 9000

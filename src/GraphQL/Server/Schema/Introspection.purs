@@ -12,7 +12,7 @@ import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..))
 
-makeIntrospectionResolver :: forall m. Applicative m => ISchema -> Resolver m
+makeIntrospectionResolver :: forall err m. Applicative m => ISchema -> Resolver err m
 makeIntrospectionResolver = toResolver <<< Introspection <<< getIntrospection
 
 getIntrospection :: ISchema -> Introspection_T
@@ -36,5 +36,5 @@ derive instance Generic Introspection _
 
 instance GqlRep Introspection GObject "Introspection"
 
-instance Applicative m => ToResolver Introspection m where
+instance Applicative m => ToResolver err Introspection m where
   toResolver a = toObjectResolver a

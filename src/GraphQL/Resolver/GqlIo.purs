@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Alt (class Alt)
 import Control.Lazy (class Lazy)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Functor.Invariant (class Invariant, imapF)
 import Data.Newtype (class Newtype)
@@ -79,6 +80,8 @@ derive newtype instance Bind m => Bind (GqlIo m)
 derive newtype instance Monad m => Monad (GqlIo m)
 
 derive newtype instance MonadEffect m => MonadEffect (GqlIo m)
+derive newtype instance MonadThrow err m => MonadThrow err (GqlIo m)
+derive newtype instance MonadError err m => MonadError err (GqlIo m)
 
 derive newtype instance MonadAff m => MonadAff (GqlIo m)
 
