@@ -18,7 +18,7 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
 import GraphQL.Resolver.Error (class CustomResolverError)
-import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
+import GraphQL.Resolver.EvalGql (class EvalGql, evalGql)
 import GraphQL.Resolver.HandleOperation (handleOperation)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
@@ -30,7 +30,7 @@ handleRequest
    . CustomResolverError err
   => MonadError err m
   => Parallel f m
-  => Gqlable m
+  => EvalGql m
   => (Request -> Aff Boolean)
   -> RootResolver err m
   -> Request
@@ -43,7 +43,7 @@ handleRequest isAuthorized resolvers req = do
   op <- parseOperation operationName operation
   either throwError pure =<<
     ( liftAff
-        $ toAff req
+        $ evalGql req
         $ map (map encodeJson)
         $ handleOperation resolvers op (fromMaybe Object.empty variables)
     )

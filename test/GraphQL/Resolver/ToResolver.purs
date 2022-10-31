@@ -14,7 +14,7 @@ import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
 import GraphQL.Resolver.GqlIo (GqlAff)
-import GraphQL.Resolver.Gqlable (toAff)
+import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, toObjectResolver, toResolver)
@@ -156,7 +156,7 @@ resolveTypedFiber :: forall a. ToResolver Error a GqlAff => a -> String -> GqlAf
 resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) query
 
 resolveTyped :: forall a. ToResolver Error a GqlAff => a -> String -> Aff (Either GqlError (Result String))
-resolveTyped resolver query = toAff mockRequest $ map (map message) <$> resolveTypedFiber resolver query
+resolveTyped resolver query = evalGql mockRequest $ map (map message) <$> resolveTypedFiber resolver query
   where
   mockRequest :: Request
   mockRequest = unsafeCoerce unit

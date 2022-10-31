@@ -12,8 +12,8 @@ import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, Error, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
+import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
-import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
 import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver, toObjectResolver, toScalarResolver, toUnionResolver)
 import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
@@ -302,7 +302,7 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- toAff mockRequest $ handleOperation simpleResolver op vars
+  eit <- evalGql mockRequest $ handleOperation simpleResolver op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 

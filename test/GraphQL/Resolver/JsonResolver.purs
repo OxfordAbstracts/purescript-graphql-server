@@ -15,7 +15,7 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Exception (Error, message)
 import GraphQL.Resolver.GqlIo (GqlIo(..), GqlEffect)
-import GraphQL.Resolver.Gqlable (toAff)
+import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
@@ -62,7 +62,7 @@ spec =
         actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
-        res <- toAff mockRequest $ resolveTestQuery booksResolver
+        res <- evalGql mockRequest $ resolveTestQuery booksResolver
           """{ books (maxPrice: 7) { 
             title 
             author { 
@@ -214,7 +214,7 @@ io :: forall a. a -> GqlEffect a
 io = GqlIo <<< pure
 
 resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
-resolveTestQuery resolver' query = toAff mockRequest $ map (map message) <$> resolveQueryString resolver' query
+resolveTestQuery resolver' query = evalGql mockRequest $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

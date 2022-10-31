@@ -13,7 +13,7 @@ import Effect.Class.Console (log)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.Error (class CustomResolverError)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Resolver.Gqlable (class Gqlable)
+import GraphQL.Resolver.EvalGql (class EvalGql)
 import GraphQL.Resolver.Root (GqlRoot, MutationRoot, QueryRoot)
 import GraphQL.Resolver.ToResolver (class ToResolver)
 import GraphQL.Server.GqlResM (toResponse)
@@ -26,7 +26,7 @@ import Prim.Row (class Nub)
 -- | Boot up the server
 start
   :: forall query mutation withIntrospection m f err
-   . Gqlable m
+   . EvalGql m
   => MonadError err m
   => CustomResolverError err
   => Parallel f m
