@@ -3,6 +3,7 @@ module GraphQL.Resolver.JsonResolver where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, catchError)
+import Control.Parallel (class Parallel, parTraverse)
 import Data.Argonaut (Json, jsonEmptyObject)
 import Data.Either (Either(..))
 import Data.GraphQL.AST as AST
@@ -11,12 +12,10 @@ import Data.List (List(..))
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (unwrap)
-import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver.EncodeValue (encodeArguments)
-import GraphQL.Resolver.Gqlable (class Gqlable, gqlParallel, gqlSequential)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), FailedToResolve(..))
 import Parsing (runParser)
@@ -47,12 +46,12 @@ type Field err m =
   }
 
 resolveQueryString
-  :: forall f m err
-   . Gqlable f m
-  => MonadError err m
-  => Resolver err f
+  :: forall m err f
+   . MonadError err m
+  => Parallel f m
+  => Resolver err m
   -> String
-  -> f (Either GqlError (Result err))
+  -> m (Either GqlError (Result err))
 resolveQueryString resolver query = do
   let
     queryParseResult = runParser query selectionSet
@@ -62,20 +61,17 @@ resolveQueryString resolver query = do
       Right <$> resolve resolver Object.empty (Just queryAST)
 
 resolve
-  :: forall f m err
-   . Applicative f
-  => MonadError err m
-  => Gqlable f m
-  => Resolver err f
+  :: forall m err f
+   . MonadError err m
+  => Parallel f m
+  => Resolver err m
   -> Object Json
   -> (Maybe AST.SelectionSet)
-  -> f (Result err)
+  -> m (Result err)
 resolve resolver vars = case resolver, _ of
-  ResolveAsync resolverM, a -> gqlParallel $ catchError resolveAsync handleError
+  ResolveAsync resolverM, a -> catchError resolveAsync handleError
     where
-    resolveAsync = do
-      resolver' <- gqlSequential resolverM
-      gqlSequential $ resolve resolver' vars a
+    resolveAsync = resolverM >>= \resolver' -> resolve resolver' vars a
 
     handleError = pure <<< ResultError <<< ResolverError
 
@@ -83,14 +79,14 @@ resolve resolver vars = case resolver, _ of
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
   ListResolver resolvers, selectionSet ->
-    ResultList <$> traverse (\r -> resolve r vars selectionSet) resolvers
+    ResultList <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
   NullableResolver resolvers, selectionSet ->
-    ResultNullable <$> traverse (\r -> resolve r vars selectionSet) resolvers
+    ResultNullable <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
   Fields _, Nothing -> err MissingSelectionSet
   (Fields { fields, typename }), Just (AST.SelectionSet selections) ->
     case getSelectionFields typename =<< selections of
       Nil -> err NoFields
-      selectedFields -> ResultObject <$> for selectedFields
+      selectedFields -> ResultObject <$> flip parTraverse selectedFields
         \{ arguments
          , name
          , alias

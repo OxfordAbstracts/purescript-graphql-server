@@ -3,6 +3,7 @@ module GraphQL.Server.HandleRequest (handleRequest, parseOperation) where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, throwError)
+import Control.Parallel (class Parallel)
 import Data.Argonaut (Json, decodeJson, encodeJson, parseJson)
 import Data.Either (Either(..), either, note)
 import Data.Filterable (filterMap)
@@ -16,21 +17,22 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
+import GraphQL.Resolver.Error (class CustomResolverError)
 import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
 import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Resolver.Result (class RenderError)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
 import HTTPure (Request, toString)
 import Parsing (runParser)
 
 handleRequest
-  :: forall m f err
-   . Gqlable f m
-  => RenderError err
+  :: forall f m err
+   . CustomResolverError err
   => MonadError err m
+  => Parallel f m
+  => Gqlable m
   => (Request -> Aff Boolean)
-  -> RootResolver err f
+  -> RootResolver err m
   -> Request
   -> GqlResM Json
 handleRequest isAuthorized resolvers req = do
@@ -41,7 +43,7 @@ handleRequest isAuthorized resolvers req = do
   op <- parseOperation operationName operation
   either throwError pure =<<
     ( liftAff
-        $ toAff
+        $ toAff req
         $ map (map encodeJson)
         $ handleOperation resolvers op (fromMaybe Object.empty variables)
     )

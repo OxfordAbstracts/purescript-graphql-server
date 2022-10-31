@@ -2,9 +2,7 @@ module Test.GraphQL.Server.Resolver.JsonResolver (spec) where
 
 import Prelude
 
-import Control.Monad.Error.Class (class MonadError)
 import Data.Argonaut (class EncodeJson, encodeJson)
-import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Filterable (filter)
 import Data.Foldable (class Foldable)
@@ -13,18 +11,21 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
+import Effect (Effect)
+import Effect.Aff (Aff)
 import Effect.Exception (Error, message)
-import GraphQL.Resolver.EffFiber (EffFiber)
-import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
-import GraphQL.Resolver.Gqlable (class Gqlable, toAff)
+import GraphQL.Resolver.GqlIo (GqlIo(..), GqlEffect)
+import GraphQL.Resolver.Gqlable (toAff)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError, FailedToResolve(..))
 import GraphQL.Server.GqlRep (class GqlRep, GObject)
+import HTTPure (Request)
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
+import Unsafe.Coerce (unsafeCoerce)
 
 spec :: Spec Unit
 spec =
@@ -61,7 +62,7 @@ spec =
         actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
-        res <- toAff $ resolveTestQuery booksResolver
+        res <- toAff mockRequest $ resolveTestQuery booksResolver
           """{ books (maxPrice: 7) { 
             title 
             author { 
@@ -152,7 +153,7 @@ mkFieldMap
   -> Map.Map String (Field err m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: forall err. Resolver err (GqlIo EffFiber)
+booksResolver :: forall err. Resolver err (GqlIo Effect)
 booksResolver =
   toResolver $ gqlObj
     { books
@@ -209,8 +210,10 @@ instance GqlRep (Author a) GObject "Author"
 instance Applicative m => ToResolver err (Author (GqlIo m)) (GqlIo m) where
   toResolver a = toObjectResolver a
 
-io :: forall a. a -> GqlFiber a
+io :: forall a. a -> GqlEffect a
 io = GqlIo <<< pure
 
-resolveTestQuery :: forall f m. Functor f => Gqlable f m => MonadError Error m => Resolver Error f -> String -> f (Either GqlError (Result String))
-resolveTestQuery resolver' query = map (map message) <$> resolveQueryString resolver' query
+resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery resolver' query = toAff mockRequest $ map (map message) <$> resolveQueryString resolver' query
+mockRequest :: Request
+mockRequest = unsafeCoerce unit

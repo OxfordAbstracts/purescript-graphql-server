@@ -21,8 +21,10 @@ import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
 import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getEnumType, getObjectType, getScalarType, getUnionType)
 import GraphQL.Server.Schema.Scalar (class Scalar)
+import HTTPure (Request)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
+import Unsafe.Coerce (unsafeCoerce)
 
 spec :: Spec Unit
 spec =
@@ -300,7 +302,7 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- toAff $ handleOperation simpleResolver op vars
+  eit <- toAff mockRequest $ handleOperation simpleResolver op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
@@ -429,3 +431,7 @@ instance ToResolver err CustomScalar GqlAff where
 
 instance GetGqlType CustomScalar where
   getType a = getScalarType a
+
+
+mockRequest :: Request
+mockRequest = unsafeCoerce unit

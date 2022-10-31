@@ -3,6 +3,7 @@ module GraphQL.Resolver.HandleOperation where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, throwError)
+import Control.Parallel (class Parallel)
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
 import Data.Foldable (foldM)
@@ -16,22 +17,22 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
 import GraphQL.Resolver.EncodeValue (encodeValue)
-import GraphQL.Resolver.Gqlable (class Gqlable)
+import GraphQL.Resolver.Error (class CustomResolverError)
 import GraphQL.Resolver.JsonResolver (resolve)
-import GraphQL.Resolver.Result (class RenderError, encodeLocatedError, getLocatedErrors, resultToData)
+import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
 import GraphQL.Server.Schema.Introspection (Introspection(..))
 import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
 
 handleOperation
-  :: forall m f err
-   . Gqlable f m
-  => RenderError err
+  :: forall f m err
+   . CustomResolverError err
+  => Parallel f m
   => MonadError err m
-  => RootResolver err f
+  => RootResolver err m
   -> AST.OperationDefinition
   -> Object Json
-  -> f
+  -> m
        ( Either GqlError
            { data :: Json
            , errors :: Maybe (NonEmptyList Json)

@@ -10,8 +10,8 @@ import Data.Generic.Rep (class Generic)
 import Data.List (List(..), fold, reverse, (:))
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
-import Effect.Exception (Error, message)
 import Foreign.Object as Object
+import GraphQL.Resolver.Error (class CustomResolverError, renderError)
 import GraphQL.Server.GqlError (FailedToResolve)
 
 data Result err
@@ -48,16 +48,8 @@ newtype LocatedError = LocatedError
   , locations :: List { line :: Int, column :: Int }
   }
 
-class RenderError err where
-  renderError :: err -> String
 
-instance RenderError String where
-  renderError = identity
-
-instance RenderError Error where
-  renderError = message
-
-getLocatedErrors :: forall err. RenderError err => Result err -> List LocatedError
+getLocatedErrors :: forall err. CustomResolverError err => Result err -> List LocatedError
 getLocatedErrors = go Nil
   where
   go :: List (Either Int String) -> Result err -> List LocatedError
