@@ -215,5 +215,6 @@ io = GqlIo <<< pure
 
 resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
 resolveTestQuery resolver' query = toAff mockRequest $ map (map message) <$> resolveQueryString resolver' query
+
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

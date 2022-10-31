@@ -432,6 +432,5 @@ instance ToResolver err CustomScalar GqlAff where
 instance GetGqlType CustomScalar where
   getType a = getScalarType a
 
-
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

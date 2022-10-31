@@ -157,6 +157,6 @@ resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) quer
 
 resolveTyped :: forall a. ToResolver Error a GqlAff => a -> String -> Aff (Either GqlError (Result String))
 resolveTyped resolver query = toAff mockRequest $ map (map message) <$> resolveTypedFiber resolver query
-  where 
+  where
   mockRequest :: Request
   mockRequest = unsafeCoerce unit

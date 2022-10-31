@@ -48,7 +48,6 @@ newtype LocatedError = LocatedError
   , locations :: List { line :: Int, column :: Int }
   }
 
-
 getLocatedErrors :: forall err. CustomResolverError err => Result err -> List LocatedError
 getLocatedErrors = go Nil
   where
