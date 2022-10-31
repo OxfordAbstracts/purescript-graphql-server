@@ -3,7 +3,7 @@ module Test.GraphQL.Server.Resolver.JsonResolver (spec) where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
-import Control.Monad.Reader (class MonadAsk, ReaderT, runReaderT)
+import Control.Monad.Reader (class MonadAsk, ReaderT, ask, runReaderT)
 import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Either (Either(..))
@@ -24,7 +24,7 @@ import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError, FailedToResolve(..))
 import GraphQL.Server.GqlRep (class GqlRep, GObject)
-import HTTPure (Request)
+import HTTPure (Request, lookup)
 import HTTPure as Headers
 import HTTPure.Headers (Headers)
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
@@ -117,7 +117,7 @@ spec =
 
           )
 
-resolver :: forall err m. Applicative m => Resolver err m
+resolver :: forall err m. MonadAsk Ctx m => Applicative m => Resolver err m
 resolver = Fields
   { typename: "name"
   , fields:
@@ -143,6 +143,11 @@ resolver = Fields
                     }
                   ]
               }
+          }
+        , { name: "stateful"
+          , resolver: \_ -> ResolveAsync do
+              { headers } <- ask
+              pure $ Node $ pure $ encodeJson $ lookup headers "key2"
           }
         ]
   }
