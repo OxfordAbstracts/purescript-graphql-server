@@ -65,6 +65,16 @@ spec =
 
         actual <- resolveTestQuery resolver query
         actual `shouldEqual` Right expected
+      it "should resolve a query using request data via a custom monad" do
+        let
+          query = "{ header2 }"
+
+          expected = ResultObject
+            $ pure
+            $ Tuple "header2" (ResultLeaf $ encodeJson "val2")
+
+        actual <- resolveTestQuery resolver query
+        actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
         res <- evalGql mockRequest $ resolveTestQuery booksResolver
@@ -144,7 +154,7 @@ resolver = Fields
                   ]
               }
           }
-        , { name: "stateful"
+        , { name: "header2"
           , resolver: \_ -> ResolveAsync do
               { headers } <- ask
               pure $ Node $ pure $ encodeJson $ lookup headers "key2"
