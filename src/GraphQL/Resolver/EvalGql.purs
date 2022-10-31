@@ -2,21 +2,20 @@ module GraphQL.Resolver.EvalGql where
 
 import Prelude
 
-import Data.Newtype (unwrap)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.GqlIo (GqlIo(..))
 import HTTPure (Request)
 
 class EvalGql m where
   evalGql :: Request -> m ~> Aff
 
-instance EvalGql (GqlIo Aff) where
-  evalGql _ = unwrap
+instance EvalGql m => EvalGql (GqlIo m) where
+  evalGql r (GqlIo a) = evalGql r a
 
-instance EvalGql (GqlIo Effect) where
-  evalGql _ = unwrap >>> liftEffect
+instance EvalGql Effect where
+  evalGql _ a = liftEffect a
 
 instance EvalGql Aff where
-  evalGql _ = identity
+  evalGql _ a = identity a

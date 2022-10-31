@@ -12,8 +12,8 @@ import Effect.Aff (Aff)
 import Effect.Class.Console (log)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.Error (class CustomResolverError)
-import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.EvalGql (class EvalGql)
+import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.Root (GqlRoot, MutationRoot, QueryRoot)
 import GraphQL.Resolver.ToResolver (class ToResolver)
 import GraphQL.Server.GqlResM (toResponse)
@@ -22,6 +22,7 @@ import GraphQL.Server.Schema (class GetSchema)
 import GraphQL.Server.Schema.Introspection (IntrospectionRow)
 import HTTPure (ServerM, Request, serve)
 import Prim.Row (class Nub)
+
 
 -- | Boot up the server
 start

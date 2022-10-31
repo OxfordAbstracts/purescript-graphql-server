@@ -2,6 +2,9 @@ module Test.GraphQL.Server.Resolver.JsonResolver (spec) where
 
 import Prelude
 
+import Control.Monad.Error.Class (class MonadError, class MonadThrow)
+import Control.Monad.Reader (class MonadAsk, ReaderT, runReaderT)
+import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Either (Either(..))
 import Data.Filterable (filter)
@@ -10,18 +13,20 @@ import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
+import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..))
-import Effect (Effect)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, ParAff)
 import Effect.Exception (Error, message)
-import GraphQL.Resolver.GqlIo (GqlIo(..), GqlEffect)
-import GraphQL.Resolver.EvalGql (evalGql)
+import GraphQL.Resolver.EvalGql (class EvalGql, evalGql)
+import GraphQL.Resolver.GqlIo (GqlIo(..))
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server.GqlError (GqlError, FailedToResolve(..))
 import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import HTTPure (Request)
+import HTTPure as Headers
+import HTTPure.Headers (Headers)
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -153,7 +158,7 @@ mkFieldMap
   -> Map.Map String (Field err m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: forall err. Resolver err (GqlIo Effect)
+booksResolver :: forall err. Resolver err GqlCustom
 booksResolver =
   toResolver $ gqlObj
     { books
@@ -164,7 +169,6 @@ booksResolver =
       filter (\(Book b) -> maybe true (b.price <= _) opts.maxPrice)
         books_
 
-  author :: (Author _)
   author = Author
     { name: "Iain M. Banks"
     , bio: io "This is some stuff about the author"
@@ -210,11 +214,46 @@ instance GqlRep (Author a) GObject "Author"
 instance Applicative m => ToResolver err (Author (GqlIo m)) (GqlIo m) where
   toResolver a = toObjectResolver a
 
-io :: forall a. a -> GqlEffect a
+io :: forall a. a -> GqlCustom a
 io = GqlIo <<< pure
 
-resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery :: Resolver Error GqlCustom -> String -> Aff (Either GqlError (Result String))
 resolveTestQuery resolver' query = evalGql mockRequest $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
-mockRequest = unsafeCoerce unit
+mockRequest = unsafeCoerce
+  { headers: Headers.headers
+      [ Tuple "key1" "val1"
+      , Tuple "key2" "val2"
+      ]
+  }
+
+type GqlCustom = GqlIo CustomM
+
+newtype CustomM a = CustomM (ReaderT Ctx Aff a)
+
+newtype CustomParM a = CustomParM (ReaderT Ctx ParAff a)
+
+type Ctx = { headers :: Headers }
+
+derive instance Newtype (CustomM a) _
+derive instance Functor CustomM
+derive newtype instance Apply CustomM
+derive newtype instance Applicative CustomM
+derive newtype instance Bind CustomM
+derive newtype instance Monad CustomM
+derive newtype instance MonadThrow Error CustomM
+derive newtype instance MonadError Error CustomM
+derive newtype instance MonadAsk Ctx CustomM
+
+derive instance Newtype (CustomParM a) _
+derive instance Functor CustomParM
+derive newtype instance Apply CustomParM
+derive newtype instance Applicative CustomParM
+
+instance Parallel CustomParM CustomM where
+  parallel (CustomM a) = CustomParM $ parallel a
+  sequential (CustomParM a) = CustomM $ sequential a
+
+instance EvalGql CustomM where
+  evalGql { headers } (CustomM a) = runReaderT a { headers }

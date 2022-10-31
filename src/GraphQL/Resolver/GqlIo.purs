@@ -5,6 +5,9 @@ import Prelude
 import Control.Alt (class Alt)
 import Control.Lazy (class Lazy)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
+import Control.Monad.Reader (class MonadAsk)
+import Control.Monad.State (class MonadState)
+import Control.Monad.Writer (class MonadTell, class MonadWriter)
 import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Functor.Invariant (class Invariant, imapF)
 import Data.Newtype (class Newtype)
@@ -17,7 +20,7 @@ newtype GqlIo :: forall k. (k -> Type) -> k -> Type
 newtype GqlIo m a = GqlIo (m a)
 
 io :: forall m a. Applicative m => a -> GqlIo m a
-io = GqlIo <<< pure
+io a = GqlIo $ pure a
 
 hoistGql :: forall m n a. (m ~> n) -> GqlIo m a -> GqlIo n a
 hoistGql f (GqlIo m) = GqlIo $ f m
@@ -25,7 +28,7 @@ hoistGql f (GqlIo m) = GqlIo $ f m
 type GqlAff = GqlIo Aff
 
 gqlAff :: forall a. a -> GqlAff a
-gqlAff = io
+gqlAff a = io a
 
 type GqlParAff = GqlIo ParAff
 
@@ -79,8 +82,11 @@ derive newtype instance Monad m => Monad (GqlIo m)
 derive newtype instance MonadEffect m => MonadEffect (GqlIo m)
 derive newtype instance MonadThrow err m => MonadThrow err (GqlIo m)
 derive newtype instance MonadError err m => MonadError err (GqlIo m)
-
 derive newtype instance MonadAff m => MonadAff (GqlIo m)
+derive newtype instance MonadAsk a m => MonadAsk a (GqlIo m)
+derive newtype instance MonadState a m => MonadState a (GqlIo m)
+derive newtype instance MonadTell a m => MonadTell a (GqlIo m)
+derive newtype instance MonadWriter a m => MonadWriter a (GqlIo m)
 
 instance Parallel (GqlIo Effect) (GqlIo Effect) where
   parallel = identity
