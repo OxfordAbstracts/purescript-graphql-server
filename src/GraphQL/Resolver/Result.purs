@@ -7,38 +7,36 @@ import Data.Array as Array
 import Data.Either (Either(..), either)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
-import Data.Lazy (Lazy, force)
 import Data.List (List(..), fold, reverse, (:))
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
-import GraphQL.Server.GqlError (ResolverError)
+import GraphQL.Resolver.Error (class CustomResolverError, renderError)
+import GraphQL.Server.GqlError (FailedToResolve)
 
-data Result
+data Result err
   = ResultLeaf Json
-  | ResultLazy (Lazy Result)
-  | ResultError ResolverError
-  | ResultObject (List (Tuple String Result))
-  | ResultList (List Result)
-  | ResultNullable (Maybe Result)
+  | ResultError (FailedToResolve err)
+  | ResultObject (List (Tuple String (Result err)))
+  | ResultList (List (Result err))
+  | ResultNullable (Maybe (Result err))
 
-derive instance Generic Result _
-derive instance Eq Result
+derive instance Generic (Result err) _
+derive instance Functor Result
+derive instance Eq err => Eq (Result err)
 
-instance Show Result where
+instance Show err => Show (Result err) where
   show = case _ of
     ResultLeaf json -> "(ResultLeaf " <> stringify json <> ")"
-    ResultLazy json -> "(ResultLazy " <> show (force json) <> ")"
     ResultError err -> "(ResultError " <> show err <> ")"
     ResultObject fields -> "(ResultObject " <> show fields <> ")"
     ResultList items -> "(ResultList " <> show items <> ")"
     ResultNullable maybeResult -> "(ResultNullable " <> show maybeResult <> ")"
 
-resultToData :: Result -> Json
+resultToData :: forall err. Result err -> Json
 resultToData = case _ of
   ResultLeaf json -> json
   ResultError _err -> jsonNull
-  ResultLazy res -> resultToData (force res)
   ResultObject fields -> fromObject $ Object.fromFoldable $
     fields <#> map resultToData
   ResultList items -> fromArray $ Array.fromFoldable $ map resultToData items
@@ -50,16 +48,15 @@ newtype LocatedError = LocatedError
   , locations :: List { line :: Int, column :: Int }
   }
 
-getLocatedErrors :: Result -> List LocatedError
+getLocatedErrors :: forall err. CustomResolverError err => Result err -> List LocatedError
 getLocatedErrors = go Nil
   where
-  go :: List (Either Int String) -> Result -> List LocatedError
+  go :: List (Either Int String) -> Result err -> List LocatedError
   go path = case _ of
     ResultLeaf _ -> Nil
-    ResultLazy res -> go path $ force res
     ResultError err -> pure $ LocatedError
       { path: reverse path
-      , message: show err
+      , message: show $ map renderError err
       , locations: Nil -- TODO
       }
 

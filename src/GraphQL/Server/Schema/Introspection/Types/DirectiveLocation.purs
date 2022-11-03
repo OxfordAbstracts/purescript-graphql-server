@@ -40,5 +40,5 @@ derive instance Eq IDirectiveLocation
 
 instance GqlRep IDirectiveLocation GEnum "IDirectiveLocation"
 
-instance (Applicative m) => ToResolver IDirectiveLocation m where
+instance (Applicative m) => ToResolver err IDirectiveLocation m where
   toResolver a = toEnumResolver a

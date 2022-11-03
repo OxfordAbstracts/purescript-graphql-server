@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Alt (class Alt)
 import Control.Lazy (class Lazy)
+import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Functor.Invariant (class Invariant, imapF)
 import Data.Newtype (class Newtype)
@@ -11,7 +12,6 @@ import Effect (Effect)
 import Effect.Aff (Aff, ParAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import GraphQL.Resolver.EffFiber (EffFiber)
 
 newtype GqlIo :: forall k. (k -> Type) -> k -> Type
 newtype GqlIo m a = GqlIo (m a)
@@ -26,8 +26,6 @@ type GqlAff = GqlIo Aff
 
 gqlAff :: forall a. a -> GqlAff a
 gqlAff = io
-
-type GqlFiber = GqlIo EffFiber
 
 type GqlParAff = GqlIo ParAff
 
@@ -79,9 +77,15 @@ derive newtype instance Bind m => Bind (GqlIo m)
 derive newtype instance Monad m => Monad (GqlIo m)
 
 derive newtype instance MonadEffect m => MonadEffect (GqlIo m)
+derive newtype instance MonadThrow err m => MonadThrow err (GqlIo m)
+derive newtype instance MonadError err m => MonadError err (GqlIo m)
 
 derive newtype instance MonadAff m => MonadAff (GqlIo m)
 
-instance Parallel f m => Parallel (GqlIo f) (GqlIo m) where
+instance Parallel (GqlIo Effect) (GqlIo Effect) where
+  parallel = identity
+  sequential = identity
+else instance Parallel f m => Parallel (GqlIo f) (GqlIo m) where
   parallel = hoistGql parallel
   sequential = hoistGql sequential
+

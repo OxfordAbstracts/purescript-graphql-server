@@ -6,12 +6,14 @@ module GraphQL.Server
 
 import Prelude
 
-import Effect (Effect)
+import Control.Monad.Error.Class (class MonadError)
+import Control.Parallel (class Parallel)
 import Effect.Aff (Aff)
 import Effect.Class.Console (log)
 import GraphQL.Resolver (RootResolver, rootResolver)
+import GraphQL.Resolver.Error (class CustomResolverError)
 import GraphQL.Resolver.GqlIo (GqlIo)
-import GraphQL.Resolver.Gqlable (class Gqlable)
+import GraphQL.Resolver.EvalGql (class EvalGql)
 import GraphQL.Resolver.Root (GqlRoot, MutationRoot, QueryRoot)
 import GraphQL.Resolver.ToResolver (class ToResolver)
 import GraphQL.Server.GqlResM (toResponse)
@@ -23,22 +25,25 @@ import Prim.Row (class Nub)
 
 -- | Boot up the server
 start
-  :: forall query mutation withIntrospection m f
-   . Gqlable f m
+  :: forall query mutation withIntrospection m f err
+   . EvalGql m
+  => MonadError err m
+  => CustomResolverError err
+  => Parallel f m
   => Nub (IntrospectionRow query) withIntrospection
-  => ToResolver ((QueryRoot { | withIntrospection })) f
-  => ToResolver (MutationRoot mutation) f
+  => ToResolver err ((QueryRoot { | withIntrospection })) m
+  => ToResolver err (MutationRoot mutation) m
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { root :: { query :: { | query }, mutation :: mutation }
      , isAuthorized :: Request -> Aff Boolean
      }
-  -> GqlServerM f
+  -> GqlServerM m
 start { root, isAuthorized } =
   GqlServerM $ serve port handler onStart
   where
   handler = handleRequest isAuthorized resolvers >>> toResponse
 
-  resolvers :: RootResolver f
+  resolvers :: RootResolver err m
   resolvers = rootResolver root
 
   port = 9000
@@ -50,9 +55,3 @@ newtype GqlServerM f = GqlServerM ServerM
 
 type GqlServer :: forall k. (k -> Type) -> Type
 type GqlServer f = GqlServerM (GqlIo f)
-
-test :: GqlServer Effect
-test = start
-  { root: { query: { hello: "world" }, mutation: {} }
-  , isAuthorized: \_ -> pure true
-  }

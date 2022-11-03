@@ -11,17 +11,21 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
-import GraphQL.Server.GqlRep (class GqlRep, GObject)
-import GraphQL.Resolver.EffFiber (EffFiber)
-import GraphQL.Resolver.GqlIo (GqlFiber, GqlIo(..))
-import GraphQL.Resolver.Gqlable (toAff)
+import Effect (Effect)
+import Effect.Aff (Aff)
+import Effect.Exception (Error, message)
+import GraphQL.Resolver.GqlIo (GqlIo(..), GqlEffect)
+import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
-import GraphQL.Server.GqlError (ResolverError(..))
+import GraphQL.Server.GqlError (GqlError, FailedToResolve(..))
+import GraphQL.Server.GqlRep (class GqlRep, GObject)
+import HTTPure (Request)
 import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
+import Unsafe.Coerce (unsafeCoerce)
 
 spec :: Spec Unit
 spec =
@@ -32,20 +36,20 @@ spec =
 
           query = "{ top_level_1 top_level_2 top_level_3 }"
 
-          expected :: Result
+          -- expected :: Result Error
           expected = ResultObject
             $ Tuple "top_level_1" (ResultLeaf $ encodeJson "top_val_1")
                 : Tuple "top_level_2" (ResultLeaf $ encodeJson [ 1 ])
                 : Tuple "top_level_3" (ResultLeaf $ encodeJson { "l2": 2, "l1": "v1" })
                 : Nil
 
-        actual <- resolveQueryString resolver query
+        actual <- resolveTestQuery resolver query
         actual `shouldEqual` Right expected
       it "should resolve a nested query string" do
         let
           query = "{ top_level_nested_1 {c1 c2} }"
 
-          expected :: Result
+          -- expected :: Result Error
           expected = ResultObject
             $ pure
             $ Tuple "top_level_nested_1"
@@ -54,11 +58,11 @@ spec =
                 : Tuple "c2" (ResultLeaf $ encodeJson "v12")
                 : Nil
 
-        actual <- resolveQueryString resolver query
+        actual <- resolveTestQuery resolver query
         actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
-        res <- toAff $ resolveQueryString booksResolver
+        res <- evalGql mockRequest $ resolveTestQuery booksResolver
           """{ books (maxPrice: 7) { 
             title 
             author { 
@@ -108,7 +112,7 @@ spec =
 
           )
 
-resolver :: forall m. Applicative m => Resolver m
+resolver :: forall err m. Applicative m => Resolver err m
 resolver = Fields
   { typename: "name"
   , fields:
@@ -138,18 +142,18 @@ resolver = Fields
         ]
   }
 
-resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). Applicative m ⇒ EncodeJson a ⇒ a → args → Resolver m
+resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type) err. Applicative m ⇒ EncodeJson a ⇒ a → args → Resolver err m
 resolveNode a _ = Node $ pure $ encodeJson a
 
 mkFieldMap
-  :: forall f m
+  :: forall err f m
    . Foldable f
   => Functor f
-  => f (Field m)
-  -> Map.Map String (Field m)
+  => f (Field err m)
+  -> Map.Map String (Field err m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: Resolver (GqlIo EffFiber)
+booksResolver :: forall err. Resolver err (GqlIo Effect)
 booksResolver =
   toResolver $ gqlObj
     { books
@@ -190,7 +194,7 @@ derive instance Generic (Book m) _
 
 instance GqlRep (Book a) GObject "Book"
 
-instance Applicative m => ToResolver (Book (GqlIo m)) (GqlIo m) where
+instance Applicative m => ToResolver err (Book (GqlIo m)) (GqlIo m) where
   toResolver a = toObjectResolver a
 
 newtype Author m = Author
@@ -203,8 +207,14 @@ derive instance Generic (Author m) _
 
 instance GqlRep (Author a) GObject "Author"
 
-instance Applicative m => ToResolver (Author (GqlIo m)) (GqlIo m) where
+instance Applicative m => ToResolver err (Author (GqlIo m)) (GqlIo m) where
   toResolver a = toObjectResolver a
 
-io :: forall a. a -> GqlFiber a
+io :: forall a. a -> GqlEffect a
 io = GqlIo <<< pure
+
+resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery resolver' query = evalGql mockRequest $ map (map message) <$> resolveQueryString resolver' query
+
+mockRequest :: Request
+mockRequest = unsafeCoerce unit

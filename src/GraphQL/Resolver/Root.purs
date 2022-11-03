@@ -8,7 +8,7 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import GraphQL.Resolver.JsonResolver (Resolver(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, makeFields, toObjectResolver)
-import GraphQL.Server.GqlError (ResolverError(..))
+import GraphQL.Server.GqlError (FailedToResolve(..))
 import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, getObjectType)
 import Heterogeneous.Folding (class HFoldlWithIndex)
 import Type.Proxy (Proxy(..))
@@ -19,10 +19,10 @@ derive instance Newtype (GqlRoot name a) _
 
 instance
   ( Applicative m
-  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) ({ query :: q, mutation :: mut }) (FieldMap m)
+  , HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) ({ query :: q, mutation :: mut }) (FieldMap err m)
   , IsSymbol "root"
   ) =>
-  ToResolver (GqlRoot q mut) m where
+  ToResolver err (GqlRoot q mut) m where
   toResolver (GqlRoot root) = Fields
     { fields: makeFields (reflectSymbol (Proxy :: Proxy "root")) root
     , typename: "root"
@@ -42,9 +42,9 @@ instance GqlRep (QueryRoot a) GObject "QueryRoot"
 
 instance
   ( Applicative m
-  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)
+  , HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)
   ) =>
-  ToResolver (QueryRoot { | a }) m where
+  ToResolver err (QueryRoot { | a }) m where
   toResolver a = toObjectResolver a
 
 newtype MutationRoot a = MutationRoot a
@@ -55,15 +55,15 @@ instance GqlRep (MutationRoot a) GObject "MutationRoot"
 
 instance
   ( Applicative m
-  , HFoldlWithIndex (ToResolverProps m) (FieldMap m) { | a } (FieldMap m)
+  , HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)
   ) =>
-  ToResolver (MutationRoot { | a }) m where
+  ToResolver err (MutationRoot { | a }) m where
   toResolver a = toObjectResolver a
 
 instance
   ( Applicative m
   ) =>
-  ToResolver (MutationRoot Unit) m where
+  ToResolver err (MutationRoot Unit) m where
   toResolver _ = FailedResolver NoMutationRoot
 
 instance
