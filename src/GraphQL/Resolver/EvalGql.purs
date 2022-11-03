@@ -22,7 +22,7 @@ instance EvalGql m => EvalGql (ReaderT GqlRequest m) where
   evalGql r a = evalGql r $ runReaderT a (GqlRequest r)
 
 instance (Functor m, EvalGql m) => EvalGql (WriterT w m) where
-  evalGql r a = evalGql r $ fst <$> runWriterT a 
+  evalGql r a = evalGql r $ fst <$> runWriterT a
 
 instance EvalGql Effect where
   evalGql _ a = liftEffect a

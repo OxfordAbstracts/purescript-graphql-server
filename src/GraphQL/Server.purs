@@ -23,7 +23,6 @@ import GraphQL.Server.Schema.Introspection (IntrospectionRow)
 import HTTPure (ServerM, Request, serve)
 import Prim.Row (class Nub)
 
-
 -- | Boot up the server
 start
   :: forall query mutation withIntrospection m f err

@@ -435,4 +435,3 @@ instance GetGqlType CustomScalar where
 mockRequest :: Request
 mockRequest = unsafeCoerce unit
 
-
