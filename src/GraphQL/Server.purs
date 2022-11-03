@@ -2,6 +2,7 @@ module GraphQL.Server
   ( GqlServerM(..)
   , GqlServer
   , start
+  , defaultOpts
   ) where
 
 import Prelude
@@ -34,11 +35,13 @@ start
   => ToResolver err ((QueryRoot { | withIntrospection })) m
   => ToResolver err (MutationRoot mutation) m
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
-  => { root :: { query :: { | query }, mutation :: mutation }
-     , isAuthorized :: Request -> Aff Boolean
-     }
+  => ServerOpts
+  -> { query :: { | query }, mutation :: mutation }
   -> GqlServerM m
-start { root, isAuthorized } =
+start
+  { isAuthorized
+  }
+  root =
   GqlServerM $ serve port handler onStart
   where
   handler = handleRequest isAuthorized resolvers >>> toResponse
@@ -49,6 +52,17 @@ start { root, isAuthorized } =
   port = 9000
   onStart = do
     log $ "Graphql server listening at http://0.0.0.0:" <> show port
+
+type ServerOpts =
+  { isAuthorized :: Request -> Aff Boolean
+  , allowIntrospection :: Request -> Aff Boolean
+  }
+
+defaultOpts :: ServerOpts
+defaultOpts =
+  { isAuthorized: const $ pure true
+  , allowIntrospection: const $ pure true
+  }
 
 newtype GqlServerM :: forall k. k -> Type
 newtype GqlServerM f = GqlServerM ServerM
