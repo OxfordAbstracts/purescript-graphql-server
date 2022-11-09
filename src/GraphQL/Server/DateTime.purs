@@ -20,7 +20,7 @@ import Data.Enum (class BoundedEnum, fromEnum, toEnum)
 import Data.Foldable (class Foldable, foldl)
 import Data.Int (toNumber)
 import Data.Int as Int
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (codePointFromChar)
 import Data.String.CodeUnits as CodeUnits
 import Data.Time (Time(..))
@@ -79,14 +79,18 @@ showEnum = show <<< fromEnum
 isoDateTime :: Parser String DateTime
 isoDateTime = do
   date <- isoDate
-  charV 'T'
-  time <- isoTime
-  tzMay <- optionMaybe isoTz
-  let
-    resWoTz = DateTime date time
-  pure $ fromMaybe resWoTz $ tzMay
-    >>= \tz ->
-      adjust tz resWoTz
+  end <- optionMaybe eof
+  if isJust end then
+    pure $ DateTime date bottom
+  else do
+    charV 'T'
+    time <- isoTime
+    tzMay <- optionMaybe isoTz
+    let
+      resWoTz = DateTime date time
+    pure $ fromMaybe resWoTz $ tzMay
+      >>= \tz ->
+        adjust tz resWoTz
 
 isoDate :: Parser String Date
 isoDate = do

@@ -34,6 +34,7 @@ import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.JsonResolver as JsonResolver
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
+import GraphQL.Server.Decode (class DecodeArg, decodeArg)
 import GraphQL.Server.GqlError (FailedToResolve(..))
 import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
 import GraphQL.Server.Schema.Scalar (class Scalar, encodeScalar)
@@ -195,7 +196,7 @@ instance
       , resolver: getArgResolver a
       }
 
-class GetArgResolver err a m | m -> m where
+class GetArgResolver err a m | m -> m, m -> err where
   getArgResolver
     :: a
     -> { args :: Json }
@@ -204,8 +205,8 @@ class GetArgResolver err a m | m -> m where
 instance argResolverUnitFn :: ToResolver err a m => GetArgResolver err (Unit -> a) m where
   getArgResolver a = \_ -> toResolver (a unit)
 
-else instance argResolverAllFn :: (DecodeJson a, ToResolver err b m) => GetArgResolver err (a -> b) m where
-  getArgResolver fn { args } = case decodeJson args of
+else instance argResolverAllFn :: (DecodeArg a, ToResolver err b m) => GetArgResolver err (a -> b) m where
+  getArgResolver fn { args } = case decodeArg args of
     Left err -> FailedResolver $ ResolverDecodeError err
     Right a -> toResolver $ fn a
 

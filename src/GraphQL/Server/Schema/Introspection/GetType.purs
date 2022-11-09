@@ -39,7 +39,7 @@ import Safe.Coerce (coerce)
 import Type.Proxy (Proxy(..))
 
 class GetGqlType :: forall k. k -> Constraint
-class GqlNullable a <= GetGqlType a where
+class GqlNullable a <= GetGqlType a  where
   getType :: Proxy a -> IType
 
 getTypeWithNull :: forall a. GetGqlType a => Proxy a -> IType
