@@ -16,7 +16,7 @@ module GraphQL.Resolver.ToResolver
 
 import Prelude
 
-import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
+import Data.Argonaut (class EncodeJson, Json, encodeJson)
 import Data.Argonaut.Encode.Generic (class EncodeLiteral, encodeLiteralSum)
 import Data.Date (Date)
 import Data.DateTime (DateTime)
@@ -37,8 +37,10 @@ import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.Decode (class DecodeArg, decodeArg)
 import GraphQL.Server.GqlError (FailedToResolve(..))
 import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
+import GraphQL.Server.Schema.RecordTypename (class RecordTypename)
 import GraphQL.Server.Schema.Scalar (class Scalar, encodeScalar)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
+import Prim.RowList (class RowToList)
 import Prim.Symbol (class Append)
 import Type.Proxy (Proxy(..))
 
@@ -156,6 +158,23 @@ instance (Applicative m, ToResolver err a m) => ToResolver err (Array a) m where
 
 instance ToResolver err a m => ToResolver err (Unit -> a) m where
   toResolver a = toResolver $ a unit
+
+instance (Applicative m, IsSymbol sym) => ToResolver err (Proxy sym) m where
+  toResolver _ = unsafeResolveNode $ reflectSymbol (Proxy :: Proxy sym)
+
+instance
+  ( Applicative m
+  , RowToList r l
+  , RecordTypename { | r } name
+  , HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | r } (FieldMap err m)
+  , IsSymbol name
+  ) =>
+  ToResolver err { | r } m where
+  toResolver arg =
+    Fields
+      { fields: makeFields (reflectSymbol (Proxy :: Proxy name)) arg
+      , typename: reflectSymbol (Proxy :: Proxy name)
+      }
 
 makeFields
   :: forall r m err

@@ -32,6 +32,7 @@ import GraphQL.Server.Schema.Introspection.GetEnumValues (class GetEnumValues, g
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
 import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIType)
 import GraphQL.Server.Schema.Introspection.Types as IT
+import GraphQL.Server.Schema.RecordTypename (class RecordTypename)
 import GraphQL.Server.Schema.Scalar (class Scalar)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Prim.Symbol (class Append)
@@ -89,6 +90,18 @@ instance (GetGqlType b) => GetGqlType (a -> b) where
 instance (GetGqlType a) => GetGqlType (GqlIo m a) where
   getType _ = getType (Proxy :: Proxy a)
 
+instance (IsSymbol a) => GetGqlType (Proxy a) where
+  getType = unsafeScalar "String"
+
+
+instance
+  ( GetIFields { | r }
+  , RecordTypename { | r } name
+  , IsSymbol name
+  ) =>
+  GetGqlType { | r } where
+  getType _ = unsafeGetObjectType (Proxy :: Proxy name) (Proxy :: Proxy { | r })
+
 getObjectType
   :: forall name ctrName r a
    . Generic a (Constructor ctrName (Argument { | r }))
@@ -97,7 +110,16 @@ getObjectType
   => IsSymbol name
   => Proxy a
   -> IType
-getObjectType _ =
+getObjectType _ = unsafeGetObjectType (Proxy :: Proxy name) (Proxy :: Proxy { | r })
+
+unsafeGetObjectType
+  :: forall name r
+   . GetIFields { | r }
+  => IsSymbol name
+  => Proxy name
+  -> Proxy { | r }
+  -> IType
+unsafeGetObjectType _ _ =
   IType defaultIType
     { name = Just $ reflectSymbol (Proxy :: Proxy name)
     , kind = IT.OBJECT

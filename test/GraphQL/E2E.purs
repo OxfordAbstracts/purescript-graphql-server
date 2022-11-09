@@ -16,8 +16,10 @@ import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver)
 import GraphQL.Server (GqlServer, defaultOpts, liftServer, start)
 import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getObjectType)
+import GraphQL.Server.Schema.RecordTypename (addTypename)
 import Test.GraphQL.E2E.Util (gqlReq, noErrors, shouldHaveData)
 import Test.Spec (Spec, before, describe, it)
+import Type.Proxy (Proxy(..))
 
 spec :: Spec Unit
 spec =
@@ -133,7 +135,7 @@ user1 = User
       [ Order
           { id: 1
           , user: user1
-          , widget: Widget { id: 1, name: "widget1" }
+          , widget: addTypename { id: 1, name: "widget1" }
           }
       ]
   }
@@ -187,21 +189,11 @@ instance ToResolver err Order GqlAff where
 instance GetGqlType Order where
   getType a = getObjectType a
 
-newtype Widget = Widget
+type Widget =
   { id :: Int
   , name :: String
+  , __typename :: Proxy "Widget"
   }
-
-derive instance Generic Widget _
-
-instance GqlRep Widget GObject "Widget"
-
-instance ToResolver err Widget GqlAff where
-  toResolver a = toObjectResolver a
-
-instance GetGqlType Widget where
-  getType a = getObjectType a
-
 
 unsafeMakeDateTime :: Int -> Int -> Int -> Time -> DateTime
 unsafeMakeDateTime year month day time = DateTime (canonicalDate (toEnum year) (toEnum month) (toEnum day)) time
