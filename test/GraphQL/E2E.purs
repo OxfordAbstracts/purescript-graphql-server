@@ -8,8 +8,9 @@ import Data.Enum (class BoundedEnum)
 import Data.Enum as Enum
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe, fromMaybe, maybe)
+import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Class (liftEffect)
+import Effect.Class (class MonadEffect, liftEffect)
 import GraphQL.Resolver.GqlIo (GqlAff, gPure)
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver)
 import GraphQL.Server (GqlServer, defaultOpts, liftServer, start)
@@ -28,7 +29,7 @@ spec =
         { top_level_pure_ints: [ 100 ]
         , top_level_string: "hello world"
         }
-      void $ liftEffect $ endServer (pure unit)
+      done endServer
     it "should return user fields" \endServer -> do
       res <- gqlReq "query t1 { users { __typename id name } }"
       noErrors res
@@ -48,7 +49,7 @@ spec =
               }
             ]
         }
-      void $ liftEffect $ endServer (pure unit)
+      done endServer
     it "should return user fields with arguments" \endServer -> do
       res <- gqlReq "query t1 { users(created_before: \"2020-01-01\") { __typename id name } }"
       noErrors res
@@ -60,7 +61,7 @@ spec =
               }
             ]
         }
-      void $ liftEffect $ endServer (pure unit)
+      done endServer
     it "should return user fields with recursive fields" \endServer -> do
       res <- gqlReq
         """query t1 { 
@@ -89,7 +90,14 @@ spec =
               }
             ]
         }
-      void $ liftEffect $ endServer (pure unit)
+      done endServer
+
+done
+  :: forall m
+   . MonadEffect m
+  => (Effect Unit -> Effect Unit)
+  -> m Unit
+done endServer = void $ liftEffect $ endServer (pure unit)
 
 gqlServer ∷ GqlServer Aff
 gqlServer = start
@@ -125,6 +133,7 @@ user1 = User
       [ Order
           { id: 1
           , user: user1
+          , widget: Widget { id: 1, name: "widget1" }
           }
       ]
   }
@@ -165,6 +174,7 @@ instance GetGqlType User where
 newtype Order = Order
   { id :: Int
   , user :: User
+  , widget :: Widget
   }
 
 derive instance Generic Order _
@@ -176,6 +186,22 @@ instance ToResolver err Order GqlAff where
 
 instance GetGqlType Order where
   getType a = getObjectType a
+
+newtype Widget = Widget
+  { id :: Int
+  , name :: String
+  }
+
+derive instance Generic Widget _
+
+instance GqlRep Widget GObject "Widget"
+
+instance ToResolver err Widget GqlAff where
+  toResolver a = toObjectResolver a
+
+instance GetGqlType Widget where
+  getType a = getObjectType a
+
 
 unsafeMakeDateTime :: Int -> Int -> Int -> Time -> DateTime
 unsafeMakeDateTime year month day time = DateTime (canonicalDate (toEnum year) (toEnum month) (toEnum day)) time
