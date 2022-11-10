@@ -10,6 +10,10 @@ class
   , name -> gqlType
   , gqlType -> name
 
+
+class GqlObject :: Type  -> Symbol -> Constraint
+class GqlObject a name | a -> name
+
 data GObject
 
 data GEnum

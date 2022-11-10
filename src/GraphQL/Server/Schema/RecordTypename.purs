@@ -7,11 +7,11 @@ import Record as Record
 import Type.Proxy (Proxy(..))
 
 addTypename
-  :: forall r169 name
-   . Lacks "__typename" r169
-  => Record r169
+  :: forall r name
+   . Lacks "__typename" r
+  => { | r }
   -> { __typename :: Proxy name
-     | r169
+     | r
      }
 addTypename = Record.insert (Proxy :: Proxy "__typename") Proxy
 
@@ -25,4 +25,3 @@ class RowListTypename (a :: RowList Type) name | a -> name
 
 instance RowListTypename (RowList.Cons "__typename" (Proxy typename) tail) typename
 else instance RowListTypename tail typename => RowListTypename (RowList.Cons sym t tail) typename
-

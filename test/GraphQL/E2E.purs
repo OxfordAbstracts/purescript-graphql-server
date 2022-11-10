@@ -8,15 +8,17 @@ import Data.Enum (class BoundedEnum)
 import Data.Enum as Enum
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe, fromMaybe, maybe)
+import Data.Newtype (class Newtype, unwrap)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
 import GraphQL.Resolver.GqlIo (GqlAff, gPure)
-import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver)
+import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
 import GraphQL.Server (GqlServer, defaultOpts, liftServer, start)
-import GraphQL.Server.GqlRep (class GqlRep, GObject)
+import GraphQL.Server.GqlRep (class GqlObject, class GqlRep, GObject)
 import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getObjectType)
 import GraphQL.Server.Schema.RecordTypename (addTypename)
+import GraphQL.Types (Object(..))
 import Test.GraphQL.E2E.Util (gqlReq, noErrors, shouldHaveData)
 import Test.Spec (Spec, before, describe, it)
 import Type.Proxy (Proxy(..))
@@ -132,10 +134,10 @@ user1 = User
   , name: "Jane"
   , created_at: unsafeMakeDateTime 2019 1 1 bottom
   , orders: \{ id } -> pure $ filter (\(Order o) -> maybe true (eq o.id) id)
-      [ Order
+      [ Order $ addTypename
           { id: 1
           , user: user1
-          , widget: addTypename { id: 1, name: "widget1" }
+          , widget: addTypename { id: 1, name: "widget1", ___a: "test", testObject: Object {a: ""} }
           }
       ]
   }
@@ -177,14 +179,16 @@ newtype Order = Order
   { id :: Int
   , user :: User
   , widget :: Widget
+  , __typename :: Proxy "Order"
   }
 
 derive instance Generic Order _
+derive instance Newtype Order _
 
 instance GqlRep Order GObject "Order"
 
 instance ToResolver err Order GqlAff where
-  toResolver a = toObjectResolver a
+  toResolver a = toResolver $ unwrap a
 
 instance GetGqlType Order where
   getType a = getObjectType a
@@ -192,8 +196,16 @@ instance GetGqlType Order where
 type Widget =
   { id :: Int
   , name :: String
+  , ___a :: String
   , __typename :: Proxy "Widget"
+  , testObject :: TestObject
   }
+
+type TestObject = Object "TestObject" { a :: String }
+
+type T1 = Object "T1" { a :: String, t2 :: T2 }
+
+newtype T2 = T2 (Object "T2" { a :: String, t1 :: T1 })
 
 unsafeMakeDateTime :: Int -> Int -> Int -> Time -> DateTime
 unsafeMakeDateTime year month day time = DateTime (canonicalDate (toEnum year) (toEnum month) (toEnum day)) time

@@ -93,7 +93,6 @@ instance (GetGqlType a) => GetGqlType (GqlIo m a) where
 instance (IsSymbol a) => GetGqlType (Proxy a) where
   getType = unsafeScalar "String"
 
-
 instance
   ( GetIFields { | r }
   , RecordTypename { | r } name
