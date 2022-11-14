@@ -55,6 +55,7 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "typelevel"
+  , "typelevel-lists"
   , "typelevel-prelude"
   , "unicode"
   , "unsafe-coerce"

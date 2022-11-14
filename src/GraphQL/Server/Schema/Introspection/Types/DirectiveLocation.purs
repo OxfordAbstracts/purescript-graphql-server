@@ -6,7 +6,6 @@ import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import GraphQL.Server.GqlRep (class GqlRep, GEnum)
-import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver)
 
 data IDirectiveLocation
   = QUERY
@@ -40,5 +39,5 @@ derive instance Eq IDirectiveLocation
 
 instance GqlRep IDirectiveLocation GEnum "IDirectiveLocation"
 
-instance (Applicative m) => ToResolver err IDirectiveLocation m where
-  toResolver a = toEnumResolver a
+-- instance (Applicative m) => ToResolver err IDirectiveLocation m where
+--   toResolver a = toEnumResolver a

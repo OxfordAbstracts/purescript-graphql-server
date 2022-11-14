@@ -18,13 +18,13 @@ derive instance Generic (Object n t) _
 
 instance GqlRep (Object n t) GObject n
 
-instance
-  ( Applicative m
-  , HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)
-  , IsSymbol n
-  ) =>
-  ToResolver err (Object n { | a }) m where
-  toResolver a = toObjectResolver a
+-- instance
+--   ( Applicative m
+--   , HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)
+--   , IsSymbol n
+--   ) =>
+--   ToResolver err (Object n { | a }) m where
+--   toResolver a = toObjectResolver a
 
 instance (GetIFields { | r }, IsSymbol n) => GetGqlType (Object n { | r }) where
   getType a = getObjectType a

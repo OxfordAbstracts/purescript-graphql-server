@@ -360,8 +360,8 @@ derive instance Generic Book _
 
 instance GqlRep Book GObject "Book"
 
-instance ToResolver err Book GqlAff where
-  toResolver a = toObjectResolver a
+-- instance ToResolver err Book GqlAff where
+  -- toResolver a = toObjectResolver a
 
 instance GetGqlType Book where
   getType a = getObjectType a
@@ -375,8 +375,8 @@ derive instance Generic Author _
 
 instance GqlRep Author GObject "Author"
 
-instance ToResolver err Author GqlAff where
-  toResolver a = toObjectResolver a
+-- instance ToResolver err Author GqlAff where
+  -- toResolver a = toObjectResolver a
 
 instance GetGqlType Author where
   getType a = getObjectType a
@@ -387,8 +387,8 @@ instance GqlRep BookType GEnum "BookType"
 
 derive instance Generic BookType _
 
-instance ToResolver err BookType GqlAff where
-  toResolver a = toEnumResolver a
+-- instance ToResolver err BookType GqlAff where
+  -- toResolver a = toEnumResolver a
 
 instance GetGqlType BookType where
   getType a = getEnumType a
@@ -406,8 +406,8 @@ derive instance Generic Packaging _
 
 instance GqlRep Packaging GUnion "Packaging"
 
-instance ToResolver err Packaging GqlAff where
-  toResolver a = toUnionResolver a
+-- instance ToResolver err Packaging GqlAff where
+  -- toResolver a = toUnionResolver a
 
 instance GetGqlType Packaging where
   getType a = getUnionType a
@@ -417,8 +417,8 @@ data CustomScalar = CustomScalar String Int
 instance Scalar CustomScalar "CustomScalar" where
   encodeScalar (CustomScalar s i) = encodeJson { s, i }
 
-instance ToResolver err CustomScalar GqlAff where
-  toResolver a = toScalarResolver a
+-- instance ToResolver err CustomScalar GqlAff where
+  -- toResolver a = toScalarResolver a
 
 instance GetGqlType CustomScalar where
   getType a = getScalarType a

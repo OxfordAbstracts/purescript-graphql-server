@@ -81,8 +81,8 @@ derive instance Generic T1 _
 
 instance GqlRep T1 GObject "T1"
 
-instance Applicative m => ToResolver err T1 m where
-  toResolver a = toObjectResolver a
+-- instance Applicative m => ToResolver err T1 m where
+--   toResolver a = toObjectResolver a
 
 instance GetGqlType T1 where
   getType a = getObjectType a
@@ -93,8 +93,8 @@ derive instance Generic TRec1 _
 
 instance GqlRep TRec1 GObject "TRec1"
 
-instance Applicative m => ToResolver err TRec1 m where
-  toResolver a = toObjectResolver a
+-- instance Applicative m => ToResolver err TRec1 m where
+--   toResolver a = toObjectResolver a
 
 instance GetGqlType TRec1 where
   getType a = getObjectType a
@@ -105,8 +105,8 @@ derive instance Generic TRec2 _
 
 instance GqlRep TRec2 GObject "TRec2"
 
-instance Applicative m => ToResolver err TRec2 m where
-  toResolver a = toObjectResolver a
+-- instance Applicative m => ToResolver err TRec2 m where
+--   toResolver a = toObjectResolver a
 
 instance GetGqlType TRec2 where
   getType a = getObjectType a

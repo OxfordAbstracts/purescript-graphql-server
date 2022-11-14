@@ -99,8 +99,8 @@ derive instance Generic (TestGqlObj a) _
 
 instance GqlRep (TestGqlObj a) GObject "TestGqlObj"
 
-instance (Applicative m, HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)) => ToResolver err (TestGqlObj { | a }) m where
-  toResolver a = toObjectResolver a
+-- instance (Applicative m, HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)) => ToResolver err (TestGqlObj { | a }) m where
+--   toResolver a = toObjectResolver a
 
 instance GetIFields { | a } => GetGqlType (TestGqlObj { | a }) where
   getType a = getObjectType a

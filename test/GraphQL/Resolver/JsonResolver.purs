@@ -12,10 +12,10 @@ import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, Error)
 import Effect.Exception (Error, message)
-import GraphQL.Resolver.GqlIo (GqlIo(..), GqlEffect)
 import GraphQL.Resolver.EvalGql (evalGql)
+import GraphQL.Resolver.GqlIo (GqlEffect, GqlIo(..), GqlAff, gPure)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
@@ -153,14 +153,15 @@ mkFieldMap
   -> Map.Map String (Field err m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: forall err. Resolver err (GqlIo Effect)
+booksResolver ::  Resolver Error Aff
 booksResolver =
-  toResolver $ gqlObj
+  toResolver mockRequest $ gqlObj
     { books
     }
   where
+  books :: _ -> GqlIo Aff _
   books = \(opts :: { maxPrice :: Maybe Number }) -> do
-    io $
+    gPure $
       filter (\(Book b) -> maybe true (b.price <= _) opts.maxPrice)
         books_
 
@@ -175,14 +176,15 @@ booksResolver =
     [ Book
         { title: "State of the Art"
         , price: 9.99
-        , author: \_ -> io author
+        , author: \_ -> gPure author
         }
     , Book
         { title: "Consider Phlebas"
         , price: 5.99
-        , author: \_ -> io author
+        , author: \_ -> gPure author
         }
     ]
+
 
 newtype Book m = Book
   { title :: String
@@ -192,10 +194,7 @@ newtype Book m = Book
 
 derive instance Generic (Book m) _
 
-instance GqlRep (Book a) GObject "Book"
 
-instance Applicative m => ToResolver err (Book (GqlIo m)) (GqlIo m) where
-  toResolver a = toObjectResolver a
 
 newtype Author m = Author
   { name :: String
@@ -205,15 +204,11 @@ newtype Author m = Author
 
 derive instance Generic (Author m) _
 
-instance GqlRep (Author a) GObject "Author"
 
-instance Applicative m => ToResolver err (Author (GqlIo m)) (GqlIo m) where
-  toResolver a = toObjectResolver a
-
-io :: forall a. a -> GqlEffect a
+io :: forall m a. a -> GqlAff a
 io = GqlIo <<< pure
 
-resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery :: Resolver Error Aff -> String -> Aff (Either GqlError (Result String))
 resolveTestQuery resolver' query = evalGql mockRequest $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
