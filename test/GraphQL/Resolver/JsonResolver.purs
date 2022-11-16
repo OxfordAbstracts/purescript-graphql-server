@@ -16,6 +16,7 @@ import Effect.Aff (Aff, Error)
 import Effect.Exception (Error, message)
 import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.GqlIo (GqlEffect, GqlIo(..), GqlAff, gPure)
+import GraphQL.Resolver.InstanceCache as IC
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
@@ -153,9 +154,11 @@ mkFieldMap
   -> Map.Map String (Field err m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
+
+
 booksResolver ::  Resolver Error Aff
 booksResolver =
-  toResolver mockRequest $ gqlObj
+  toResolver IC.Nil mockRequest $ TopLevel
     { books
     }
   where
@@ -185,6 +188,11 @@ booksResolver =
         }
     ]
 
+newtype TopLevel m = TopLevel
+  { books :: { maxPrice :: Maybe Number } -> GqlIo Aff (Array (Book m))
+  }
+
+derive instance Generic (TopLevel m) _
 
 newtype Book m = Book
   { title :: String

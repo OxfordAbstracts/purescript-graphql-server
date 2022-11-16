@@ -2,6 +2,9 @@ module GraphQL.Resolver (RootResolver, rootResolver) where
 
 import Prelude
 
+import Effect.Aff (Aff)
+import Effect.Exception (Error)
+import GraphQL.Resolver.InstanceCache as IC
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
@@ -15,14 +18,14 @@ rootResolver
   :: forall query mutation m withIntrospection err
    . Applicative m
   => Nub (IntrospectionRow query) withIntrospection
-  => ToResolver err ((QueryRoot { | withIntrospection })) m
-  => ToResolver err (MutationRoot mutation) m
+  => ToResolver IC.Nil ((QueryRoot { | withIntrospection }))
+  => ToResolver  IC.Nil (MutationRoot mutation)
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { query :: { | query }, mutation :: mutation }
-  -> RootResolver err m
+  -> RootResolver Error Aff
 rootResolver root =
-  { query: toResolver $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
-  , mutation: toResolver $ MutationRoot root.mutation
+  { query: toResolver  IC.Nil $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
+  , mutation: toResolver IC.Nil $ MutationRoot root.mutation
   , introspection: Introspection introspection
   }
   where

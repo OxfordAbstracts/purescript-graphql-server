@@ -4,8 +4,7 @@ import Effect.Aff (Aff, Error)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import HTTPure (Request)
 
-
 data Nil = Nil
 
-data Cons :: forall k. Symbol -> Type -> k -> Type
-data Cons sym ty rest = Cons (Request -> ty ->  Resolver Error Aff)
+data Cons :: Type -> Type -> Type -> Type
+data Cons ty rep rest = Cons (Request -> ty -> rep -> Resolver Error Aff) rest

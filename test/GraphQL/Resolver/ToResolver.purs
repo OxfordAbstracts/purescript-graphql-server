@@ -13,8 +13,9 @@ import Data.Maybe (Maybe, maybe)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
-import GraphQL.Resolver.GqlIo (GqlAff)
 import GraphQL.Resolver.EvalGql (evalGql)
+import GraphQL.Resolver.GqlIo (GqlAff)
+import GraphQL.Resolver.InstanceCache as IC
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, toObjectResolver, toResolver)
@@ -152,11 +153,11 @@ leaf = ResultLeaf <<< encodeJson
 aff :: forall a. a -> GqlAff a
 aff = pure
 
-resolveTypedFiber :: forall a. ToResolver Error a GqlAff => a -> String -> GqlAff (Either GqlError (Result Error))
-resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) query
+resolveTypedFiber :: forall a. ToResolver IC.Nil a => a -> String -> Aff (Either GqlError (Result Error))
+resolveTypedFiber resolver query = resolveQueryString (toResolver IC.Nil mockRequest resolver) query
 
-resolveTyped :: forall a. ToResolver Error a GqlAff => a -> String -> Aff (Either GqlError (Result String))
+resolveTyped :: forall a. ToResolver IC.Nil a => a -> String -> Aff (Either GqlError (Result String))
 resolveTyped resolver query = evalGql mockRequest $ map (map message) <$> resolveTypedFiber resolver query
-  where
-  mockRequest :: Request
-  mockRequest = unsafeCoerce unit
+
+mockRequest :: Request
+mockRequest = unsafeCoerce unit

@@ -3,6 +3,7 @@ module GraphQL.Resolver.GenericRecursionTestInt where
 import Prelude
 
 import Data.Maybe (Maybe, maybe)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- import Prim.RowList (Cons, Nil)
 
@@ -85,3 +86,16 @@ else instance T memo a => T memo (Maybe a) where
 -- tr2 = t $ ADT4 {a : Nothing}
 
 -- -- tr2 = tRec { a: ADT4 {}, b: ADT5 {} }
+
+
+class ABC a b c  where 
+  abc :: a -> b -> c
+
+instance ABC Int Int Int where
+  abc a b = a + b
+
+instance ABC Int Unit Int where
+  abc = unsafeCoerce
+  
+instance ABC Unit Int Int where
+  abc = unsafeCoerce

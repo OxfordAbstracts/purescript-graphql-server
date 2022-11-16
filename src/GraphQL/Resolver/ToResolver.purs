@@ -36,6 +36,7 @@ import Effect.Aff (Aff)
 import Effect.Exception (Error)
 import GraphQL.Resolver.EvalGql (class EvalGql, evalGql)
 import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.InstanceCache (Cons(..), Nil(..))
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot, QueryRoot)
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
@@ -48,8 +49,9 @@ import HTTPure (Request)
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
 import Prim.RowList (class RowToList)
 import Type.Proxy (Proxy(..))
+import Unsafe.Coerce (unsafeCoerce)
 
-class ToResolver iCache a  where
+class ToResolver iCache a where
   toResolver :: iCache -> Request -> a -> AffResolver
 
 type AffResolver = Resolver Error Aff
@@ -131,7 +133,7 @@ else instance
   toResolver iCache req a = toObjectResolver iCache req a
 
 else instance
-  ToResolver  c (MutationRoot Unit) where
+  ToResolver c (MutationRoot Unit) where
   toResolver _iCache _ _ = FailedResolver NoMutationRoot
 else instance
   ( RowToList r l
@@ -139,7 +141,7 @@ else instance
   , HFoldlWithIndex (ToResolverProps c) FieldMap { | r } FieldMap
   , IsSymbol name
   ) =>
-  ToResolver  c { | r } where
+  ToResolver c { | r } where
   toResolver iCache req arg =
     Fields
       { fields: makeFields iCache req (reflectSymbol (Proxy :: Proxy name)) arg
@@ -147,34 +149,76 @@ else instance
       }
 else instance
   ( Generic a rep
-  , ToResolverGeneric c a rep name
+  , ToResolverGeneric c c a rep name
   ) =>
-  ToResolver  c a where
-  toResolver iCache req arg = toResolverGeneric iCache req arg (from arg)
-
+  ToResolver c a where
+  toResolver iCache req arg = toResolverGeneric iCache iCache req arg (from arg)
 
 -- keep a list of the types already visited
 -- and make a lazy resolver that can be cached for 
 -- future use
 
-class ToResolverGeneric :: Type -> Type -> Type -> Symbol -> Constraint
-class ToResolverGeneric iCache a rep name | name -> a rep, a -> rep, rep -> a, a -> a, a -> name where
-  toResolverGeneric :: iCache -> Request -> a -> rep -> AffResolver
 
-instance
-  ( IsSymbol name
-  , HFoldlWithIndex (ToResolverProps c) FieldMap { | arg } FieldMap
+
+class ToResolverGeneric :: Type -> Type -> Type -> Type -> Symbol -> Constraint
+class
+  ToResolverGeneric fullCache iCache a rep name
+  |
+    -- name -> a rep
+    -- , 
+    a -> rep
+  -- -- , rep -> a
+  -- -- , a -> a
+  -- , 
+  , a -> name
+  -- , iCache -> a 
+  -- , fullCache -> a 
+  -- , a -> iCache
+  -- , a -> fullCache 
+  where
+  toResolverGeneric :: fullCache -> iCache -> Request -> a -> rep -> AffResolver
+
+instance resolverCached ::
+  ToResolverGeneric c (Cons a rep rest) a rep name where
+  toResolverGeneric _c (Cons fn _) req a rep = fn req a rep
+else instance resolverRest ::
+  ( ToResolverGeneric c rest a rep name
   ) =>
-  ToResolverGeneric c a ((Constructor name (Argument { | arg }))) name where
-  toResolverGeneric c req _ = unsafeToObjectResolverRep c req (Proxy :: Proxy name)
-else instance
+  ToResolverGeneric c (Cons notA notRep rest) a rep name where
+  toResolverGeneric c (Cons _ rest) req a rep = toResolverGeneric c rest req a rep
+
+instance resolverObject ::
+  ( IsSymbol name
+  , HFoldlWithIndex
+      ( ToResolverProps
+          ( Cons { | arg }
+              (Constructor name (Argument { | arg }))
+              c
+          )
+      )
+      FieldMap
+      { | arg }
+      FieldMap
+  ) =>
+  ToResolverGeneric c Nil a (Constructor name (Argument { | arg })) name where
+  toResolverGeneric c _ req _ rep = getRes req rep
+    where
+    getRes :: Request -> Constructor name (Argument { | arg }) -> AffResolver
+    getRes req' rep' =
+      unsafeToObjectResolverRep
+        ((Cons (\req'' _a' rep'' -> getRes req'' rep'') c) :: (Cons { | arg } (Constructor name (Argument { | arg })) c))
+        req'
+        (Proxy :: Proxy name)
+        rep'
+
+else instance resolverEnum ::
   ( IsSymbol name
   , Generic a (Sum (Constructor cName NoArguments) r)
   , GqlRep a GEnum name
   , EncodeLiteral (Sum (Constructor cName NoArguments) r)
   ) =>
-  ToResolverGeneric c a (Sum (Constructor cName NoArguments) r) name where
-  toResolverGeneric _ _ a _ = toEnumResolver a
+  ToResolverGeneric c Nil a (Sum (Constructor cName NoArguments) r) name where
+  toResolverGeneric _ _ _ a _ = toEnumResolver a
 
 toScalarResolver
   :: forall a name
@@ -199,7 +243,7 @@ toObjectResolver
   => GqlRep a GObject name
   => IsSymbol name
   => HFoldlWithIndex (ToResolverProps c) FieldMap { | arg } FieldMap
-  => c 
+  => c
   -> Request
   -> a
   -> AffResolver
@@ -209,7 +253,7 @@ unsafeToObjectResolverRep
   :: forall arg name ctrName c
    . IsSymbol name
   => HFoldlWithIndex (ToResolverProps c) FieldMap { | arg } FieldMap
-  => c 
+  => c
   -> Request
   -> Proxy name
   -> (Constructor ctrName (Argument { | arg }))
@@ -247,7 +291,7 @@ unsafeResolveNodeWithNoReq encode a = Node $ pure $ encode a
 makeFields
   :: forall r c
    . HFoldlWithIndex (ToResolverProps c) FieldMap { | r } FieldMap
-  => c 
+  => c
   -> Request
   -> String
   -> { | r }
@@ -285,7 +329,7 @@ instance
 
 class GetArgResolver c a where
   getArgResolver
-    :: c 
+    :: c
     -> Request
     -> a
     -> { args :: Json }
