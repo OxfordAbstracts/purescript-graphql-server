@@ -13,6 +13,8 @@ import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Tuple (Tuple(..))
+import Effect.Aff (Aff)
+import Effect.Exception (Error)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver.EncodeValue (encodeArguments)
@@ -34,6 +36,8 @@ data Resolver err m
   | ResolveAsync (m (Resolver err m))
   | NullableResolver (Maybe (Resolver err m))
   | FailedResolver (FailedToResolve err)
+
+type AffResolver = Resolver Error Aff
 
 type Fields err m =
   { fields :: Map String (Field err m)

@@ -159,6 +159,12 @@ else instance
 -- future use
 
 
+-- Make a typeclass Gql that has single member gql
+-- which includes toResolver and getType 
+-- 1st try using just toResolver 
+-- then make ADTs instances using a generic function
+
+
 
 class ToResolverGeneric :: Type -> Type -> Type -> Type -> Symbol -> Constraint
 class

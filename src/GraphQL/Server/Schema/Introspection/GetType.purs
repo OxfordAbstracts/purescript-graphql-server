@@ -102,9 +102,8 @@ instance
   getType _ = unsafeGetObjectType (Proxy :: Proxy name) (Proxy :: Proxy { | r })
 
 getObjectType
-  :: forall name ctrName r a
-   . Generic a (Constructor ctrName (Argument { | r }))
-  => GqlRep a GObject name
+  :: forall name r a
+   . Generic a (Constructor name (Argument { | r }))
   => GetIFields { | r }
   => IsSymbol name
   => Proxy a
