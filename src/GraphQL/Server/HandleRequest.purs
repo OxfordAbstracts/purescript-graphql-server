@@ -45,7 +45,7 @@ handleRequest isAuthorized resolvers req = do
     ( liftAff
         $ evalGql req
         $ map (map encodeJson)
-        $ handleOperation resolvers op (fromMaybe Object.empty variables)
+        $ handleOperation resolvers req op (fromMaybe Object.empty variables)
     )
 
 parseGqlRequest

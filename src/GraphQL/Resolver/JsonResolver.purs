@@ -18,6 +18,7 @@ import Effect.Exception (Error)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver.EncodeValue (encodeArguments)
+import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), FailedToResolve(..))
 import Parsing (runParser)
@@ -33,11 +34,11 @@ data Resolver err m
   = Node (m Json)
   | ListResolver (List (Resolver err m))
   | Fields (Fields err m)
-  | ResolveAsync (m (Resolver err m))
+  | AsyncResolver (m (Resolver err m))
   | NullableResolver (Maybe (Resolver err m))
   | FailedResolver (FailedToResolve err)
 
-type AffResolver = Resolver Error Aff
+type AffResolver = Resolver Error (GqlIo Aff)
 
 type Fields err m =
   { fields :: Map String (Field err m)
@@ -73,7 +74,7 @@ resolve
   -> (Maybe AST.SelectionSet)
   -> m (Result err)
 resolve resolver vars = case resolver, _ of
-  ResolveAsync resolverM, a -> catchError resolveAsync handleError
+  AsyncResolver resolverM, a -> catchError resolveAsync handleError
     where
     resolveAsync = resolverM >>= \resolver' -> resolve resolver' vars a
 

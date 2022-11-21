@@ -23,6 +23,7 @@ import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToDa
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
 import GraphQL.Server.Schema.Introspection (Introspection(..))
 import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
+import HTTPure (Request)
 
 handleOperation
   :: forall f m err
@@ -30,6 +31,7 @@ handleOperation
   => Parallel f m
   => MonadError err m
   => RootResolver err m
+  -> Request
   -> AST.OperationDefinition
   -> Object Json
   -> m
@@ -38,7 +40,7 @@ handleOperation
            , errors :: Maybe (NonEmptyList Json)
            }
        )
-handleOperation { mutation, query, introspection: Introspection introspection } opDef rawVars = do
+handleOperation  root@{ introspection: Introspection introspection } request opDef rawVars = do
   case opDef of
     AST.OperationDefinition_SelectionSet selectionSet ->
       resolveToJson Object.empty query selectionSet
@@ -55,6 +57,8 @@ handleOperation { mutation, query, introspection: Introspection introspection } 
             Mutation -> resolveToJson vars mutation selectionSet
             Subscription -> pure $ Left $ SubscriptionsNotSupported
   where
+  mutation = root.mutation request
+  query = root.query request
   resolveToJson vars r selectionSet = getJson <$> resolve r vars (Just selectionSet)
 
   getJson result = pure

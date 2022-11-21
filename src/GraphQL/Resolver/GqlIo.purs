@@ -19,7 +19,7 @@ newtype GqlIo m a = GqlIo (m a)
 
 -- | Similar to `pure` but wraps the value in a `GqlIo` monad.
 -- | Helps with type inference in resolvers.
-gPure :: forall m a. Applicative m => a -> GqlIo m a
+gPure :: forall a. a -> GqlAff a
 gPure = pure
 
 hoistGql :: forall m n a. (m ~> n) -> GqlIo m a -> GqlIo n a
@@ -77,7 +77,9 @@ derive newtype instance Bind m => Bind (GqlIo m)
 derive newtype instance Monad m => Monad (GqlIo m)
 
 derive newtype instance MonadEffect m => MonadEffect (GqlIo m)
+
 derive newtype instance MonadThrow err m => MonadThrow err (GqlIo m)
+
 derive newtype instance MonadError err m => MonadError err (GqlIo m)
 
 derive newtype instance MonadAff m => MonadAff (GqlIo m)
@@ -85,6 +87,7 @@ derive newtype instance MonadAff m => MonadAff (GqlIo m)
 instance Parallel (GqlIo Effect) (GqlIo Effect) where
   parallel = identity
   sequential = identity
+
 else instance Parallel f m => Parallel (GqlIo f) (GqlIo m) where
   parallel = hoistGql parallel
   sequential = hoistGql sequential

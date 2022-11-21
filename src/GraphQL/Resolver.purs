@@ -4,39 +4,37 @@ import Prelude
 
 import Effect.Aff (Aff)
 import Effect.Exception (Error)
-import GraphQL.Resolver.InstanceCache as IC
+import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, toResolver)
-import GraphQL.Server.Gql (class Gql, GqlProps(..), gql)
+import GraphQL.Server.Gql (class Gql, GqlPropsT, gql')
 import GraphQL.Server.Schema (class GetSchema, getSchema)
 import GraphQL.Server.Schema.Introspection (Introspection(..), IntrospectionRow, getIntrospection)
 import HTTPure (Request)
-import Prim.Row (class Nub)
+import Prim.Row (class Nub, class Union)
 import Record as Record
-import Unsafe.Coerce (unsafeCoerce)
 
 -- | Create a root resolver from a root record
 rootResolver
-  :: forall query mutation m withIntrospection err
-   . Applicative m
+  :: forall query mutation withIntrospection
+   . Union query (IntrospectionRow ()) (IntrospectionRow query)
   => Nub (IntrospectionRow query) withIntrospection
+  => Gql ((QueryRoot { | query }))
   => Gql ((QueryRoot { | withIntrospection }))
   => Gql (MutationRoot mutation)
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { query :: { | query }, mutation :: mutation }
-  -> RootResolver Error Aff
+  -> RootResolver Error (GqlIo Aff)
 rootResolver root =
-  { query: unsafeCoerce unit
-  -- toResolver IC.Nil $ QueryRoot (Record.merge introspection query :: { | withIntrospection })
-  , mutation: mutationProps.resolver root.mutation
+  { query: withIntrospectionProps.resolver $ QueryRoot $ Record.merge root.query introspection
+  , mutation: mutationProps.resolver $ MutationRoot root.mutation
   , introspection: Introspection introspection
   }
   where
-  GqlProps queryProps = gql :: GqlProps (QueryRoot { | query })
-  GqlProps mutationProps = gql :: GqlProps mutation
-
-  root'@(GqlRoot { query: QueryRoot query }) = GqlRoot root
+  mutationProps = gql' 
+  withIntrospectionProps = gql' :: GqlPropsT (QueryRoot { | withIntrospection })
+  
+  root'= GqlRoot root
     { query = QueryRoot root.query
     , mutation = MutationRoot root.mutation
     }

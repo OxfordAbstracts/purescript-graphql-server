@@ -5,7 +5,7 @@ import Prelude
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
-import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getType)
+import GraphQL.Server.Gql (class Gql, getTypeWithNull)
 import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
 import Type.Proxy (Proxy(..))
@@ -13,7 +13,10 @@ import Type.Proxy (Proxy(..))
 class GetSchema a where
   getSchema :: a -> ISchema
 
-instance (GetGqlType (QueryRoot { | q })) => GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot Unit)) where
+instance
+  ( Gql (QueryRoot { | q })
+  ) =>
+  GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot Unit)) where
   getSchema _ = ISchema
     { types: getDescendantITypes queryType
     , queryType
@@ -22,8 +25,12 @@ instance (GetGqlType (QueryRoot { | q })) => GetSchema (GqlRoot (QueryRoot { | q
     , directives: Nil
     }
     where
-    queryType = getType (Proxy :: Proxy (QueryRoot { | q }))
-else instance (GetGqlType (QueryRoot { | q }), GetGqlType (MutationRoot { | m })) => GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot { | m })) where
+    queryType = getTypeWithNull (Proxy :: Proxy (QueryRoot { | q }))
+else instance
+  ( Gql (QueryRoot { | q })
+  , Gql (MutationRoot { | m })
+  ) =>
+  GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot { | m })) where
   getSchema _ = ISchema
     { types: getDescendantITypes queryType <> getDescendantITypes mutationType
     , queryType
@@ -32,8 +39,8 @@ else instance (GetGqlType (QueryRoot { | q }), GetGqlType (MutationRoot { | m })
     , directives: Nil
     }
     where
-    queryType = getType (Proxy :: Proxy (QueryRoot { | q }))
-    mutationType = getType (Proxy :: Proxy (MutationRoot { | m }))
+    queryType = getTypeWithNull (Proxy :: Proxy (QueryRoot { | q }))
+    mutationType = getTypeWithNull (Proxy :: Proxy (MutationRoot { | m }))
 
 test0 :: ISchema
 test0 = getSchema $ GqlRoot { query: QueryRoot { t: 1 }, mutation: MutationRoot unit }

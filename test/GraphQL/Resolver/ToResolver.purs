@@ -15,13 +15,12 @@ import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
 import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.GqlIo (GqlAff)
+import GraphQL.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Resolver.InstanceCache as IC
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, toObjectResolver, toResolver)
+import GraphQL.Server.Gql (class Gql, toResolver)
 import GraphQL.Server.GqlError (GqlError)
-import GraphQL.Server.GqlRep (class GqlRep, GObject)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, getObjectType)
 import HTTPure (Request)
 import Heterogeneous.Folding (class HFoldlWithIndex)
 import Test.Spec (Spec, describe, it)
@@ -91,23 +90,12 @@ spec =
               ]
           )
 
-gqlObj :: forall a115. a115 -> TestGqlObj a115
-gqlObj = TestGqlObj
+gqlObj :: forall a115. a115 -> GqlObj "test_object" a115
+gqlObj = GqlObj
 
-newtype TestGqlObj a = TestGqlObj a
-
-derive instance Generic (TestGqlObj a) _
-
-instance GqlRep (TestGqlObj a) GObject "TestGqlObj"
-
--- instance (Applicative m, HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)) => ToResolver err (TestGqlObj { | a }) m where
---   toResolver a = toObjectResolver a
-
-instance GetIFields { | a } => GetGqlType (TestGqlObj { | a }) where
-  getType a = getObjectType a
 
 resolverParent
-  :: TestGqlObj
+  :: GqlObj "Parent"
        { async :: { str :: String } -> GqlAff String
        , double :: { a :: Int } -> Int
        , noArgs :: GqlAff String
@@ -117,7 +105,7 @@ resolverParent
        , children1 :: { ids :: Array Int } -> (Array ResolverChild1)
        }
 resolverParent =
-  ( TestGqlObj
+  ( GqlObj
       { double: \({ a }) -> a * 2
       , shout: \({ str }) -> toUpper str
       , async: \({ str }) -> pure $ toUpper str
@@ -130,7 +118,7 @@ resolverParent =
       }
   )
 
-type ResolverChild1 = TestGqlObj
+type ResolverChild1 = GqlObj "ResolverChild1"
   { id :: Int
   , n :: GqlAff Number
   , name :: String
@@ -141,7 +129,7 @@ resolverChild1 = mkChild 1
 
 mkChild :: Int -> ResolverChild1
 mkChild = \id ->
-  TestGqlObj
+  GqlObj
     { id
     , n: pure $ toNumber id
     , name: "child " <> show id
@@ -153,10 +141,10 @@ leaf = ResultLeaf <<< encodeJson
 aff :: forall a. a -> GqlAff a
 aff = pure
 
-resolveTypedFiber :: forall a. ToResolver IC.Nil a => a -> String -> Aff (Either GqlError (Result Error))
-resolveTypedFiber resolver query = resolveQueryString (toResolver IC.Nil mockRequest resolver) query
+resolveTypedFiber :: forall a. Gql a => a -> String -> GqlAff (Either GqlError (Result Error))
+resolveTypedFiber resolver query = resolveQueryString (toResolver resolver mockRequest) query
 
-resolveTyped :: forall a. ToResolver IC.Nil a => a -> String -> Aff (Either GqlError (Result String))
+resolveTyped :: forall a. Gql a => a -> String -> Aff (Either GqlError (Result String))
 resolveTyped resolver query = evalGql mockRequest $ map (map message) <$> resolveTypedFiber resolver query
 
 mockRequest :: Request
