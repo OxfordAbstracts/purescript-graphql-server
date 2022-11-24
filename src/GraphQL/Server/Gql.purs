@@ -12,7 +12,7 @@ import Data.List (List(..), reverse, (:))
 import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Time (Time)
@@ -76,22 +76,26 @@ instance Gql Number where
 
 instance Gql String where
   gql _ = jsonScalar "String"
+  
+instance IsSymbol sym => Gql (Proxy sym) where
+  gql _ = scalar (reflectSymbol >>> encodeJson) "String"
 
 instance Gql Json where
   gql _ = jsonScalar "Json"
 
 instance Gql Date where
-  gql _ = scalarWith encodeDate "Date"
+  gql _ = scalar encodeDate "Date"
 
 instance Gql Time where
-  gql _ = scalarWith encodeTime "Time"
+  gql _ = scalar encodeTime "Time"
 
 instance Gql DateTime where
-  gql _ = scalarWith encodeDateTime "DateTime"
+  gql _ = scalar encodeDateTime "DateTime"
 
-instance Gql a => Gql (Maybe a) where
+instance (GqlNullable a, Gql a) => Gql (Maybe a) where
   gql _ = GqlProps
-    { resolver: \a req -> NullableResolver $ flip resolver req <$> a
+    { resolver: \a req ->
+        maybe Null (flip resolver req) a
     , iType
     }
     where
@@ -120,12 +124,11 @@ instance Gql a => Gql (List a) where
 instance (Gql a) => Gql (GqlIo Aff a) where
   gql _ = GqlProps
     { resolver: \a req ->
-        let
-          GqlProps { resolver } = gql unit :: GqlProps a
-        in
-          AsyncResolver do
-            a' <- a
-            pure $ resolver a' req
+        AsyncResolver do
+          a' <- a
+          let
+            GqlProps { resolver } = gql unit :: GqlProps a
+          pure $ resolver a' req
     , iType: \_ ->
         let
           GqlProps { iType } = gql unit :: GqlProps a
@@ -177,49 +180,68 @@ enum name _ = GqlProps
 union
   :: forall rep a
    . Generic a rep
-  => UnionGql a rep
+  => UnionGql rep
   => String
   -> Unit
   -> GqlProps a
 union name _ = GqlProps
-  { resolver: unionResolver
+  { resolver: \a req -> unionResolver name (from a) req
   , iType: \_ -> IType defaultIType
       { name = Just name
       , kind = IT.UNION
-      , possibleTypes = Just $ possibleTypes (Proxy :: Proxy rep)
+      , possibleTypes = Just $ possibleTypes name (Proxy :: Proxy rep)
       }
   }
 
-class UnionGql a rep | rep -> a, a -> rep where
-  unionResolver :: a -> Request -> AffResolver
-  possibleTypes :: Proxy rep -> List IType
+-- class UnionGql :: forall k. Type -> k -> Constraint
+class UnionGql a where
+  unionResolver :: String -> a -> Request -> AffResolver
+  possibleTypes :: String -> Proxy a -> List IType
 
 instance
-  ( Generic a (Sum l r)
-  , UnionGql l lrep
-  , UnionGql r rrep
+  ( UnionGql l
+  , UnionGql r
   ) =>
-  UnionGql a (Sum l r) where
-  unionResolver a req = case from a of
-    Inl l -> unionResolver l req
-    Inr r -> unionResolver r req
-  possibleTypes _ = possibleTypes (Proxy :: Proxy lrep) <> possibleTypes (Proxy :: Proxy rrep)
+  UnionGql (Sum l r) where
+  unionResolver name a req = case a of
+    Inl l -> unionResolver name l req
+    Inr r -> unionResolver name r req
+  possibleTypes name _ = possibleTypes name (Proxy :: Proxy l) <> possibleTypes name (Proxy :: Proxy r)
 
-else instance
-  ( Generic a (Constructor name { | arg })
-  , Gql a
+instance
+  ( HFoldlWithIndex ToResolverProps FieldMap { | arg } FieldMap
+  , GetIFields { | arg }
+  , IsSymbol name
   ) =>
-  UnionGql a (Constructor name { | arg }) where
-  unionResolver req = getResolver ((gql unit) :: GqlProps a) req
-  possibleTypes _ = pure $ getIType ((gql unit) :: GqlProps a) unit
-
+  UnionGql (Constructor name (Argument { | arg })) where
+  unionResolver ctrName (Constructor (Argument a)) req =
+    Fields
+      { fields: makeFields typename req a
+      , typename
+      }
+    where
+    typename = ctrName <> "_" <> reflectSymbol (Proxy :: Proxy name)
+  possibleTypes ctrName _ = pure $ IType defaultIType
+    { name = Just typename
+    , kind = IT.OBJECT
+    , fields = \_ -> Just $ getIFields (Proxy :: Proxy { | arg })
+    }
+    where
+    typename = ctrName <> "_" <> reflectSymbol (Proxy :: Proxy name)
 else instance
-  ( Generic a (Constructor name arg)
-  , Gql a
+  ( Gql arg
   ) =>
-  UnionGql a (Constructor name arg) where
-  unionResolver req = getResolver ((gql unit) :: GqlProps a) req
-  possibleTypes _ = pure $ getIType ((gql unit) :: GqlProps a) unit
+  UnionGql (Constructor name (Argument arg)) where
+  unionResolver _ctrName a req =
+    let
+      (GqlProps { resolver }) = gql unit :: GqlProps arg
+    in
+      resolver (coerce a) req
+  possibleTypes _ _ =
+    let
+      (GqlProps { iType }) = gql unit :: GqlProps arg
+    in
+      pure $ iType unit
 
 -- | create an object graphql type
 object
@@ -254,8 +276,8 @@ instance
 
 makeGqlObject
   :: forall arg a name r
-   . HFoldlWithIndex ToResolverProps FieldMap arg FieldMap
-  => Generic a (Constructor name (Argument arg))
+   . Generic a (Constructor name (Argument arg))
+  => HFoldlWithIndex ToResolverProps FieldMap arg FieldMap
   => GetIFields r
   => Proxy r
   -> String
@@ -263,10 +285,10 @@ makeGqlObject
 makeGqlObject recordProxy typename = GqlProps
   { resolver: \a req ->
       let
-        (Constructor (Argument r)) = from a
+        Constructor (Argument r) = from a
       in
         Fields
-          { fields: makeFields req r
+          { fields: makeFields typename req r
           , typename
           }
   , iType: \_ -> IType defaultIType
@@ -275,14 +297,21 @@ makeGqlObject recordProxy typename = GqlProps
       , fields = \_ -> Just $ getIFields recordProxy
       }
   }
+
+makeFields
+  :: forall a
+   . HFoldlWithIndex ToResolverProps FieldMap a FieldMap
+  => String
+  -> Request
+  -> a
+  -> Map String (Field Error (GqlIo Aff))
+makeFields typename req r =
+  unwrap $ hfoldlWithIndex (ToResolverProps req) resolveTypename r
   where
-  makeFields req r =
-    (unwrap :: FieldMap -> _) $ hfoldlWithIndex (ToResolverProps req) resolveTypename r
-    where
-    resolveTypename = FieldMap $ Map.singleton "__typename"
-      { name: "__typename"
-      , resolver: \_ -> Node $ pure $ encodeJson typename
-      }
+  resolveTypename = FieldMap $ Map.singleton "__typename"
+    { name: "__typename"
+    , resolver: \_ -> Node $ pure $ encodeJson typename
+    }
 
 data ToResolverProps = ToResolverProps Request
 
@@ -417,10 +446,10 @@ getRecordIInputValues =
   hfoldlWithIndex (GetIInputValuesProps :: GetIInputValuesProps) (mempty :: List IInputValue) >>> reverse
 
 jsonScalar :: forall a. EncodeJson a => String -> GqlProps a
-jsonScalar = scalarWith encodeJson
+jsonScalar = scalar encodeJson
 
-scalarWith :: forall a. (a -> Json) -> String -> GqlProps a
-scalarWith encode name = GqlProps
+scalar :: forall a. (a -> Json) -> String -> GqlProps a
+scalar encode name = GqlProps
   { resolver: \a _ -> Node $ pure $ encode a
   , iType: \_ -> scalarType name
   }
@@ -440,5 +469,10 @@ getTypeWithNull proxy =
     iType unit
   else
     unnamed IT.NON_NULL # modifyIType _ { ofType = Just $ iType unit }
+  where
+  GqlProps { iType } = (gql unit) :: GqlProps a
+
+getTypeWithoutNull :: forall a. Gql a => Proxy a -> IType
+getTypeWithoutNull _proxy = iType unit
   where
   GqlProps { iType } = (gql unit) :: GqlProps a

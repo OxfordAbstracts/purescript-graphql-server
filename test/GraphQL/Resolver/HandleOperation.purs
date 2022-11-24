@@ -15,13 +15,12 @@ import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Resolver.EvalGql (evalGql)
 import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, gPure)
 import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Server.Gql (class Gql, enum, object, union)
+import GraphQL.Server.Gql (class Gql, enum, object, scalar, union)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
-import GraphQL.Server.Schema.Scalar (class Scalar)
 import HTTPure (Request)
 import Test.GraphQL.E2E.Util (JsonTest(..))
-import Test.Spec (Spec, describe, it)
+import Test.Spec (Spec, describe, describeOnly, it, itOnly)
 import Test.Spec.Assertions (shouldEqual)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -124,10 +123,10 @@ spec =
             id 
             packaging {
               __typename
-              ... on PackagingBoxed {
+              ... on Packaging_Boxed {
                 note
               }
-              ... on PackagingGiftWrapped {
+              ... on Packaging_GiftWrapped {
                 colour
               }
             }
@@ -136,13 +135,13 @@ spec =
           { "books":
               [ { "id": 1
                 , "packaging": encodeJson
-                    { "__typename": "PackagingBoxed"
+                    { "__typename": "Packaging_Boxed"
                     , "note": "Custom note"
                     }
                 }
               , { "id": 2
                 , "packaging": encodeJson
-                    { "__typename": "PackagingGiftWrapped"
+                    { "__typename": "Packaging_GiftWrapped"
                     , "colour": "Blue"
                     }
                 }
@@ -318,10 +317,10 @@ book1 = Book
   , id: 1
   , price: 1.0
   , type: Just Paperback
-  -- , packaging: Just $ Boxed { note: "Custom note" }
+  , packaging: Just $ Boxed { note: "Custom note" }
   , author: \_ -> pure author
   , created_at: Just bottom
-  -- , custom_scalar: CustomScalar "1" 1
+  , custom_scalar: CustomScalar "1" 1
   }
 
 book2 :: Book
@@ -330,10 +329,10 @@ book2 = Book
   , id: 2
   , price: 2.0
   , type: Just Ebook
-  -- , packaging: Just $ GiftWrapped { colour: "Blue", withCard: true }
+  , packaging: Just $ GiftWrapped { colour: "Blue", withCard: true }
   , author: \_ -> pure author
   , created_at: Just top
-  -- , custom_scalar: CustomScalar "2" 2
+  , custom_scalar: CustomScalar "2" 2
   }
 
 author :: Author
@@ -348,17 +347,16 @@ newtype Book = Book
   , id :: Int
   , price :: Number
   , type :: Maybe BookType
-  -- , packaging :: Maybe Packaging
+  , packaging :: Maybe Packaging
   , author :: Unit -> GqlIo Aff Author
   , created_at :: Maybe DateTime
-  -- , custom_scalar :: CustomScalar
+  , custom_scalar :: CustomScalar
   }
 
 derive instance Generic Book _
 
-instance Gql Book where 
+instance Gql Book where
   gql _ = object unit
-
 
 newtype Author = Author
   { name :: String
@@ -367,47 +365,37 @@ newtype Author = Author
 
 derive instance Generic Author _
 
-instance Gql Author where 
+instance Gql Author where
   gql _ = object unit
 
 data BookType = Paperback | Hardback | Ebook
 
 derive instance Generic BookType _
 
-instance Gql BookType where 
+instance Gql BookType where
   gql = enum "BookType"
 
--- data Packaging
---   = GiftWrapped
---       { colour :: String
---       , withCard :: Boolean
---       }
---   | Boxed
---       { note :: String
---       }
+data Packaging
+  = GiftWrapped
+      { colour :: String
+      , withCard :: Boolean
+      }
+  | Boxed
+      { note :: String
+      }
+  | CustomPacking String
 
--- derive instance Generic Packaging _
+derive instance Generic Packaging _
 
--- instance Gql Packaging where 
---   gql = union "Packaging"
--- instance GqlRep Packaging GUnion "Packaging"
+instance Gql Packaging where
+  gql = union "Packaging"
 
--- -- instance ToResolver err Packaging GqlAff where
---   -- toResolver a = toUnionResolver a
+data CustomScalar = CustomScalar String Int
 
--- instance GetGqlType Packaging where
---   getType a = getUnionType a
-
--- data CustomScalar = CustomScalar String Int
-
--- instance Scalar CustomScalar "CustomScalar" where
---   encodeScalar (CustomScalar s i) = encodeJson { s, i }
-
--- -- instance ToResolver err CustomScalar GqlAff where
---   -- toResolver a = toScalarResolver a
-
--- instance GetGqlType CustomScalar where
---   getType a = getScalarType a
+instance Gql CustomScalar where
+  gql _ = scalar encode "CustomScalar"
+    where
+    encode (CustomScalar s i) = encodeJson { s, i }
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

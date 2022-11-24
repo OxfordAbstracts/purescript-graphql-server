@@ -7,7 +7,7 @@ import Effect.Exception (Error)
 import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
-import GraphQL.Server.Gql (class Gql, GqlPropsT, gql')
+import GraphQL.Server.Gql (class Gql, GqlProps(..), gql)
 import GraphQL.Server.Schema (class GetSchema, getSchema)
 import GraphQL.Server.Schema.Introspection (Introspection(..), IntrospectionRow, getIntrospection)
 import HTTPure (Request)
@@ -31,13 +31,14 @@ rootResolver root =
   , introspection: Introspection introspection
   }
   where
-  mutationProps = gql' 
-  withIntrospectionProps = gql' :: GqlPropsT (QueryRoot { | withIntrospection })
+  GqlProps mutationProps = gql unit
+  GqlProps withIntrospectionProps = gql unit :: GqlProps (QueryRoot { | withIntrospection })
   
   root'= GqlRoot root
     { query = QueryRoot root.query
     , mutation = MutationRoot root.mutation
     }
+    
   schema = getSchema root'
 
   introspection = getIntrospection schema

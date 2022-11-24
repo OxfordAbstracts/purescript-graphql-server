@@ -11,18 +11,16 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
-import Effect (Effect)
-import Effect.Aff (Aff, Error)
+import Effect.Aff (Aff)
 import Effect.Exception (Error, message)
 import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.GqlIo (GqlEffect, GqlIo(..), GqlAff, gPure)
-import GraphQL.Resolver.InstanceCache as IC
+import GraphQL.Resolver.GqlIo (GqlAff, GqlIo(..), gPure)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.Gql (class Gql, object, toResolver)
 import GraphQL.Server.GqlError (GqlError, FailedToResolve(..))
 import HTTPure (Request)
-import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
+import Test.GraphQL.Server.Resolver.ToResolver (leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Unsafe.Coerce (unsafeCoerce)
@@ -62,7 +60,7 @@ spec =
         actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
-        res <- evalGql mockRequest $ resolveTestQuery  booksResolver
+        res <- evalGql mockRequest $ resolveTestQuery booksResolver
           """{ books (maxPrice: 7) { 
             title 
             author { 
@@ -153,9 +151,7 @@ mkFieldMap
   -> Map.Map String (Field err m)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-
-
-booksResolver ::  Resolver Error GqlAff
+booksResolver :: Resolver Error GqlAff
 booksResolver =
   flip toResolver mockRequest $ TopLevel
     { books
@@ -191,7 +187,7 @@ newtype TopLevel = TopLevel
   { books :: { maxPrice :: Maybe Number } -> GqlIo Aff (Array Book)
   }
 
-derive instance Generic (TopLevel) _
+derive instance Generic TopLevel _
 
 instance Gql TopLevel where
   gql _ = object unit
@@ -202,16 +198,15 @@ newtype Book = Book
   , author :: Unit -> GqlAff Author
   }
 
-derive instance Generic (Book) _
+derive instance Generic Book _
 
 instance Gql Book where
   gql _ = object unit
 
-
 newtype Author = Author
   { name :: String
   , bio :: GqlAff String
-  , books :: Unit -> Array (Book )
+  , books :: Unit -> Array Book
   }
 
 derive instance Generic (Author) _

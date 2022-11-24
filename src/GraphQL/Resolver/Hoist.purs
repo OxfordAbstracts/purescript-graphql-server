@@ -16,7 +16,8 @@ hoistResolver fn = case _ of
         }
     }
   AsyncResolver a -> AsyncResolver $ fn $ map (hoistResolver fn) a
-  NullableResolver a -> NullableResolver $ map (hoistResolver fn) a
+  -- NullableResolver a -> NullableResolver $ map (hoistResolver fn) a
+  Null -> Null
   FailedResolver err -> FailedResolver err
 
 mapError :: forall err err' m. Functor m => (err -> err') -> Resolver err m -> Resolver err' m
@@ -31,5 +32,6 @@ mapError fn = case _ of
         }
     }
   AsyncResolver a -> AsyncResolver (map (mapError fn) a)
-  NullableResolver a -> NullableResolver $ map (mapError fn) a
+  -- -- NullableResolver a -> NullableResolver $ map (mapError fn) a
+  Null -> Null
   FailedResolver err -> FailedResolver (map fn err)

@@ -4,9 +4,11 @@ import Prelude
 
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
+import Debug (spy)
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
-import GraphQL.Server.Gql (class Gql, getTypeWithNull)
+import GraphQL.Server.Gql (class Gql, getTypeWithNull, getTypeWithoutNull)
 import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
+import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable)
 import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
 import Type.Proxy (Proxy(..))
 
@@ -15,6 +17,7 @@ class GetSchema a where
 
 instance
   ( Gql (QueryRoot { | q })
+  , GqlNullable (QueryRoot { | q })
   ) =>
   GetSchema (GqlRoot (QueryRoot { | q }) (MutationRoot Unit)) where
   getSchema _ = ISchema
@@ -25,7 +28,7 @@ instance
     , directives: Nil
     }
     where
-    queryType = getTypeWithNull (Proxy :: Proxy (QueryRoot { | q }))
+    queryType = getTypeWithoutNull (Proxy :: Proxy (QueryRoot { | q }))
 else instance
   ( Gql (QueryRoot { | q })
   , Gql (MutationRoot { | m })
@@ -39,8 +42,8 @@ else instance
     , directives: Nil
     }
     where
-    queryType = getTypeWithNull (Proxy :: Proxy (QueryRoot { | q }))
-    mutationType = getTypeWithNull (Proxy :: Proxy (MutationRoot { | m }))
+    queryType = getTypeWithoutNull (Proxy :: Proxy (QueryRoot { | q }))
+    mutationType = getTypeWithoutNull (Proxy :: Proxy (MutationRoot { | m }))
 
 test0 :: ISchema
 test0 = getSchema $ GqlRoot { query: QueryRoot { t: 1 }, mutation: MutationRoot unit }

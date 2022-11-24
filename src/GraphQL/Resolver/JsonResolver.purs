@@ -35,7 +35,8 @@ data Resolver err m
   | ListResolver (List (Resolver err m))
   | Fields (Fields err m)
   | AsyncResolver (m (Resolver err m))
-  | NullableResolver (Maybe (Resolver err m))
+  | Null
+  -- | NullableResolver (Maybe (Resolver err m))
   | FailedResolver (FailedToResolve err)
 
 type AffResolver = Resolver Error (GqlIo Aff)
@@ -85,8 +86,9 @@ resolve resolver vars = case resolver, _ of
   Node node, _ -> ResultLeaf <$> node
   ListResolver resolvers, selectionSet ->
     ResultList <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
-  NullableResolver resolvers, selectionSet ->
-    ResultNullable <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
+  Null, _ -> pure $ ResultNullable Nothing
+  -- NullableResolver resolvers, selectionSet ->
+  -- ResultNullable <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
   Fields _, Nothing -> err MissingSelectionSet
   (Fields { fields, typename }), Just (AST.SelectionSet selections) ->
     case getSelectionFields typename =<< selections of
