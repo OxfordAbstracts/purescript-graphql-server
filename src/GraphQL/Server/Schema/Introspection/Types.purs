@@ -22,6 +22,8 @@ newtype ISchema = ISchema
 
 derive instance Generic ISchema _
 
+derive instance Newtype ISchema _
+
 newtype IType = IType IType_T
 
 type IType_T =
@@ -53,7 +55,6 @@ derive instance Generic IType _
 
 derive instance Newtype IType _
 
-
 data ITypeKind
   = SCALAR
   | OBJECT
@@ -80,7 +81,6 @@ instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
 
-
 newtype IField = IField IField_T
 
 type IField_T =
@@ -105,7 +105,6 @@ defaultIField =
 derive instance Generic IField _
 derive instance Newtype IField _
 
-
 newtype IInputValue = IInputValue
   { name :: String
   , description :: Maybe String
@@ -117,7 +116,6 @@ derive instance Generic IInputValue _
 
 derive instance Newtype IInputValue _
 
-
 newtype IEnumValue = IEnumValue
   { name :: String
   , description :: Maybe String
@@ -126,7 +124,6 @@ newtype IEnumValue = IEnumValue
   }
 
 derive instance Generic IEnumValue _
-
 
 instance Show IEnumValue where
   show = genericShow

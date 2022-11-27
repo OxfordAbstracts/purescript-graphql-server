@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Control.Monad.Except (ExceptT, runExceptT)
-import Data.Argonaut (Json, stringify)
+import Data.Argonaut (Json, encodeJson, stringify)
 import Data.Either (Either(..), either)
 import Data.Newtype (class Newtype, unwrap)
 import Effect.Aff (Aff, error)
@@ -34,7 +34,7 @@ toResponse (GqlResM gqlResM) = do
     Left NoOperationDefinition -> badRequest "No operation definition in request body"
     Left NotAuthorized -> unauthorized
     Left (OtherError str) -> badRequest str
-    Left err -> badRequest $ show err
+    Left err -> badRequest $ stringify $ encodeJson {error: show err}
     Right res -> ok $ stringify res
 
 toAff :: forall a. GqlResM a -> Aff (Either GqlError a)

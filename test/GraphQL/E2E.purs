@@ -16,7 +16,7 @@ import GraphQL.Resolver.GqlM (GqlM, gPure)
 import GraphQL.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Server (GqlServerM, defaultOpts, liftServer, start)
 import GraphQL.Server.Gql (class Gql, object)
-import Test.GraphQL.E2E.Util (gqlReq, noErrors, shouldHaveData)
+import Test.GraphQL.E2E.Util (gqlReq, gqlReqVars, noErrors, shouldHaveData)
 import Test.Spec (Spec, before, describe, it)
 
 spec :: Spec Unit
@@ -53,6 +53,21 @@ spec =
       done endServer
     it "should return user fields with arguments" \endServer -> do
       res <- gqlReq "query t1 { users(created_before: \"2020-01-01\") { __typename id name } }"
+      noErrors res
+      res `shouldHaveData`
+        { users:
+            [ { __typename: "User"
+              , id: 1
+              , name: "Jane"
+              }
+            ]
+        }
+      done endServer
+    it "should return user fields with arguments as variables" \endServer -> do
+      res <- gqlReqVars "query t1($created_before: DateTime) { users(created_before: $created_before) { __typename id name } }"
+        { created_before: "2020-01-01" 
+        }
+
       noErrors res
       res `shouldHaveData`
         { users:

@@ -26,11 +26,20 @@ noErrors :: GqlRes -> Aff Unit
 noErrors res = isNothing res.errors `shouldEqual` true
 
 gqlReq :: String -> Aff GqlRes
-gqlReq operation =
+gqlReq operation = gqlReq_
+  { operation
+  }
+
+gqlReqVars :: forall v. EncodeJson v => String -> v -> Aff GqlRes
+gqlReqVars operation variables = gqlReq_
+  { operation
+  , variables
+  }
+
+gqlReq_ :: forall b. EncodeJson b => b -> Aff GqlRes
+gqlReq_ body =
   post json "http://0.0.0.0:9000"
-    ( Just $ Json $ encodeJson
-        { operation
-        }
+    ( Just $ Json $ encodeJson body
     )
     >>= either (printError >>> error >>> throwError) (_.body >>> pure)
     >>= decodeGql
