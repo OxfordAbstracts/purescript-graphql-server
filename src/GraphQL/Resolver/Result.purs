@@ -7,7 +7,6 @@ import Data.Array as Array
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), fold, reverse, (:))
-import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
 import GraphQL.Resolver.Error (class CustomResolverError, renderError)
@@ -19,7 +18,7 @@ data Result err
   | ResultError (FailedToResolve err)
   | ResultObject (List (Tuple String (Result err)))
   | ResultList (List (Result err))
-  | ResultNullable (Maybe (Result err))
+  | ResultNull
 
 derive instance Generic (Result err) _
 derive instance Functor Result
@@ -31,7 +30,7 @@ instance Show err => Show (Result err) where
     ResultError err -> "(ResultError " <> show err <> ")"
     ResultObject fields -> "(ResultObject " <> show fields <> ")"
     ResultList items -> "(ResultList " <> show items <> ")"
-    ResultNullable maybeResult -> "(ResultNullable " <> show maybeResult <> ")"
+    ResultNull -> "ResultNull"
 
 resultToData :: forall err. Result err -> Json
 resultToData = case _ of
@@ -40,7 +39,7 @@ resultToData = case _ of
   ResultObject fields -> fromObject $ Object.fromFoldable $
     fields <#> map resultToData
   ResultList items -> fromArray $ Array.fromFoldable $ map resultToData items
-  ResultNullable maybeResult -> maybe jsonNull resultToData maybeResult
+  ResultNull -> jsonNull
 
 newtype LocatedError = LocatedError
   { path :: Path
@@ -67,7 +66,7 @@ getLocatedErrors = go Nil
       # mapWithIndex (\i -> go (Index i : path))
       # fold
 
-    ResultNullable maybeResult -> maybe Nil (go path) maybeResult
+    ResultNull -> Nil
 
 encodeLocatedError :: LocatedError -> Json
 encodeLocatedError (LocatedError { path, message, locations }) =

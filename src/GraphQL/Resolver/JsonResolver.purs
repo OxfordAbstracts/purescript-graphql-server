@@ -6,8 +6,7 @@ module GraphQL.Resolver.JsonResolver
   , TopLevelJsonResolver
   , resolve
   , resolveQueryString
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -45,10 +44,9 @@ type TopLevelJsonResolver =
 data Resolver
   = Node (GqlM Json)
   | ListResolver (List (Resolver))
-  | Fields (Fields)
+  | Fields Fields
   | AsyncResolver (GqlM (Resolver))
   | Null
-  -- | NullableResolver (Maybe (Resolver))
   | FailedResolver (FailedToResolve Error)
 
 type AffResolver = Resolver
@@ -92,9 +90,7 @@ resolve resolver vars = case resolver, _ of
   Node node, _ -> ResultLeaf <$> node
   ListResolver resolvers, selectionSet ->
     ResultList <$> gqlTraverseList vars selectionSet resolvers
-  Null, _ -> pure $ ResultNullable Nothing
-  -- NullableResolver resolvers, selectionSet ->
-  -- ResultNullable <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
+  Null, _ -> pure ResultNull
   Fields _, Nothing -> err MissingSelectionSet
   (Fields { fields, typename }), Just (AST.SelectionSet selections) ->
     case getSelectionFields typename =<< selections of
@@ -140,16 +136,19 @@ resolve resolver vars = case resolver, _ of
   err = pure <<< ResultError
 
 gqlTraverseList :: Object Json -> Maybe SelectionSet -> List Resolver -> GqlM (List (Result Error))
-gqlTraverseList vars selectionSet = parTraverseWithIndex
-  ( \i r ->
-      let
-        setEnv env = env
-          { index = Just i
-          , path = Index i : env.path
-          }
-      in
-        local setEnv $ resolve r vars selectionSet
-  )
+gqlTraverseList vars selectionSet = parTraverseWithIndex (map (flip catchError handleError) <<< go)
+  where
+
+  go i r =
+    let
+      setEnv env = env
+        { index = Just i
+        , path = Index i : env.path
+        }
+    in
+      local setEnv $ resolve r vars selectionSet
+
+  handleError = pure <<< ResultError <<< ResolverError
 
 parTraverseWithIndex
   :: forall f m t a b i

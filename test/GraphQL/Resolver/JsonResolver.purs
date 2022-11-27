@@ -33,7 +33,6 @@ spec =
 
           query = "{ top_level_1 top_level_2 top_level_3 }"
 
-          -- expected :: Result Error
           expected = ResultObject
             $ Tuple "top_level_1" (ResultLeaf $ encodeJson "top_val_1")
                 : Tuple "top_level_2" (ResultLeaf $ encodeJson [ 1 ])
@@ -46,7 +45,6 @@ spec =
         let
           query = "{ top_level_nested_1 {c1 c2} }"
 
-          -- expected :: Result Error
           expected = ResultObject
             $ pure
             $ Tuple "top_level_nested_1"
