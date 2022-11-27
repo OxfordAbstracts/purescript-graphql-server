@@ -4,7 +4,6 @@ import Prelude
 
 import Data.Argonaut (Json, encodeJson, fromArray, fromObject, jsonNull, stringify)
 import Data.Array as Array
-import Data.Either (Either(..), either)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), fold, reverse, (:))
@@ -12,6 +11,7 @@ import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
 import Foreign.Object as Object
 import GraphQL.Resolver.Error (class CustomResolverError, renderError)
+import GraphQL.Resolver.Path (Path, PathPart(..), encodePath)
 import GraphQL.Server.GqlError (FailedToResolve)
 
 data Result err
@@ -43,7 +43,7 @@ resultToData = case _ of
   ResultNullable maybeResult -> maybe jsonNull resultToData maybeResult
 
 newtype LocatedError = LocatedError
-  { path :: List (Either Int String)
+  { path :: Path
   , message :: String
   , locations :: List { line :: Int, column :: Int }
   }
@@ -51,7 +51,7 @@ newtype LocatedError = LocatedError
 getLocatedErrors :: forall err. CustomResolverError err => Result err -> List LocatedError
 getLocatedErrors = go Nil
   where
-  go :: List (Either Int String) -> Result err -> List LocatedError
+  go :: Path -> Result err -> List LocatedError
   go path = case _ of
     ResultLeaf _ -> Nil
     ResultError err -> pure $ LocatedError
@@ -61,10 +61,10 @@ getLocatedErrors = go Nil
       }
 
     ResultObject fields -> fields
-      >>= \(Tuple name result) -> go (Right name : path) result
+      >>= \(Tuple name result) -> go (Field name : path) result
 
     ResultList items -> items
-      # mapWithIndex (\i -> go (Left i : path))
+      # mapWithIndex (\i -> go (Index i : path))
       # fold
 
     ResultNullable maybeResult -> maybe Nil (go path) maybeResult
@@ -72,7 +72,7 @@ getLocatedErrors = go Nil
 encodeLocatedError :: LocatedError -> Json
 encodeLocatedError (LocatedError { path, message, locations }) =
   encodeJson
-    { path: either encodeJson encodeJson <$> path
+    { path: encodePath path
     , message
     , locations
     }

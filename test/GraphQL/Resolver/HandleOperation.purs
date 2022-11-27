@@ -9,18 +9,17 @@ import Data.Filterable (filter)
 import Data.Foldable (find)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
-import Effect.Aff (Aff, Error, error, throwError)
+import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, gPure)
+import GraphQL.Resolver.GqlM (GqlM, gPure, runGqlM)
 import GraphQL.Resolver.HandleOperation (handleOperation)
 import GraphQL.Server.Gql (class Gql, enum, object, scalar, union)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
 import HTTPure (Request)
 import Test.GraphQL.E2E.Util (JsonTest(..))
-import Test.Spec (Spec, describe, describeOnly, it, itOnly)
+import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -293,11 +292,11 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- evalGql mockRequest $ handleOperation simpleResolver mockRequest op vars
+  eit <- runGqlM mockRequest $ handleOperation simpleResolver mockRequest op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver :: RootResolver Error GqlAff
+simpleResolver :: RootResolver
 simpleResolver =
   rootResolver
     { query:
@@ -343,12 +342,12 @@ author = Author
   }
 
 newtype Book = Book
-  { name :: GqlIo Aff String
+  { name :: GqlM String
   , id :: Int
   , price :: Number
   , type :: Maybe BookType
   , packaging :: Maybe Packaging
-  , author :: Unit -> GqlIo Aff Author
+  , author :: Unit -> GqlM Author
   , created_at :: Maybe DateTime
   , custom_scalar :: CustomScalar
   }
@@ -360,7 +359,7 @@ instance Gql Book where
 
 newtype Author = Author
   { name :: String
-  , books :: { maxPrice :: Number } -> GqlIo Aff (Array Book)
+  , books :: { maxPrice :: Number } -> GqlM (Array Book)
   }
 
 derive instance Generic Author _

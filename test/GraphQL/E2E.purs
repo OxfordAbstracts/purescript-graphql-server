@@ -12,7 +12,7 @@ import Data.Newtype (class Newtype)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
-import GraphQL.Resolver.GqlIo (GqlAff, gPure)
+import GraphQL.Resolver.GqlM (GqlM, gPure)
 import GraphQL.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Server (GqlServerM, defaultOpts, liftServer, start)
 import GraphQL.Server.Gql (class Gql, object)
@@ -115,7 +115,7 @@ users
   :: { created_before :: Maybe DateTime
      , created_after :: Maybe DateTime
      }
-  -> GqlAff (Array User)
+  -> GqlM (Array User)
 users args =
   pure
     $ filter (\(User u) -> maybe true (u.created_at > _) args.created_after)
@@ -159,7 +159,7 @@ newtype User = User
   { id :: Int
   , name :: String
   , created_at :: DateTime
-  , orders :: { id :: Maybe Int } -> GqlAff (Array Order)
+  , orders :: { id :: Maybe Int } -> GqlM (Array Order)
   }
 
 derive instance Generic User _

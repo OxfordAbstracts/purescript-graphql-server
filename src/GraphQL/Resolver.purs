@@ -2,9 +2,6 @@ module GraphQL.Resolver (RootResolver, rootResolver) where
 
 import Prelude
 
-import Effect.Aff (Aff)
-import Effect.Exception (Error)
-import GraphQL.Resolver.GqlIo (GqlIo)
 import GraphQL.Resolver.JsonResolver (Resolver)
 import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Server.Gql (class Gql, GqlProps(..), gql)
@@ -24,7 +21,7 @@ rootResolver
   => Gql (MutationRoot mutation)
   => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
   => { query :: { | query }, mutation :: mutation }
-  -> RootResolver Error (GqlIo Aff)
+  -> RootResolver
 rootResolver root =
   { query: withIntrospectionProps.resolver $ QueryRoot $ Record.merge root.query introspection
   , mutation: mutationProps.resolver $ MutationRoot root.mutation
@@ -43,8 +40,8 @@ rootResolver root =
 
   introspection = getIntrospection schema
 
-type RootResolver err m =
-  { query :: Request -> Resolver err m
-  , mutation :: Request -> Resolver err m
+type RootResolver =
+  { query :: Request -> Resolver
+  , mutation :: Request -> Resolver
   , introspection :: Introspection
   }

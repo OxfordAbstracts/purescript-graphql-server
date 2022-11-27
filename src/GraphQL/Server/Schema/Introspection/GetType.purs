@@ -25,7 +25,7 @@ module GraphQL.Server.Schema.Introspection.GetType where
 -- import Data.Symbol (class IsSymbol, reflectSymbol)
 -- import Data.Time (Time)
 -- import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
--- import GraphQL.Resolver.GqlIo (GqlIo)
+-- import GraphQL.Resolver.GqlM (GqlM)
 -- import GraphQL.Server.Schema.Introspection.GetEnumValues (class GetEnumValues, getEnumValues)
 -- import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable, isNullable)
 -- import GraphQL.Server.Schema.Introspection.Types (IEnumValue(..), IField(..), IInputValue(..), IType(..), ITypeKind(..), IType_T, defaultIType)
@@ -85,7 +85,7 @@ module GraphQL.Server.Schema.Introspection.GetType where
 -- instance (GetGqlType b) => GetGqlType (a -> b) where
 --   getType _ = getType (Proxy :: Proxy b)
 
--- instance (GetGqlType a) => GetGqlType (GqlIo m a) where
+-- instance (GetGqlType a) => GetGqlType (GqlM m a) where
 --   getType _ = getType (Proxy :: Proxy a)
 
 -- instance (IsSymbol a) => GetGqlType (Proxy a) where

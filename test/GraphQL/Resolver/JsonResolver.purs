@@ -12,9 +12,8 @@ import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Effect.Exception (Error, message)
-import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.GqlIo (GqlAff, GqlIo(..), gPure)
+import Effect.Exception (message)
+import GraphQL.Resolver.GqlM (GqlM(..), gPure, runGqlM)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.Gql (class Gql, object, toResolver)
@@ -60,7 +59,7 @@ spec =
         actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
-        res <- evalGql mockRequest $ resolveTestQuery booksResolver
+        res <- resolveTestQuery booksResolver
           """{ books (maxPrice: 7) { 
             title 
             author { 
@@ -110,7 +109,7 @@ spec =
 
           )
 
-resolver :: forall err m. Applicative m => Resolver err m
+resolver ::  Resolver 
 resolver = Fields
   { typename: "name"
   , fields:
@@ -140,24 +139,24 @@ resolver = Fields
         ]
   }
 
-resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type) err. Applicative m ⇒ EncodeJson a ⇒ a → args → Resolver err m
+resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). EncodeJson a ⇒ a → args → Resolver 
 resolveNode a _ = Node $ pure $ encodeJson a
 
 mkFieldMap
-  :: forall err f m
+  :: forall f
    . Foldable f
   => Functor f
-  => f (Field err m)
-  -> Map.Map String (Field err m)
+  => f (Field)
+  -> Map.Map String (Field)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: Resolver Error GqlAff
+booksResolver :: Resolver
 booksResolver =
   flip toResolver mockRequest $ TopLevel
     { books
     }
   where
-  books :: _ -> GqlIo Aff _
+  books :: _ -> GqlM _
   books = \(opts :: { maxPrice :: Maybe Number }) -> do
     gPure $
       filter (\(Book b) -> maybe true (b.price <= _) opts.maxPrice)
@@ -184,7 +183,7 @@ booksResolver =
     ]
 
 newtype TopLevel = TopLevel
-  { books :: { maxPrice :: Maybe Number } -> GqlIo Aff (Array Book)
+  { books :: { maxPrice :: Maybe Number } -> GqlM (Array Book)
   }
 
 derive instance Generic TopLevel _
@@ -195,7 +194,7 @@ instance Gql TopLevel where
 newtype Book = Book
   { title :: String
   , price :: Number
-  , author :: Unit -> GqlAff Author
+  , author :: Unit -> GqlM Author
   }
 
 derive instance Generic Book _
@@ -205,7 +204,7 @@ instance Gql Book where
 
 newtype Author = Author
   { name :: String
-  , bio :: GqlAff String
+  , bio :: GqlM String
   , books :: Unit -> Array Book
   }
 
@@ -214,11 +213,11 @@ derive instance Generic (Author) _
 instance Gql Author where
   gql _ = object unit
 
-io :: forall a. a -> GqlAff a
-io = GqlIo <<< pure
+io :: forall a. a -> GqlM a
+io = GqlM <<< pure
 
-resolveTestQuery :: Resolver Error GqlAff -> String -> Aff (Either GqlError (Result String))
-resolveTestQuery resolver' query = evalGql mockRequest $ map (map message) <$> resolveQueryString resolver' query
+resolveTestQuery :: Resolver -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery resolver' query = runGqlM mockRequest $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

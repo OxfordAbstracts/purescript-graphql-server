@@ -12,8 +12,7 @@ import Data.Maybe (Maybe, maybe)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
-import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.GqlIo (GqlAff)
+import GraphQL.Resolver.GqlM (GqlM, runGqlM)
 import GraphQL.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
@@ -93,11 +92,11 @@ gqlObj = GqlObj
 
 resolverParent
   :: GqlObj "Parent"
-       { async :: { str :: String } -> GqlAff String
+       { async :: { str :: String } -> GqlM String
        , double :: { a :: Int } -> Int
-       , noArgs :: GqlAff String
+       , noArgs :: GqlM String
        , shout :: { str :: String } -> String
-       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlAff (Array Int)
+       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlM (Array Int)
        , child1 :: ResolverChild1
        , children1 :: { ids :: Array Int } -> (Array ResolverChild1)
        }
@@ -117,7 +116,7 @@ resolverParent =
 
 type ResolverChild1 = GqlObj "ResolverChild1"
   { id :: Int
-  , n :: GqlAff Number
+  , n :: GqlM Number
   , name :: String
   }
 
@@ -135,14 +134,14 @@ mkChild = \id ->
 leaf ∷ ∀ (a ∷ Type) err. EncodeJson a ⇒ a → (Result err)
 leaf = ResultLeaf <<< encodeJson
 
-aff :: forall a. a -> GqlAff a
+aff :: forall a. a -> GqlM a
 aff = pure
 
-resolveTypedFiber :: forall a. Gql a => a -> String -> GqlAff (Either GqlError (Result Error))
+resolveTypedFiber :: forall a. Gql a => a -> String -> GqlM (Either GqlError (Result Error))
 resolveTypedFiber resolver query = resolveQueryString (toResolver resolver mockRequest) query
 
 resolveTyped :: forall a. Gql a => a -> String -> Aff (Either GqlError (Result String))
-resolveTyped resolver query = evalGql mockRequest $ map (map message) <$> resolveTypedFiber resolver query
+resolveTyped resolver query = runGqlM mockRequest $ map (map message) <$> resolveTypedFiber resolver query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

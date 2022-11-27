@@ -1,63 +1,72 @@
-module GraphQL.Resolver.JsonResolver where
+module GraphQL.Resolver.JsonResolver
+  ( AffResolver
+  , Field
+  , Fields
+  , Resolver(..)
+  , TopLevelJsonResolver
+  , resolve
+  , resolveQueryString
+  )
+  where
 
 import Prelude
 
-import Control.Monad.Error.Class (class MonadError, catchError)
-import Control.Parallel (class Parallel, parTraverse)
+import Control.Monad.Error.Class (catchError)
+import Control.Monad.Reader (local)
+import Control.Parallel (class Parallel, parTraverse, parallel, sequential)
 import Data.Argonaut (Json, jsonEmptyObject)
 import Data.Either (Either(..))
+import Data.GraphQL.AST (SelectionSet)
 import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (selectionSet)
-import Data.List (List(..))
+import Data.List (List(..), (:))
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (unwrap)
+import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
 import Data.Tuple (Tuple(..))
-import Effect.Aff (Aff)
 import Effect.Exception (Error)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver.EncodeValue (encodeArguments)
-import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.GqlM (GqlM)
+import GraphQL.Resolver.Path (PathPart(..))
 import GraphQL.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), FailedToResolve(..))
 import Parsing (runParser)
 import Safe.Coerce (coerce)
 
-type TopLevelJsonResolver err m =
-  { query :: Resolver err m
-  , mutation :: Maybe (Resolver err m)
-  , subscription :: Maybe (Resolver err m)
+type TopLevelJsonResolver =
+  { query :: Resolver
+  , mutation :: Maybe (Resolver)
+  , subscription :: Maybe (Resolver)
   }
 
-data Resolver err m
-  = Node (m Json)
-  | ListResolver (List (Resolver err m))
-  | Fields (Fields err m)
-  | AsyncResolver (m (Resolver err m))
+data Resolver
+  = Node (GqlM Json)
+  | ListResolver (List (Resolver))
+  | Fields (Fields)
+  | AsyncResolver (GqlM (Resolver))
   | Null
-  -- | NullableResolver (Maybe (Resolver err m))
-  | FailedResolver (FailedToResolve err)
+  -- | NullableResolver (Maybe (Resolver))
+  | FailedResolver (FailedToResolve Error)
 
-type AffResolver = Resolver Error (GqlIo Aff)
+type AffResolver = Resolver
 
-type Fields err m =
-  { fields :: Map String (Field err m)
+type Fields =
+  { fields :: Map String (Field)
   , typename :: String
   }
 
-type Field err m =
+type Field =
   { name :: String
-  , resolver :: { args :: Json } -> Resolver err m
+  , resolver :: { args :: Json } -> Resolver
   }
 
 resolveQueryString
-  :: forall m err f
-   . MonadError err m
-  => Parallel f m
-  => Resolver err m
+  :: Resolver
   -> String
-  -> m (Either GqlError (Result err))
+  -> GqlM (Either GqlError (Result Error))
 resolveQueryString resolver query = do
   let
     queryParseResult = runParser query selectionSet
@@ -67,13 +76,10 @@ resolveQueryString resolver query = do
       Right <$> resolve resolver Object.empty (Just queryAST)
 
 resolve
-  :: forall m err f
-   . MonadError err m
-  => Parallel f m
-  => Resolver err m
+  :: Resolver
   -> Object Json
   -> (Maybe AST.SelectionSet)
-  -> m (Result err)
+  -> GqlM (Result Error)
 resolve resolver vars = case resolver, _ of
   AsyncResolver resolverM, a -> catchError resolveAsync handleError
     where
@@ -85,7 +91,7 @@ resolve resolver vars = case resolver, _ of
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
   ListResolver resolvers, selectionSet ->
-    ResultList <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
+    ResultList <$> gqlTraverseList vars selectionSet resolvers
   Null, _ -> pure $ ResultNullable Nothing
   -- NullableResolver resolvers, selectionSet ->
   -- ResultNullable <$> parTraverse (\r -> resolve r vars selectionSet) resolvers
@@ -104,8 +110,13 @@ resolve resolver vars = case resolver, _ of
             Just field ->
               let
                 args = maybe jsonEmptyObject (encodeArguments vars <<< unwrap) arguments
+                setEnv e = e
+                  { depth = e.depth + 1
+                  , path = Field field.name : e.path
+                  }
               in
-                resolve (field.resolver { args }) vars selectionSet
+                local setEnv $
+                  resolve (field.resolver { args }) vars selectionSet
   where
   getSelectionFields :: String -> AST.Selection -> List AST.T_Field
   getSelectionFields typename = case _ of
@@ -127,3 +138,24 @@ resolve resolver vars = case resolver, _ of
     _ -> Nil
 
   err = pure <<< ResultError
+
+gqlTraverseList :: Object Json -> Maybe SelectionSet -> List Resolver -> GqlM (List (Result Error))
+gqlTraverseList vars selectionSet = parTraverseWithIndex
+  ( \i r ->
+      let
+        setEnv env = env
+          { index = Just i
+          , path = Index i : env.path
+          }
+      in
+        local setEnv $ resolve r vars selectionSet
+  )
+
+parTraverseWithIndex
+  :: forall f m t a b i
+   . Parallel f m
+  => TraversableWithIndex i t
+  => (i -> a -> m b)
+  -> t a
+  -> m (t b)
+parTraverseWithIndex f = sequential <<< traverseWithIndex (map parallel <<< f)

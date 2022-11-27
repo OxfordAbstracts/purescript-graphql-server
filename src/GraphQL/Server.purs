@@ -11,10 +11,10 @@ import Prelude
 
 import Data.Newtype (class Newtype)
 import Effect (Effect)
-import Effect.Aff (Aff, Error)
+import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.GqlM (GqlM)
 import GraphQL.Resolver.Root (GqlRoot, MutationRoot, QueryRoot)
 import GraphQL.Server.Gql (class Gql)
 import GraphQL.Server.GqlResM (toResponse)
@@ -49,7 +49,7 @@ start
   where
   handler = handleRequest isAuthorized resolvers >>> toResponse
 
-  resolvers :: RootResolver Error (GqlIo Aff)
+  resolvers :: RootResolver 
   resolvers = rootResolver root
 
 type ServerOptions =
@@ -77,8 +77,7 @@ newtype GqlServerM f = GqlServerM ServerM
 
 derive instance Newtype (GqlServerM f) _
 
-type GqlServer :: forall k. (k -> Type) -> Type
-type GqlServer f = GqlServerM (GqlIo f)
+type GqlServer = GqlServerM GqlM
 
 -- | Run a `GqlServerM` as an `Effect`.
 asEffect :: forall m. GqlServerM m -> Effect CloseServer

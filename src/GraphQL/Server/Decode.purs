@@ -3,13 +3,12 @@ module GraphQL.Server.Decode where
 import Prelude
 
 import Data.Argonaut (Json, JsonDecodeError(..), decodeJson, toObject)
-import Data.Argonaut.Decode.Decoders (decodeArray, decodeCodePoint, decodeForeignObject, decodeList, decodeMap, decodeMaybe, decodeSet, decodeVoid)
+import Data.Argonaut.Decode.Decoders (decodeArray, decodeCodePoint, decodeForeignObject, decodeList, decodeMaybe, decodeSet, decodeVoid)
 import Data.Bifunctor (lmap)
 import Data.Date (Date)
 import Data.DateTime (DateTime)
 import Data.Either (Either(..))
 import Data.List (List)
-import Data.Map as M
 import Data.Maybe (Maybe(..))
 import Data.Set as S
 import Data.String (CodePoint)
@@ -35,6 +34,9 @@ instance DecodeArg Number where
   decodeArg = decodeJson
 
 instance DecodeArg String where
+  decodeArg = decodeJson
+
+instance DecodeArg Json where
   decodeArg = decodeJson
 
 instance DecodeArg Date where
@@ -63,9 +65,6 @@ instance DecodeArg a => DecodeArg (List a) where
 
 instance (Ord a, DecodeArg a) => DecodeArg (S.Set a) where
   decodeArg = decodeSet decodeArg
-
-instance (Ord a, DecodeArg a, DecodeArg b) => DecodeArg (M.Map a b) where
-  decodeArg = decodeMap decodeArg decodeArg
 
 instance DecodeArg Void where
   decodeArg = decodeVoid

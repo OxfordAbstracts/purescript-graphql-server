@@ -16,10 +16,8 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Time (Time)
-import Effect.Aff (Aff)
-import Effect.Exception (Error)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
-import GraphQL.Resolver.GqlIo (GqlIo)
+import GraphQL.Resolver.GqlM (GqlM)
 import GraphQL.Resolver.JsonResolver (AffResolver, Field, Resolver(..))
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.Decode (class DecodeArg, decodeArg)
@@ -121,7 +119,7 @@ instance Gql a => Gql (List a) where
     where
     GqlProps { resolver } = (gql unit) :: GqlProps a
 
-instance (Gql a) => Gql (GqlIo Aff a) where
+instance (Gql a) => Gql (GqlM a) where
   gql _ = GqlProps
     { resolver: \a req ->
         AsyncResolver do
@@ -304,7 +302,7 @@ makeFields
   => String
   -> Request
   -> a
-  -> Map String (Field Error (GqlIo Aff))
+  -> Map String (Field)
 makeFields typename req r =
   unwrap $ hfoldlWithIndex (ToResolverProps req) resolveTypename r
   where
@@ -315,7 +313,7 @@ makeFields typename req r =
 
 data ToResolverProps = ToResolverProps Request
 
-newtype FieldMap = FieldMap (Map String (Field Error (GqlIo Aff)))
+newtype FieldMap = FieldMap (Map String (Field))
 
 derive instance Newtype FieldMap _
 
@@ -329,7 +327,7 @@ instance
     where
     name = reflectSymbol prop
 
-    field :: Field Error (GqlIo Aff)
+    field :: Field
     field =
       { name
       , resolver: getArgResolver a req
