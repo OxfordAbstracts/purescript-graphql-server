@@ -1,6 +1,5 @@
 module GraphQL.Resolver.JsonResolver
-  ( AffResolver
-  , Field
+  ( Field
   , Fields
   , Resolver(..)
   , TopLevelJsonResolver
@@ -48,8 +47,6 @@ data Resolver
   | AsyncResolver (GqlM (Resolver))
   | Null
   | FailedResolver (FailedToResolve Error)
-
-type AffResolver = Resolver
 
 type Fields =
   { fields :: Map String (Field)

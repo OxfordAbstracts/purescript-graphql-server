@@ -8,8 +8,8 @@ import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), fold, reverse, (:))
 import Data.Tuple (Tuple(..))
+import Effect.Exception (Error, message)
 import Foreign.Object as Object
-import GraphQL.Resolver.Error (class CustomResolverError, renderError)
 import GraphQL.Resolver.Path (Path, PathPart(..), encodePath)
 import GraphQL.Server.GqlError (FailedToResolve)
 
@@ -47,16 +47,16 @@ newtype LocatedError = LocatedError
   , locations :: List { line :: Int, column :: Int }
   }
 
-getLocatedErrors :: forall err. CustomResolverError err => Result err -> List LocatedError
+getLocatedErrors :: Result Error -> List LocatedError
 getLocatedErrors = go Nil
   where
-  go :: Path -> Result err -> List LocatedError
+  go :: Path -> Result Error -> List LocatedError
   go path = case _ of
     ResultLeaf _ -> Nil
     ResultError err -> pure $ LocatedError
       { path: reverse path
-      , message: show $ map renderError err
-      , locations: Nil -- TODO
+      , message: show $ map message err
+      , locations: Nil  
       }
 
     ResultObject fields -> fields

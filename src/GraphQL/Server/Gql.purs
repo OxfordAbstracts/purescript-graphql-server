@@ -18,7 +18,7 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Time (Time)
 import GraphQL.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
 import GraphQL.Resolver.GqlM (GqlM)
-import GraphQL.Resolver.JsonResolver (AffResolver, Field, Resolver(..))
+import GraphQL.Resolver.JsonResolver (Field, Resolver(..))
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.Decode (class DecodeArg, decodeArg)
 import GraphQL.Server.GqlError (FailedToResolve(..))
@@ -42,17 +42,17 @@ newtype GqlProps a = GqlProps (GqlPropsT a)
 derive instance Newtype (GqlProps a) _
 
 type GqlPropsT a =
-  { resolver :: a -> Request -> AffResolver
+  { resolver :: a -> Request -> Resolver
   , iType :: Unit -> IType
   }
 
 getIType :: forall a. GqlProps a -> Unit -> IType
 getIType (GqlProps { iType }) _ = iType unit
 
-getResolver :: forall a. GqlProps a -> a -> Request -> AffResolver
+getResolver :: forall a. GqlProps a -> a -> Request -> Resolver
 getResolver (GqlProps { resolver }) = resolver
 
-toResolver :: forall a. Gql a => a -> Request -> AffResolver
+toResolver :: forall a. Gql a => a -> Request -> Resolver
 toResolver a req = resolver a req
   where
   (GqlProps { resolver }) = gql unit
@@ -193,7 +193,7 @@ union name _ = GqlProps
 
 -- class UnionGql :: forall k. Type -> k -> Constraint
 class UnionGql a where
-  unionResolver :: String -> a -> Request -> AffResolver
+  unionResolver :: String -> a -> Request -> Resolver
   possibleTypes :: String -> Proxy a -> List IType
 
 instance
@@ -338,7 +338,7 @@ class GetArgResolver a where
     :: a
     -> Request
     -> { args :: Json }
-    -> AffResolver
+    -> Resolver
 
 instance argResolverUnitFn :: Gql a => GetArgResolver (Unit -> a) where
   getArgResolver a req _ = toResolver (a unit) req
