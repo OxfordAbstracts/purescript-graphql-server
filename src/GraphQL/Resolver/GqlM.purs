@@ -5,12 +5,14 @@ import Prelude
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.Reader (class MonadAsk, class MonadReader, ReaderT(..), runReaderT)
 import Control.Parallel (class Parallel, parallel, sequential)
+import Data.Argonaut (Json)
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Effect.Aff (Aff, Error, ParAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
+import Foreign.Object (Object)
 import GraphQL.Resolver.Path (Path)
 import HTTPure (Request)
 
@@ -22,6 +24,7 @@ type GqlEnv =
   , index :: Maybe Int
   , path :: Path
   , request :: Request
+  , variables :: Object Json
   }
 
 -- | Similar to `pure` but wraps the value in a `GqlM` monad.
@@ -29,12 +32,13 @@ type GqlEnv =
 gPure :: forall a. a -> GqlM a
 gPure = pure
 
-runGqlM :: forall a. Request -> GqlM a -> Aff a
-runGqlM request (GqlM a) = runReaderT a
+runGqlM :: forall a. Request -> Object Json -> GqlM a -> Aff a
+runGqlM request variables (GqlM a) = runReaderT a
   { depth: 0
   , index: Nothing
   , path: Nil
   , request
+  , variables
   }
 
 derive instance Newtype (GqlM a) _

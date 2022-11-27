@@ -12,7 +12,7 @@ import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Resolver.GqlM (GqlM, gPure, runGqlM)
+import GraphQL.Resolver.GqlM (GqlM, gPure)
 import GraphQL.Resolver.HandleOperation (handleOperation)
 import GraphQL.Server.Gql (class Gql, enum, object, scalar, union)
 import GraphQL.Server.GqlResM as GqlM
@@ -292,7 +292,7 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- runGqlM mockRequest $ handleOperation simpleResolver mockRequest op vars
+  eit <- handleOperation simpleResolver mockRequest op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 

@@ -12,6 +12,7 @@ import Data.Maybe (Maybe, maybe)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
+import Foreign.Object as Object
 import GraphQL.Resolver.GqlM (GqlM, runGqlM)
 import GraphQL.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Resolver.JsonResolver (resolveQueryString)
@@ -141,7 +142,7 @@ resolveTypedFiber :: forall a. Gql a => a -> String -> GqlM (Either GqlError (Re
 resolveTypedFiber resolver query = resolveQueryString (toResolver resolver mockRequest) query
 
 resolveTyped :: forall a. Gql a => a -> String -> Aff (Either GqlError (Result String))
-resolveTyped resolver query = runGqlM mockRequest $ map (map message) <$> resolveTypedFiber resolver query
+resolveTyped resolver query = runGqlM mockRequest Object.empty $ map (map message) <$> resolveTypedFiber resolver query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

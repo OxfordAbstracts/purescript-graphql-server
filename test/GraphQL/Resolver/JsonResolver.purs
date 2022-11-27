@@ -13,6 +13,7 @@ import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
 import Effect.Exception (message)
+import Foreign.Object as Object
 import GraphQL.Resolver.GqlM (GqlM(..), gPure, runGqlM)
 import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Resolver.Result (Result(..))
@@ -215,7 +216,7 @@ io :: forall a. a -> GqlM a
 io = GqlM <<< pure
 
 resolveTestQuery :: Resolver -> String -> Aff (Either GqlError (Result String))
-resolveTestQuery resolver' query = runGqlM mockRequest $ map (map message) <$> resolveQueryString resolver' query
+resolveTestQuery resolver' query = runGqlM mockRequest Object.empty $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

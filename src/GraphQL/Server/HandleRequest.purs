@@ -16,7 +16,6 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
-import GraphQL.Resolver.GqlM (runGqlM)
 import GraphQL.Resolver.HandleOperation (handleOperation)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
@@ -36,7 +35,6 @@ handleRequest isAuthorized resolvers req = do
   op <- parseOperation operationName operation
   either throwError pure =<<
     ( liftAff 
-        $ runGqlM req
         $ map (map encodeJson)
         $ handleOperation resolvers req op (fromMaybe Object.empty variables)
     )

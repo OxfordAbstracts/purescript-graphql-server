@@ -12,11 +12,12 @@ import Data.List.NonEmpty as NonEmpty
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
+import Effect.Aff (Aff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
 import GraphQL.Resolver.EncodeValue (encodeValue)
-import GraphQL.Resolver.GqlM (GqlM)
+import GraphQL.Resolver.GqlM (runGqlM)
 import GraphQL.Resolver.JsonResolver (resolve)
 import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
@@ -25,36 +26,44 @@ import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
 import HTTPure (Request)
 
 handleOperation
-  :: RootResolver 
+  :: RootResolver
   -> Request
   -> AST.OperationDefinition
   -> Object Json
-  -> GqlM
+  -> Aff
        ( Either GqlError
            { data :: Json
            , errors :: Maybe (NonEmptyList Json)
            }
        )
-handleOperation  root@{ introspection: Introspection introspection } request opDef rawVars = do
-  case opDef of
-    AST.OperationDefinition_SelectionSet selectionSet ->
-      resolveToJson Object.empty query selectionSet
-    AST.OperationDefinition_OperationType
-      { operationType
-      , variableDefinitions
-      , selectionSet
-      } ->
-      case coerceVars variableDefinitions of
-        Left err -> pure $ Left $ VariableInputError err
-        Right vars -> do
-          case operationType of
-            Query -> resolveToJson vars query selectionSet
-            Mutation -> resolveToJson vars mutation selectionSet
-            Subscription -> pure $ Left $ SubscriptionsNotSupported
+handleOperation root@{ introspection: Introspection introspection } request opDef rawVars = do
+  let
+    vars' = case opDef of
+      AST.OperationDefinition_SelectionSet _ ->
+        Right Object.empty
+      AST.OperationDefinition_OperationType
+        { variableDefinitions
+        } -> coerceVars variableDefinitions
+
+  case vars' of
+    Left err -> pure $ Left $ VariableInputError err
+    Right vars ->
+      runGqlM request vars do
+        case opDef of
+          AST.OperationDefinition_SelectionSet selectionSet ->
+            resolveToJson query selectionSet
+          AST.OperationDefinition_OperationType
+            { operationType
+            , selectionSet
+            } ->
+            case operationType of
+              Query -> resolveToJson query selectionSet
+              Mutation -> resolveToJson mutation selectionSet
+              Subscription -> pure $ Left $ SubscriptionsNotSupported
   where
   mutation = root.mutation request
   query = root.query request
-  resolveToJson vars r selectionSet = getJson <$> resolve r vars (Just selectionSet)
+  resolveToJson r selectionSet = getJson <$> resolve r (Just selectionSet)
 
   getJson result = pure
     { data: resultToData result
