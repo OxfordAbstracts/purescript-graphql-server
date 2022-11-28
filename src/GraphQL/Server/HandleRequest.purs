@@ -52,7 +52,6 @@ parseGqlRequest =
   (parseJson >=> decodeJson) >>>
     either (ParseGqlRequestError >>> throwError) pure
 
--- parseOperation :: Maybe String -> String -> GqlResM AST.OperationDefinition
 parseOperation
   :: forall m
    . MonadAff m
