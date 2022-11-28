@@ -29,5 +29,5 @@ type IntrospectionRow r =
 
 derive instance Generic Introspection _
 
-instance Gql Introspection where 
+instance Gql Introspection where
   gql = object

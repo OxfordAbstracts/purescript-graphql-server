@@ -82,7 +82,7 @@ resolve resolver = case resolver, _ of
   FailedResolver error, _ -> err error
   Node _, Just _ -> err SelectionSetAtNodeValue
   Node node, _ -> ResultLeaf <$> node
-  ListResolver resolvers, selectionSet -> do 
+  ListResolver resolvers, selectionSet -> do
     ResultList <$> gqlTraverseList selectionSet resolvers
   Null, _ -> pure ResultNull
   Fields _, Nothing -> err MissingSelectionSet
@@ -98,7 +98,7 @@ resolve resolver = case resolver, _ of
           Tuple (fromMaybe name alias) <$> case lookup name fields of
             Nothing -> pure $ ResultError FieldNotFound
             Just field -> do
-              {variables} <- ask
+              { variables } <- ask
               let
                 args = maybe jsonEmptyObject (encodeArguments variables <<< unwrap) arguments
                 setEnv e = e
@@ -106,7 +106,7 @@ resolve resolver = case resolver, _ of
                   , path = Field field.name : e.path
                   }
               local setEnv $
-                  resolve (field.resolver { args }) selectionSet
+                resolve (field.resolver { args }) selectionSet
   where
   getSelectionFields :: String -> AST.Selection -> List AST.T_Field
   getSelectionFields typename = case _ of
@@ -129,7 +129,7 @@ resolve resolver = case resolver, _ of
 
   err = pure <<< ResultError
 
-gqlTraverseList ::  Maybe SelectionSet -> List Resolver -> GqlM (List (Result Error))
+gqlTraverseList :: Maybe SelectionSet -> List Resolver -> GqlM (List (Result Error))
 gqlTraverseList selectionSet = parTraverseWithIndex (map (flip catchError handleError) <<< go)
   where
 

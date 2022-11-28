@@ -108,7 +108,7 @@ spec =
 
           )
 
-resolver ::  Resolver 
+resolver :: Resolver
 resolver = Fields
   { typename: "name"
   , fields:
@@ -138,7 +138,7 @@ resolver = Fields
         ]
   }
 
-resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). EncodeJson a ⇒ a → args → Resolver 
+resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). EncodeJson a ⇒ a → args → Resolver
 resolveNode a _ = Node $ pure $ encodeJson a
 
 mkFieldMap

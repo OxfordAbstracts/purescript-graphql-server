@@ -30,12 +30,12 @@ rootResolver root =
   where
   GqlProps mutationProps = gql unit
   GqlProps withIntrospectionProps = gql unit :: GqlProps (QueryRoot { | withIntrospection })
-  
-  root'= GqlRoot root
+
+  root' = GqlRoot root
     { query = QueryRoot root.query
     , mutation = MutationRoot root.mutation
     }
-    
+
   schema = getSchema root'
 
   introspection = getIntrospection schema

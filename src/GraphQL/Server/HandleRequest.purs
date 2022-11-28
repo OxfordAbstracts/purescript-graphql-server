@@ -24,7 +24,7 @@ import Parsing (runParser)
 
 handleRequest
   :: (Request -> Aff Boolean)
-  -> RootResolver 
+  -> RootResolver
   -> Request
   -> GqlResM Json
 handleRequest isAuthorized resolvers req = do
@@ -34,7 +34,7 @@ handleRequest isAuthorized resolvers req = do
   { operationName, operation, variables } <- parseGqlRequest bodyStr
   op <- parseOperation operationName operation
   either throwError pure =<<
-    ( liftAff 
+    ( liftAff
         $ map (map encodeJson)
         $ handleOperation resolvers req op (fromMaybe Object.empty variables)
     )

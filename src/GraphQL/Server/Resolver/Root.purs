@@ -11,7 +11,7 @@ derive instance Newtype (GqlRoot name a) _
 derive instance Generic (GqlRoot q a) _
 
 instance
-  ( GqlObject (GqlRoot q m) 
+  ( GqlObject (GqlRoot q m)
   ) =>
   Gql (GqlRoot q m) where
   gql = object
@@ -23,7 +23,7 @@ derive instance Newtype (QueryRoot a) _
 derive instance Generic (QueryRoot a) _
 
 instance
-  ( GqlObject (QueryRoot { | a }) 
+  ( GqlObject (QueryRoot { | a })
   ) =>
   Gql (QueryRoot { | a }) where
   gql = object

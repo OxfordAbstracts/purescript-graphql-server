@@ -90,7 +90,6 @@ spec =
 gqlObj :: forall a115. a115 -> GqlObj "test_object" a115
 gqlObj = GqlObj
 
-
 resolverParent
   :: GqlObj "Parent"
        { async :: { str :: String } -> GqlM String

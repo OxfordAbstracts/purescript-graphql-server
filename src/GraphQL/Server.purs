@@ -49,7 +49,7 @@ start
   where
   handler = handleRequest isAuthorized resolvers >>> toResponse
 
-  resolvers :: RootResolver 
+  resolvers :: RootResolver
   resolvers = rootResolver root
 
 type ServerOptions =

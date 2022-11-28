@@ -56,7 +56,7 @@ getLocatedErrors = go Nil
     ResultError err -> pure $ LocatedError
       { path: reverse path
       , message: show $ map message err
-      , locations: Nil  
+      , locations: Nil
       }
 
     ResultObject fields -> fields

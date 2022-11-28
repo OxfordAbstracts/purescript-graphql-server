@@ -74,7 +74,7 @@ instance Gql Number where
 
 instance Gql String where
   gql _ = jsonScalar "String"
-  
+
 instance IsSymbol sym => Gql (Proxy sym) where
   gql _ = scalar (reflectSymbol >>> encodeJson) "String"
 

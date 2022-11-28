@@ -65,7 +65,7 @@ spec =
       done endServer
     it "should return user fields with arguments as variables" \endServer -> do
       res <- gqlReqVars "query t1($created_before: DateTime) { users(created_before: $created_before) { __typename id name } }"
-        { created_before: "2020-01-01" 
+        { created_before: "2020-01-01"
         }
 
       noErrors res
