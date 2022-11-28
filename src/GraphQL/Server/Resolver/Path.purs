@@ -1,4 +1,4 @@
-module GraphQL.Resolver.Path where
+module GraphQL.Server.Resolver.Path where
 
 import Prelude
 

@@ -1,4 +1,4 @@
-module GraphQL.Resolver.JsonResolver
+module GraphQL.Server.Resolver.JsonResolver
   ( Field
   , Fields
   , Resolver(..)
@@ -24,10 +24,10 @@ import Data.Newtype (unwrap)
 import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
 import Data.Tuple (Tuple(..))
 import Effect.Exception (Error)
-import GraphQL.Resolver.EncodeValue (encodeArguments)
-import GraphQL.Resolver.GqlM (GqlM)
-import GraphQL.Resolver.Path (PathPart(..))
-import GraphQL.Resolver.Result (Result(..))
+import GraphQL.Server.Resolver.EncodeValue (encodeArguments)
+import GraphQL.Server.Resolver.GqlM (GqlM)
+import GraphQL.Server.Resolver.Path (PathPart(..))
+import GraphQL.Server.Resolver.Result (Result(..))
 import GraphQL.Server.GqlError (GqlError(..), FailedToResolve(..))
 import Parsing (runParser)
 import Safe.Coerce (coerce)

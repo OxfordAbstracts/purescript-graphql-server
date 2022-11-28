@@ -1,4 +1,4 @@
-module GraphQL.Resolver.GqlM where
+module GraphQL.Server.Resolver.GqlM where
 
 import Prelude
 
@@ -13,7 +13,7 @@ import Effect.Aff (Aff, Error, ParAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Foreign.Object (Object)
-import GraphQL.Resolver.Path (Path)
+import GraphQL.Server.Resolver.Path (Path)
 import HTTPure (Request)
 
 newtype GqlM a = GqlM (ReaderT GqlEnv Aff a)

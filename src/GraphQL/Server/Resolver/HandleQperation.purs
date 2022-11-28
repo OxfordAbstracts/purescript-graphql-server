@@ -1,4 +1,4 @@
-module GraphQL.Resolver.HandleOperation where
+module GraphQL.Server.Resolver.HandleOperation where
 
 import Prelude
 
@@ -16,10 +16,10 @@ import Effect.Aff (Aff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
-import GraphQL.Resolver.EncodeValue (encodeValue)
-import GraphQL.Resolver.GqlM (runGqlM)
-import GraphQL.Resolver.JsonResolver (resolve)
-import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
+import GraphQL.Server.Resolver.EncodeValue (encodeValue)
+import GraphQL.Server.Resolver.GqlM (runGqlM)
+import GraphQL.Server.Resolver.JsonResolver (resolve)
+import GraphQL.Server.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
 import GraphQL.Server.Schema.Introspection (Introspection(..))
 import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))

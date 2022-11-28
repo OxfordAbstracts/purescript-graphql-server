@@ -1,4 +1,4 @@
-module GraphQL.Resolver.GqlObj where
+module GraphQL.Server.Resolver.GqlObj where
 
 import Prelude
 

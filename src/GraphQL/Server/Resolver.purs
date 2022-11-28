@@ -2,8 +2,8 @@ module GraphQL.Resolver (RootResolver, rootResolver) where
 
 import Prelude
 
-import GraphQL.Resolver.JsonResolver (Resolver)
-import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
+import GraphQL.Server.Resolver.JsonResolver (Resolver)
+import GraphQL.Server.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Server.Gql (class Gql, GqlProps(..), gql)
 import GraphQL.Server.Schema (class GetSchema, getSchema)
 import GraphQL.Server.Schema.Introspection (Introspection(..), IntrospectionRow, getIntrospection)

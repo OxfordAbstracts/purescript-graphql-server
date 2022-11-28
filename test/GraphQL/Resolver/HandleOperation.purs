@@ -1,4 +1,4 @@
-module Test.GraphQL.Resolver.HandleOperation (spec) where
+module Test.GraphQL.Server.Resolver.HandleOperation (spec) where
 
 import Prelude
 
@@ -12,8 +12,8 @@ import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Resolver.GqlM (GqlM, gPure)
-import GraphQL.Resolver.HandleOperation (handleOperation)
+import GraphQL.Server.Resolver.GqlM (GqlM, gPure)
+import GraphQL.Server.Resolver.HandleOperation (handleOperation)
 import GraphQL.Server.Gql (class Gql, enum, object, scalar, union)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
@@ -25,7 +25,7 @@ import Unsafe.Coerce (unsafeCoerce)
 
 spec :: Spec Unit
 spec =
-  describe "GraphQL.Resolver.HandleOperation" do
+  describe "GraphQL.Server.Resolver.HandleOperation" do
     describe "handleOperation" do
       it "should resolve a simple query" do
         "query { books { id type } }" `shouldResolveTo`

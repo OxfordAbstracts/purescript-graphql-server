@@ -16,7 +16,7 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
-import GraphQL.Resolver.HandleOperation (handleOperation)
+import GraphQL.Server.Resolver.HandleOperation (handleOperation)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlResM (GqlResM)
 import HTTPure (Request, toString)

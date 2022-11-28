@@ -1,4 +1,4 @@
-module GraphQL.Resolver.Root (GqlRoot(..), QueryRoot(..), MutationRoot(..)) where
+module GraphQL.Server.Resolver.Root (GqlRoot(..), QueryRoot(..), MutationRoot(..)) where
 
 import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Data.Newtype (class Newtype)

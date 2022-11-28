@@ -5,7 +5,7 @@ import Prelude
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Debug (spy)
-import GraphQL.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
+import GraphQL.Server.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Server.Gql (class Gql, getTypeWithNull, getTypeWithoutNull)
 import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
 import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable)

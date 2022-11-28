@@ -1,4 +1,4 @@
-module GraphQL.Resolver.Result where
+module GraphQL.Server.Resolver.Result where
 
 import Prelude
 
@@ -10,7 +10,7 @@ import Data.List (List(..), fold, reverse, (:))
 import Data.Tuple (Tuple(..))
 import Effect.Exception (Error, message)
 import Foreign.Object as Object
-import GraphQL.Resolver.Path (Path, PathPart(..), encodePath)
+import GraphQL.Server.Resolver.Path (Path, PathPart(..), encodePath)
 import GraphQL.Server.GqlError (FailedToResolve)
 
 data Result err

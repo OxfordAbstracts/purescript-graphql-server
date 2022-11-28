@@ -1,4 +1,4 @@
-module GraphQL.Record.Unsequence where
+module GraphQL.Server.Record.Unsequence where
 
 import Prelude
 
