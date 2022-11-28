@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection.Types where
+module GraphQL.Server.Introspection.Types where
 
 import Prelude
 
@@ -10,7 +10,7 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
+import GraphQL.Server.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
   { types :: List IType

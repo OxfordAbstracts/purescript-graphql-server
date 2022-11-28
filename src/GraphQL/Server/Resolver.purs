@@ -6,7 +6,7 @@ import GraphQL.Server.Resolver.JsonResolver (Resolver)
 import GraphQL.Server.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Server.Gql (class Gql, GqlProps(..), gql)
 import GraphQL.Server.Schema (class GetSchema, getSchema)
-import GraphQL.Server.Schema.Introspection (Introspection(..), IntrospectionRow, getIntrospection)
+import GraphQL.Server.Introspection (Introspection(..), IntrospectionRow, getIntrospection)
 import HTTPure (Request)
 import Prim.Row (class Nub, class Union)
 import Record as Record

@@ -7,9 +7,9 @@ import Data.Maybe (Maybe(..))
 import Debug (spy)
 import GraphQL.Server.Resolver.Root (GqlRoot(..), MutationRoot(..), QueryRoot(..))
 import GraphQL.Server.Gql (class Gql, getTypeWithNull, getTypeWithoutNull)
-import GraphQL.Server.Schema.Introspection.GetTypes (getDescendantITypes)
-import GraphQL.Server.Schema.Introspection.GqlNullable (class GqlNullable)
-import GraphQL.Server.Schema.Introspection.Types (ISchema(..))
+import GraphQL.Server.Introspection.GetTypes (getDescendantITypes)
+import GraphQL.Server.Introspection.GqlNullable (class GqlNullable)
+import GraphQL.Server.Introspection.Types (ISchema(..))
 import Type.Proxy (Proxy(..))
 
 class GetSchema a where

@@ -21,8 +21,8 @@ import GraphQL.Server.Resolver.GqlM (runGqlM)
 import GraphQL.Server.Resolver.JsonResolver (resolve)
 import GraphQL.Server.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
-import GraphQL.Server.Schema.Introspection (Introspection(..))
-import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
+import GraphQL.Server.Introspection (Introspection(..))
+import GraphQL.Server.Introspection.Types (ITypeKind(..))
 import HTTPure (Request)
 
 handleOperation

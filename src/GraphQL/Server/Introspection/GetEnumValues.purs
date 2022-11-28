@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection.GetEnumValues where
+module GraphQL.Server.Introspection.GetEnumValues where
 
 import Prelude
 

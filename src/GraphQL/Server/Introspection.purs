@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection where
+module GraphQL.Server.Introspection where
 
 import Prelude
 
@@ -7,7 +7,7 @@ import Data.Map (lookup)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import GraphQL.Server.Schema.Introspection.Types (ISchema(..), IType(..))
+import GraphQL.Server.Introspection.Types (ISchema(..), IType(..))
 import GraphQL.Server.Gql (class Gql, object)
 
 getIntrospection :: ISchema -> Introspection_T

@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection.Types.DirectiveLocation where
+module GraphQL.Server.Introspection.Types.DirectiveLocation where
 
 import Prelude
 
