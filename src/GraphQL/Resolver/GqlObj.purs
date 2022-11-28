@@ -3,14 +3,16 @@ module GraphQL.Resolver.GqlObj where
 import Prelude
 
 import Data.Generic.Rep (class Generic)
+import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import GraphQL.Server.Gql (class Gql, class GqlObject, objectWithName)
 import Type.Proxy (Proxy(..))
 
-data GqlObj :: Symbol -> Type -> Type
-data GqlObj name a = GqlObj a
+newtype GqlObj :: Symbol -> Type -> Type
+newtype GqlObj name a = GqlObj a
 
 derive instance Generic (GqlObj name a) _
+derive instance Newtype (GqlObj name a) _
 
 instance
   ( GqlObject (GqlObj name { | a })
