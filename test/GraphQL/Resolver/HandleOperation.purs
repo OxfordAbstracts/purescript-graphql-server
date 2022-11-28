@@ -1,34 +1,31 @@
-module Test.GraphQL.Resolver.HandleOperation (spec) where
+module Test.GraphQL.Server.HandleOperation (spec) where
 
 import Prelude
 
-import Data.Argonaut (class EncodeJson, Json, decodeJson, encodeJson, jsonNull, stringify)
+import Data.Argonaut (class EncodeJson, Json, encodeJson, jsonNull)
 import Data.DateTime (DateTime)
 import Data.Either (either)
 import Data.Filterable (filter)
 import Data.Foldable (find)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), maybe)
-import Effect.Aff (Aff, Error, error, throwError)
+import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.GqlIo (GqlAff, GqlIo, io)
-import GraphQL.Resolver.HandleOperation (handleOperation)
-import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver, toObjectResolver, toScalarResolver, toUnionResolver)
-import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject, GUnion)
+import GraphQL.Server.GqlM (GqlM, gPure)
+import GraphQL.Server.HandleOperation (handleOperation)
+import GraphQL.Server.Gql (class Gql, enum, object, scalar, union)
 import GraphQL.Server.GqlResM as GqlM
 import GraphQL.Server.HandleRequest (parseOperation)
-import GraphQL.Server.Schema.Introspection.GetType (class GetGqlType, getEnumType, getObjectType, getScalarType, getUnionType)
-import GraphQL.Server.Schema.Scalar (class Scalar)
 import HTTPure (Request)
+import Test.GraphQL.E2E.Util (JsonTest(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Unsafe.Coerce (unsafeCoerce)
 
 spec :: Spec Unit
 spec =
-  describe "GraphQL.Resolver.HandleOperation" do
+  describe "GraphQL.Server.HandleOperation" do
     describe "handleOperation" do
       it "should resolve a simple query" do
         "query { books { id type } }" `shouldResolveTo`
@@ -125,10 +122,10 @@ spec =
             id 
             packaging {
               __typename
-              ... on PackagingBoxed {
+              ... on Packaging_Boxed {
                 note
               }
-              ... on PackagingGiftWrapped {
+              ... on Packaging_GiftWrapped {
                 colour
               }
             }
@@ -137,13 +134,13 @@ spec =
           { "books":
               [ { "id": 1
                 , "packaging": encodeJson
-                    { "__typename": "PackagingBoxed"
+                    { "__typename": "Packaging_Boxed"
                     , "note": "Custom note"
                     }
                 }
               , { "id": 2
                 , "packaging": encodeJson
-                    { "__typename": "PackagingGiftWrapped"
+                    { "__typename": "Packaging_GiftWrapped"
                     , "colour": "Blue"
                     }
                 }
@@ -282,19 +279,12 @@ spec =
 shouldResolveTo :: forall a. EncodeJson a => String -> a -> Aff Unit
 shouldResolveTo query expected = do
   res <- resolveAsJson query
-  JsonShow res `shouldEqual` JsonShow (encodeJson expected)
+  JsonTest res `shouldEqual` JsonTest (encodeJson expected)
 
 shouldResolveToWithVars :: forall a. EncodeJson a => { query :: String, vars :: Object.Object Json } -> a -> Aff Unit
 shouldResolveToWithVars { vars, query } expected = do
   res <- resolveAsJsonWithVars vars query
-  JsonShow res `shouldEqual` JsonShow (encodeJson expected)
-
-newtype JsonShow = JsonShow Json
-
-derive newtype instance Eq JsonShow
-
-instance Show JsonShow where
-  show (JsonShow j) = stringify j
+  JsonTest res `shouldEqual` JsonTest (encodeJson expected)
 
 resolveAsJson :: String -> Aff Json
 resolveAsJson = resolveAsJsonWithVars Object.empty
@@ -302,21 +292,21 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- evalGql mockRequest $ handleOperation simpleResolver op vars
+  eit <- handleOperation simpleResolver mockRequest op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver :: RootResolver Error GqlAff
+simpleResolver :: RootResolver
 simpleResolver =
   rootResolver
     { query:
-        { books: \(args :: { maxPrice :: Maybe Number }) -> io $ [ book1, book2 ]
+        { books: \(args :: { maxPrice :: Maybe Number }) -> gPure $ [ book1, book2 ]
             # filter (\(Book b) -> maybe true ((<=) b.price) args.maxPrice)
         , book: \(args :: { id :: Int }) ->
             find (\(Book b) -> b.id == args.id) [ book1, book2 ]
         }
     , mutation:
-        { action1: io "action1"
+        { action1: gPure "action1"
         }
     }
 
@@ -352,52 +342,37 @@ author = Author
   }
 
 newtype Book = Book
-  { name :: GqlIo Aff String
+  { name :: GqlM String
   , id :: Int
   , price :: Number
   , type :: Maybe BookType
   , packaging :: Maybe Packaging
-  , author :: Unit -> GqlIo Aff Author
+  , author :: Unit -> GqlM Author
   , created_at :: Maybe DateTime
   , custom_scalar :: CustomScalar
   }
 
 derive instance Generic Book _
 
-instance GqlRep Book GObject "Book"
-
-instance ToResolver err Book GqlAff where
-  toResolver a = toObjectResolver a
-
-instance GetGqlType Book where
-  getType a = getObjectType a
+instance Gql Book where
+  gql _ = object unit
 
 newtype Author = Author
   { name :: String
-  , books :: { maxPrice :: Number } -> GqlIo Aff (Array Book)
+  , books :: { maxPrice :: Number } -> GqlM (Array Book)
   }
 
 derive instance Generic Author _
 
-instance GqlRep Author GObject "Author"
-
-instance ToResolver err Author GqlAff where
-  toResolver a = toObjectResolver a
-
-instance GetGqlType Author where
-  getType a = getObjectType a
+instance Gql Author where
+  gql _ = object unit
 
 data BookType = Paperback | Hardback | Ebook
 
-instance GqlRep BookType GEnum "BookType"
-
 derive instance Generic BookType _
 
-instance ToResolver err BookType GqlAff where
-  toResolver a = toEnumResolver a
-
-instance GetGqlType BookType where
-  getType a = getEnumType a
+instance Gql BookType where
+  gql = enum "BookType"
 
 data Packaging
   = GiftWrapped
@@ -407,30 +382,19 @@ data Packaging
   | Boxed
       { note :: String
       }
+  | CustomPacking String
 
 derive instance Generic Packaging _
 
-instance GqlRep Packaging GUnion "Packaging"
-
-instance ToResolver err Packaging GqlAff where
-  toResolver a = toUnionResolver a
-
-instance GetGqlType Packaging where
-  getType a = getUnionType a
+instance Gql Packaging where
+  gql = union "Packaging"
 
 data CustomScalar = CustomScalar String Int
 
-instance Scalar CustomScalar "CustomScalar" where
-  encodeScalar (CustomScalar s i) = encodeJson { s, i }
-  decodeScalar json = do
-    rec :: { s :: String, i :: Int } <- decodeJson json
-    pure $ CustomScalar rec.s rec.i
-
-instance ToResolver err CustomScalar GqlAff where
-  toResolver a = toScalarResolver a
-
-instance GetGqlType CustomScalar where
-  getType a = getScalarType a
+instance Gql CustomScalar where
+  gql _ = scalar encode "CustomScalar"
+    where
+    encode (CustomScalar s i) = encodeJson { s, i }
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

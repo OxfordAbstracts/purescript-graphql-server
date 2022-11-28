@@ -1,12 +1,10 @@
-module GraphQL.Server.Schema.Introspection.Types.DirectiveLocation where
+module GraphQL.Server.Introspection.Types.DirectiveLocation where
 
 import Prelude
 
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import GraphQL.Server.GqlRep (class GqlRep, GEnum)
-import GraphQL.Resolver.ToResolver (class ToResolver, toEnumResolver)
 
 data IDirectiveLocation
   = QUERY
@@ -37,8 +35,3 @@ instance EncodeJson IDirectiveLocation where
   encodeJson = show >>> encodeJson
 
 derive instance Eq IDirectiveLocation
-
-instance GqlRep IDirectiveLocation GEnum "IDirectiveLocation"
-
-instance (Applicative m) => ToResolver err IDirectiveLocation m where
-  toResolver a = toEnumResolver a

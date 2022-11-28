@@ -5,7 +5,6 @@ import Prelude
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (filter)
 import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
 import Data.List (List(..), (:))
 import Data.List as List
@@ -13,16 +12,14 @@ import Data.Maybe (Maybe, maybe)
 import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
-import GraphQL.Resolver.GqlIo (GqlAff)
-import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.JsonResolver (resolveQueryString)
-import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, FieldMap, ToResolverProps, toObjectResolver, toResolver)
+import Foreign.Object as Object
+import GraphQL.Server.GqlM (GqlM, runGqlM)
+import GraphQL.Server.Resolver.GqlObj (GqlObj(..))
+import GraphQL.Server.Resolver.JsonResolver (resolveQueryString)
+import GraphQL.Server.Resolver.Result (Result(..))
+import GraphQL.Server.Gql (class Gql, toResolver)
 import GraphQL.Server.GqlError (GqlError)
-import GraphQL.Server.GqlRep (class GqlRep, GObject)
-import GraphQL.Server.Schema.Introspection.GetType (class GetIFields, class GetGqlType, getObjectType)
 import HTTPure (Request)
-import Heterogeneous.Folding (class HFoldlWithIndex)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Unsafe.Coerce (unsafeCoerce)
@@ -90,33 +87,21 @@ spec =
               ]
           )
 
-gqlObj :: forall a115. a115 -> TestGqlObj a115
-gqlObj = TestGqlObj
-
-newtype TestGqlObj a = TestGqlObj a
-
-derive instance Generic (TestGqlObj a) _
-
-instance GqlRep (TestGqlObj a) GObject "TestGqlObj"
-
-instance (Applicative m, HFoldlWithIndex (ToResolverProps err m) (FieldMap err m) { | a } (FieldMap err m)) => ToResolver err (TestGqlObj { | a }) m where
-  toResolver a = toObjectResolver a
-
-instance GetIFields { | a } => GetGqlType (TestGqlObj { | a }) where
-  getType a = getObjectType a
+gqlObj :: forall a115. a115 -> GqlObj "test_object" a115
+gqlObj = GqlObj
 
 resolverParent
-  :: TestGqlObj
-       { async :: { str :: String } -> GqlAff String
+  :: GqlObj "Parent"
+       { async :: { str :: String } -> GqlM String
        , double :: { a :: Int } -> Int
-       , noArgs :: GqlAff String
+       , noArgs :: GqlM String
        , shout :: { str :: String } -> String
-       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlAff (Array Int)
+       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlM (Array Int)
        , child1 :: ResolverChild1
        , children1 :: { ids :: Array Int } -> (Array ResolverChild1)
        }
 resolverParent =
-  ( TestGqlObj
+  ( GqlObj
       { double: \({ a }) -> a * 2
       , shout: \({ str }) -> toUpper str
       , async: \({ str }) -> pure $ toUpper str
@@ -129,9 +114,9 @@ resolverParent =
       }
   )
 
-type ResolverChild1 = TestGqlObj
+type ResolverChild1 = GqlObj "ResolverChild1"
   { id :: Int
-  , n :: GqlAff Number
+  , n :: GqlM Number
   , name :: String
   }
 
@@ -140,7 +125,7 @@ resolverChild1 = mkChild 1
 
 mkChild :: Int -> ResolverChild1
 mkChild = \id ->
-  TestGqlObj
+  GqlObj
     { id
     , n: pure $ toNumber id
     , name: "child " <> show id
@@ -149,14 +134,14 @@ mkChild = \id ->
 leaf ∷ ∀ (a ∷ Type) err. EncodeJson a ⇒ a → (Result err)
 leaf = ResultLeaf <<< encodeJson
 
-aff :: forall a. a -> GqlAff a
+aff :: forall a. a -> GqlM a
 aff = pure
 
-resolveTypedFiber :: forall a. ToResolver Error a GqlAff => a -> String -> GqlAff (Either GqlError (Result Error))
-resolveTypedFiber resolver query = resolveQueryString (toResolver resolver) query
+resolveTypedFiber :: forall a. Gql a => a -> String -> GqlM (Either GqlError (Result Error))
+resolveTypedFiber resolver query = resolveQueryString (toResolver resolver mockRequest) query
 
-resolveTyped :: forall a. ToResolver Error a GqlAff => a -> String -> Aff (Either GqlError (Result String))
-resolveTyped resolver query = evalGql mockRequest $ map (map message) <$> resolveTypedFiber resolver query
-  where
-  mockRequest :: Request
-  mockRequest = unsafeCoerce unit
+resolveTyped :: forall a. Gql a => a -> String -> Aff (Either GqlError (Result String))
+resolveTyped resolver query = runGqlM mockRequest Object.empty $ map (map message) <$> resolveTypedFiber resolver query
+
+mockRequest :: Request
+mockRequest = unsafeCoerce unit

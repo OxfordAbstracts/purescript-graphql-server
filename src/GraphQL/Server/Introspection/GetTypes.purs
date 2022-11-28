@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection.GetTypes where
+module GraphQL.Server.Introspection.GetTypes where
 
 import Prelude
 
@@ -6,7 +6,7 @@ import Data.List (List, foldl, (:))
 import Data.Maybe (Maybe(..))
 import Data.Typelevel.Num (toInt')
 import GraphQL.Server.MaxDepth (maxDepth)
-import GraphQL.Server.Schema.Introspection.Types (IField(..), IInputValue(..), IType(..))
+import GraphQL.Server.Introspection.Types (IField(..), IInputValue(..), IType(..))
 
 getDescendantITypes :: IType -> List IType
 getDescendantITypes = go depthLimit mempty

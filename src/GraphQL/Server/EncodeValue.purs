@@ -1,4 +1,4 @@
-module GraphQL.Resolver.EncodeValue where
+module GraphQL.Server.EncodeValue where
 
 import Prelude
 

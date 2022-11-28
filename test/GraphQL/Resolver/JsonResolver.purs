@@ -11,18 +11,16 @@ import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple (Tuple(..))
-import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Exception (Error, message)
-import GraphQL.Resolver.GqlIo (GqlIo(..), GqlEffect)
-import GraphQL.Resolver.EvalGql (evalGql)
-import GraphQL.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
-import GraphQL.Resolver.Result (Result(..))
-import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toResolver)
+import Effect.Exception (message)
+import Foreign.Object as Object
+import GraphQL.Server.GqlM (GqlM(..), gPure, runGqlM)
+import GraphQL.Server.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
+import GraphQL.Server.Resolver.Result (Result(..))
+import GraphQL.Server.Gql (class Gql, object, toResolver)
 import GraphQL.Server.GqlError (GqlError, FailedToResolve(..))
-import GraphQL.Server.GqlRep (class GqlRep, GObject)
 import HTTPure (Request)
-import Test.GraphQL.Server.Resolver.ToResolver (gqlObj, leaf)
+import Test.GraphQL.Server.Resolver.ToResolver (leaf)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Unsafe.Coerce (unsafeCoerce)
@@ -36,7 +34,6 @@ spec =
 
           query = "{ top_level_1 top_level_2 top_level_3 }"
 
-          -- expected :: Result Error
           expected = ResultObject
             $ Tuple "top_level_1" (ResultLeaf $ encodeJson "top_val_1")
                 : Tuple "top_level_2" (ResultLeaf $ encodeJson [ 1 ])
@@ -49,7 +46,6 @@ spec =
         let
           query = "{ top_level_nested_1 {c1 c2} }"
 
-          -- expected :: Result Error
           expected = ResultObject
             $ pure
             $ Tuple "top_level_nested_1"
@@ -62,7 +58,7 @@ spec =
         actual `shouldEqual` Right expected
 
       it "should resolve a recursive resolver constucted using `toResolver` " do
-        res <- evalGql mockRequest $ resolveTestQuery booksResolver
+        res <- resolveTestQuery booksResolver
           """{ books (maxPrice: 7) { 
             title 
             author { 
@@ -112,7 +108,7 @@ spec =
 
           )
 
-resolver :: forall err m. Applicative m => Resolver err m
+resolver :: Resolver
 resolver = Fields
   { typename: "name"
   , fields:
@@ -142,29 +138,30 @@ resolver = Fields
         ]
   }
 
-resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type) err. Applicative m ⇒ EncodeJson a ⇒ a → args → Resolver err m
+resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). EncodeJson a ⇒ a → args → Resolver
 resolveNode a _ = Node $ pure $ encodeJson a
 
 mkFieldMap
-  :: forall err f m
+  :: forall f
    . Foldable f
   => Functor f
-  => f (Field err m)
-  -> Map.Map String (Field err m)
+  => f (Field)
+  -> Map.Map String (Field)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: forall err. Resolver err (GqlIo Effect)
+booksResolver :: Resolver
 booksResolver =
-  toResolver $ gqlObj
+  flip toResolver mockRequest $ TopLevel
     { books
     }
   where
+  books :: _ -> GqlM _
   books = \(opts :: { maxPrice :: Maybe Number }) -> do
-    io $
+    gPure $
       filter (\(Book b) -> maybe true (b.price <= _) opts.maxPrice)
         books_
 
-  author :: (Author _)
+  author :: (Author)
   author = Author
     { name: "Iain M. Banks"
     , bio: io "This is some stuff about the author"
@@ -175,46 +172,51 @@ booksResolver =
     [ Book
         { title: "State of the Art"
         , price: 9.99
-        , author: \_ -> io author
+        , author: \_ -> gPure author
         }
     , Book
         { title: "Consider Phlebas"
         , price: 5.99
-        , author: \_ -> io author
+        , author: \_ -> gPure author
         }
     ]
 
-newtype Book m = Book
+newtype TopLevel = TopLevel
+  { books :: { maxPrice :: Maybe Number } -> GqlM (Array Book)
+  }
+
+derive instance Generic TopLevel _
+
+instance Gql TopLevel where
+  gql _ = object unit
+
+newtype Book = Book
   { title :: String
   , price :: Number
-  , author :: Unit -> m (Author m)
+  , author :: Unit -> GqlM Author
   }
 
-derive instance Generic (Book m) _
+derive instance Generic Book _
 
-instance GqlRep (Book a) GObject "Book"
+instance Gql Book where
+  gql _ = object unit
 
-instance Applicative m => ToResolver err (Book (GqlIo m)) (GqlIo m) where
-  toResolver a = toObjectResolver a
-
-newtype Author m = Author
+newtype Author = Author
   { name :: String
-  , bio :: m String
-  , books :: Unit -> Array (Book m)
+  , bio :: GqlM String
+  , books :: Unit -> Array Book
   }
 
-derive instance Generic (Author m) _
+derive instance Generic (Author) _
 
-instance GqlRep (Author a) GObject "Author"
+instance Gql Author where
+  gql _ = object unit
 
-instance Applicative m => ToResolver err (Author (GqlIo m)) (GqlIo m) where
-  toResolver a = toObjectResolver a
+io :: forall a. a -> GqlM a
+io = GqlM <<< pure
 
-io :: forall a. a -> GqlEffect a
-io = GqlIo <<< pure
-
-resolveTestQuery :: Resolver Error GqlEffect -> String -> Aff (Either GqlError (Result String))
-resolveTestQuery resolver' query = evalGql mockRequest $ map (map message) <$> resolveQueryString resolver' query
+resolveTestQuery :: Resolver -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery resolver' query = runGqlM mockRequest Object.empty $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

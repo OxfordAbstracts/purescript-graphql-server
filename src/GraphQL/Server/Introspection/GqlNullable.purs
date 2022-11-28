@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection.GqlNullable where
+module GraphQL.Server.Introspection.GqlNullable where
 
 import Data.Maybe (Maybe)
 import Type.Proxy (Proxy)

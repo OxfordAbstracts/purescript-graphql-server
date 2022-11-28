@@ -1,4 +1,4 @@
-module GraphQL.Server.Schema.Introspection.Types where
+module GraphQL.Server.Introspection.Types where
 
 import Prelude
 
@@ -10,9 +10,7 @@ import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import GraphQL.Server.GqlRep (class GqlRep, GEnum, GObject)
-import GraphQL.Resolver.ToResolver (class ToResolver, toObjectResolver, toEnumResolver)
-import GraphQL.Server.Schema.Introspection.Types.DirectiveLocation (IDirectiveLocation)
+import GraphQL.Server.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
   { types :: List IType
@@ -24,10 +22,7 @@ newtype ISchema = ISchema
 
 derive instance Generic ISchema _
 
-instance GqlRep ISchema GObject "ISchema"
-
-instance Applicative m => ToResolver err ISchema m where
-  toResolver = toObjectResolver
+derive instance Newtype ISchema _
 
 newtype IType = IType IType_T
 
@@ -60,11 +55,6 @@ derive instance Generic IType _
 
 derive instance Newtype IType _
 
-instance GqlRep IType GObject "IType"
-
-instance Applicative m => ToResolver err IType m where
-  toResolver a = toObjectResolver a
-
 data ITypeKind
   = SCALAR
   | OBJECT
@@ -91,11 +81,6 @@ instance Enum ITypeKind where
   succ = genericSucc
   pred = genericPred
 
-instance GqlRep ITypeKind GEnum "ITypeKind"
-
-instance (Applicative m) => ToResolver err ITypeKind m where
-  toResolver a = toEnumResolver a
-
 newtype IField = IField IField_T
 
 type IField_T =
@@ -119,10 +104,6 @@ defaultIField =
 
 derive instance Generic IField _
 derive instance Newtype IField _
-instance GqlRep IField GObject "IField"
-
-instance (Applicative m) => ToResolver err IField m where
-  toResolver a = toObjectResolver a
 
 newtype IInputValue = IInputValue
   { name :: String
@@ -135,11 +116,6 @@ derive instance Generic IInputValue _
 
 derive instance Newtype IInputValue _
 
-instance GqlRep IInputValue GObject "IInputValue"
-
-instance (Applicative m) => ToResolver err IInputValue m where
-  toResolver a = toObjectResolver a
-
 newtype IEnumValue = IEnumValue
   { name :: String
   , description :: Maybe String
@@ -148,11 +124,6 @@ newtype IEnumValue = IEnumValue
   }
 
 derive instance Generic IEnumValue _
-
-instance GqlRep IEnumValue GObject "IEnumValue"
-
-instance Applicative m => ToResolver err IEnumValue m where
-  toResolver a = toObjectResolver a
 
 instance Show IEnumValue where
   show = genericShow
@@ -166,7 +137,3 @@ newtype IDirective = IDirective
 
 derive instance Generic IDirective _
 
-instance GqlRep IDirective GObject "IDirective"
-
-instance Applicative m => ToResolver err IDirective m where
-  toResolver a = toObjectResolver a

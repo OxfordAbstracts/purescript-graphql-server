@@ -1,9 +1,8 @@
-module GraphQL.Resolver.HandleOperation where
+module GraphQL.Server.HandleOperation where
 
 import Prelude
 
-import Control.Monad.Error.Class (class MonadError, throwError)
-import Control.Parallel (class Parallel)
+import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
 import Data.Foldable (foldM)
@@ -13,49 +12,58 @@ import Data.List.NonEmpty as NonEmpty
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
+import Effect.Aff (Aff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
-import GraphQL.Resolver.EncodeValue (encodeValue)
-import GraphQL.Resolver.Error (class CustomResolverError)
-import GraphQL.Resolver.JsonResolver (resolve)
-import GraphQL.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
+import GraphQL.Server.EncodeValue (encodeValue)
+import GraphQL.Server.GqlM (runGqlM)
+import GraphQL.Server.Resolver.JsonResolver (resolve)
+import GraphQL.Server.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
 import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
-import GraphQL.Server.Schema.Introspection (Introspection(..))
-import GraphQL.Server.Schema.Introspection.Types (ITypeKind(..))
+import GraphQL.Server.Introspection (Introspection(..))
+import GraphQL.Server.Introspection.Types (ITypeKind(..))
+import HTTPure (Request)
 
 handleOperation
-  :: forall f m err
-   . CustomResolverError err
-  => Parallel f m
-  => MonadError err m
-  => RootResolver err m
+  :: RootResolver
+  -> Request
   -> AST.OperationDefinition
   -> Object Json
-  -> m
+  -> Aff
        ( Either GqlError
            { data :: Json
            , errors :: Maybe (NonEmptyList Json)
            }
        )
-handleOperation { mutation, query, introspection: Introspection introspection } opDef rawVars = do
-  case opDef of
-    AST.OperationDefinition_SelectionSet selectionSet ->
-      resolveToJson Object.empty query selectionSet
-    AST.OperationDefinition_OperationType
-      { operationType
-      , variableDefinitions
-      , selectionSet
-      } ->
-      case coerceVars variableDefinitions of
-        Left err -> pure $ Left $ VariableInputError err
-        Right vars -> do
-          case operationType of
-            Query -> resolveToJson vars query selectionSet
-            Mutation -> resolveToJson vars mutation selectionSet
-            Subscription -> pure $ Left $ SubscriptionsNotSupported
+handleOperation root@{ introspection: Introspection introspection } request opDef rawVars = do
+  let
+    vars' = case opDef of
+      AST.OperationDefinition_SelectionSet _ ->
+        Right Object.empty
+      AST.OperationDefinition_OperationType
+        { variableDefinitions
+        } -> coerceVars variableDefinitions
+
+  case vars' of
+    Left err -> pure $ Left $ VariableInputError err
+    Right vars ->
+      runGqlM request vars do
+        case opDef of
+          AST.OperationDefinition_SelectionSet selectionSet ->
+            resolveToJson query selectionSet
+          AST.OperationDefinition_OperationType
+            { operationType
+            , selectionSet
+            } ->
+            case operationType of
+              Query -> resolveToJson query selectionSet
+              Mutation -> resolveToJson mutation selectionSet
+              Subscription -> pure $ Left $ SubscriptionsNotSupported
   where
-  resolveToJson vars r selectionSet = getJson <$> resolve r vars (Just selectionSet)
+  mutation = root.mutation request
+  query = root.query request
+  resolveToJson r selectionSet = getJson <$> resolve r (Just selectionSet)
 
   getJson result = pure
     { data: resultToData result
