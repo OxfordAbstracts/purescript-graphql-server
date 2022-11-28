@@ -23,11 +23,13 @@ import HTTPure (Request, toString)
 import Parsing (runParser)
 
 handleRequest
-  :: (Request -> Aff Boolean)
-  -> RootResolver
+  :: forall env
+   . (Request -> Aff Boolean)
+  -> (Request -> Aff env)
+  -> RootResolver env
   -> Request
   -> GqlResM Json
-handleRequest isAuthorized resolvers req = do
+handleRequest isAuthorized mkEnv resolvers req = do
   authorized <- liftAff $ isAuthorized req
   when (not authorized) $ throwError NotAuthorized
   bodyStr <- liftAff $ toString req.body
@@ -36,7 +38,7 @@ handleRequest isAuthorized resolvers req = do
   either throwError pure =<<
     ( liftAff
         $ map (map encodeJson)
-        $ handleOperation resolvers req op (fromMaybe Object.empty variables)
+        $ handleOperation mkEnv resolvers req op (fromMaybe Object.empty variables)
     )
 
 parseGqlRequest

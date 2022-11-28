@@ -10,12 +10,12 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe, fromMaybe, maybe)
 import Data.Newtype (class Newtype)
 import Effect (Effect)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, finally)
 import Effect.Class (class MonadEffect, liftEffect)
-import GraphQL.Server.GqlM (GqlM, gPure)
-import GraphQL.Server.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Server (GqlServerM, defaultOpts, liftServer, start)
 import GraphQL.Server.Gql (class Gql, object)
+import GraphQL.Server.GqlM (GqlM, gPure)
+import GraphQL.Server.Resolver.GqlObj (GqlObj(..))
 import Test.GraphQL.E2E.Util (gqlReq, gqlReqVars, noErrors, shouldHaveData)
 import Test.Spec (Spec, before, describe, it)
 
@@ -23,15 +23,15 @@ spec :: Spec Unit
 spec =
   before
     (liftServer gqlServer) $ describe "Graphql server e2e tests" do
-    it "should return top level fields" \endServer -> do
+    it "should return top level fields" $ e2e do
       res <- gqlReq "query t1 { top_level_pure_ints top_level_string }"
       noErrors res
       res `shouldHaveData`
         { top_level_pure_ints: [ 100 ]
         , top_level_string: "hello world"
         }
-      done endServer
-    it "should return user fields" \endServer -> do
+
+    it "should return user fields" $ e2e do
       res <- gqlReq "query t1 { users { __typename id name } }"
       noErrors res
       res `shouldHaveData`
@@ -50,8 +50,8 @@ spec =
               }
             ]
         }
-      done endServer
-    it "should return user fields with arguments" \endServer -> do
+
+    it "should return user fields with arguments" $ e2e do
       res <- gqlReq "query t1 { users(created_before: \"2020-01-01\") { __typename id name } }"
       noErrors res
       res `shouldHaveData`
@@ -62,8 +62,8 @@ spec =
               }
             ]
         }
-      done endServer
-    it "should return user fields with arguments as variables" \endServer -> do
+
+    it "should return user fields with arguments as variables" $ e2e do
       res <- gqlReqVars "query t1($created_before: DateTime) { users(created_before: $created_before) { __typename id name } }"
         { created_before: "2020-01-01"
         }
@@ -77,8 +77,7 @@ spec =
               }
             ]
         }
-      done endServer
-    it "should return user fields with recursive fields" \endServer -> do
+    it "should return user fields with recursive fields" $ e2e do
       res <- gqlReq
         """query t1 { 
         users(created_before: "2020-01-01") 
@@ -106,14 +105,12 @@ spec =
               }
             ]
         }
-      done endServer
 
-done
-  :: forall m
-   . MonadEffect m
-  => (Effect Unit -> Effect Unit)
-  -> m Unit
-done endServer = void $ liftEffect $ endServer (pure unit)
+e2e :: forall a. Aff a -> (Effect Unit -> Effect Unit) -> Aff a
+e2e aff endServer = finally done do
+  aff
+  where
+  done = void $ liftEffect $ endServer (pure unit)
 
 gqlServer ∷ GqlServerM Aff
 gqlServer = start
@@ -130,7 +127,7 @@ users
   :: { created_before :: Maybe DateTime
      , created_after :: Maybe DateTime
      }
-  -> GqlM (Array User)
+  -> GqlM Unit (Array User)
 users args =
   pure
     $ filter (\(User u) -> maybe true (u.created_at > _) args.created_after)
@@ -174,12 +171,12 @@ newtype User = User
   { id :: Int
   , name :: String
   , created_at :: DateTime
-  , orders :: { id :: Maybe Int } -> GqlM (Array Order)
+  , orders :: { id :: Maybe Int } -> GqlM Unit (Array Order)
   }
 
 derive instance Generic User _
 
-instance Gql User where
+instance Gql Unit User where
   gql _ = object unit
 
 newtype Order = Order
@@ -192,7 +189,7 @@ derive instance Generic Order _
 
 derive instance Newtype Order _
 
-instance Gql Order where
+instance Gql Unit Order where
   gql _ = object unit
 
 newtype Widget = Widget
@@ -206,7 +203,7 @@ derive instance Generic Widget _
 
 derive instance Newtype Widget _
 
-instance Gql Widget where
+instance Gql Unit Widget where
   gql _ = object unit
 
 type TestObject = GqlObj "TestObject" { a :: String }

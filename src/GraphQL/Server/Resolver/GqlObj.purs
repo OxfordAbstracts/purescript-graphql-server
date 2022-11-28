@@ -15,8 +15,8 @@ derive instance Generic (GqlObj name a) _
 derive instance Newtype (GqlObj name a) _
 
 instance
-  ( GqlObject (GqlObj name { | a })
+  ( GqlObject env (GqlObj name { | a })
   , IsSymbol name
   ) =>
-  Gql (GqlObj name { | a }) where
+  Gql env (GqlObj name { | a }) where
   gql = objectWithName $ reflectSymbol (Proxy :: Proxy name)

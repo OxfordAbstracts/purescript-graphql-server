@@ -29,30 +29,31 @@ import Safe.Coerce (coerce)
 -- | Takes a ServerOptions with config arguments and a resolver root. 
 -- | Returns an `GqlServerM` containing the server's effects.
 start
-  :: forall query mutation withIntrospection
+  :: forall query mutation withIntrospection env
    . Union query (IntrospectionRow ()) (IntrospectionRow query)
   => Nub (IntrospectionRow query) withIntrospection
-  => Gql ((QueryRoot { | query }))
-  => Gql ((QueryRoot { | withIntrospection }))
-  => Gql (MutationRoot mutation)
-  => GetSchema (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
-  => ServerOptions
+  => Gql env ((QueryRoot { | query }))
+  => Gql env ((QueryRoot { | withIntrospection }))
+  => Gql env (MutationRoot mutation)
+  => GetSchema env (GqlRoot (QueryRoot { | query }) (MutationRoot mutation))
+  => ServerOptions env
   -> { query :: { | query }, mutation :: mutation }
   -> GqlServerM Aff
 start
   { isAuthorized
+  , mkEnv
   , onStart
   , port
   }
   root =
   GqlServerM $ serve port handler onStart
   where
-  handler = handleRequest isAuthorized resolvers >>> toResponse
+  handler = handleRequest isAuthorized mkEnv resolvers >>> toResponse
 
-  resolvers :: RootResolver
+  resolvers :: RootResolver env
   resolvers = rootResolver root
 
-type ServerOptions =
+type ServerOptions env =
   -- | Run an effect on server start. 
   { onStart :: Effect Unit
   -- | Which port to listen on. 
@@ -61,14 +62,16 @@ type ServerOptions =
   , isAuthorized :: Request -> Aff Boolean
   -- | Whether a request is allowed to introspect the schema. 
   , allowIntrospection :: Request -> Aff Boolean
+  , mkEnv :: Request -> Aff env
   }
 
-defaultOpts :: ServerOptions
+defaultOpts :: ServerOptions Unit
 defaultOpts =
   { onStart: pure unit
   , port: 9000
   , isAuthorized: const $ pure true
   , allowIntrospection: const $ pure true
+  , mkEnv: const $ pure unit
   }
 
 -- | A newtype around HTTPure's `ServerM` with a phantom type to help with type inference

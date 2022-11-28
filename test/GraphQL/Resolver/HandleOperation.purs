@@ -292,11 +292,11 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- handleOperation simpleResolver mockRequest op vars
+  eit <- handleOperation (\_ -> pure unit) simpleResolver mockRequest op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver :: RootResolver
+simpleResolver :: RootResolver Unit
 simpleResolver =
   rootResolver
     { query:
@@ -342,36 +342,36 @@ author = Author
   }
 
 newtype Book = Book
-  { name :: GqlM String
+  { name :: GqlM Unit String
   , id :: Int
   , price :: Number
   , type :: Maybe BookType
   , packaging :: Maybe Packaging
-  , author :: Unit -> GqlM Author
+  , author :: Unit -> GqlM Unit Author
   , created_at :: Maybe DateTime
   , custom_scalar :: CustomScalar
   }
 
 derive instance Generic Book _
 
-instance Gql Book where
+instance Gql Unit Book where
   gql _ = object unit
 
 newtype Author = Author
   { name :: String
-  , books :: { maxPrice :: Number } -> GqlM (Array Book)
+  , books :: { maxPrice :: Number } -> GqlM Unit (Array Book)
   }
 
 derive instance Generic Author _
 
-instance Gql Author where
+instance Gql Unit Author where
   gql _ = object unit
 
 data BookType = Paperback | Hardback | Ebook
 
 derive instance Generic BookType _
 
-instance Gql BookType where
+instance Gql Unit BookType where
   gql = enum "BookType"
 
 data Packaging
@@ -386,12 +386,12 @@ data Packaging
 
 derive instance Generic Packaging _
 
-instance Gql Packaging where
+instance Gql Unit Packaging where
   gql = union "Packaging"
 
 data CustomScalar = CustomScalar String Int
 
-instance Gql CustomScalar where
+instance Gql Unit CustomScalar where
   gql _ = scalar encode "CustomScalar"
     where
     encode (CustomScalar s i) = encodeJson { s, i }

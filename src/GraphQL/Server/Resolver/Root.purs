@@ -11,9 +11,9 @@ derive instance Newtype (GqlRoot name a) _
 derive instance Generic (GqlRoot q a) _
 
 instance
-  ( GqlObject (GqlRoot q m)
+  ( GqlObject env (GqlRoot q m)
   ) =>
-  Gql (GqlRoot q m) where
+  Gql env (GqlRoot q m) where
   gql = object
 
 newtype QueryRoot a = QueryRoot a
@@ -23,9 +23,9 @@ derive instance Newtype (QueryRoot a) _
 derive instance Generic (QueryRoot a) _
 
 instance
-  ( GqlObject (QueryRoot { | a })
+  ( GqlObject env (QueryRoot { | a })
   ) =>
-  Gql (QueryRoot { | a }) where
+  Gql env (QueryRoot { | a }) where
   gql = object
 
 newtype MutationRoot a = MutationRoot a
@@ -35,8 +35,8 @@ derive instance Newtype (MutationRoot a) _
 derive instance Generic (MutationRoot a) _
 
 instance
-  ( GqlObject (MutationRoot { | a })
+  ( GqlObject env (MutationRoot { | a })
   ) =>
-  Gql (MutationRoot { | a }) where
+  Gql env (MutationRoot { | a }) where
   gql = object
 

@@ -25,8 +25,10 @@ import GraphQL.Server.Introspection (Introspection(..))
 import GraphQL.Server.Introspection.Types (ITypeKind(..))
 import HTTPure (Request)
 
-handleOperation
-  :: RootResolver
+handleOperation 
+  :: forall env. 
+  (Request -> Aff env)
+  -> RootResolver env
   -> Request
   -> AST.OperationDefinition
   -> Object Json
@@ -36,7 +38,7 @@ handleOperation
            , errors :: Maybe (NonEmptyList Json)
            }
        )
-handleOperation root@{ introspection: Introspection introspection } request opDef rawVars = do
+handleOperation mkEnv root@{ introspection: Introspection introspection } request opDef rawVars = do
   let
     vars' = case opDef of
       AST.OperationDefinition_SelectionSet _ ->
@@ -48,7 +50,7 @@ handleOperation root@{ introspection: Introspection introspection } request opDe
   case vars' of
     Left err -> pure $ Left $ VariableInputError err
     Right vars ->
-      runGqlM request vars do
+      runGqlM mkEnv request vars do
         case opDef of
           AST.OperationDefinition_SelectionSet selectionSet ->
             resolveToJson query selectionSet

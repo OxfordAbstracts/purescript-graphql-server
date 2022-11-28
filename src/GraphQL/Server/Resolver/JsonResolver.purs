@@ -32,34 +32,35 @@ import GraphQL.Server.GqlError (GqlError(..), FailedToResolve(..))
 import Parsing (runParser)
 import Safe.Coerce (coerce)
 
-type TopLevelJsonResolver =
-  { query :: Resolver
-  , mutation :: Maybe (Resolver)
-  , subscription :: Maybe (Resolver)
+type TopLevelJsonResolver env =
+  { query :: Resolver env
+  , mutation :: Maybe (Resolver env)
+  , subscription :: Maybe (Resolver env)
   }
 
-data Resolver
-  = Node (GqlM Json)
-  | ListResolver (List (Resolver))
-  | Fields Fields
-  | AsyncResolver (GqlM (Resolver))
+data Resolver env
+  = Node (GqlM env Json)
+  | ListResolver (List (Resolver env))
+  | Fields (Fields env)
+  | AsyncResolver (GqlM env (Resolver env))
   | Null
   | FailedResolver (FailedToResolve Error)
 
-type Fields =
-  { fields :: Map String (Field)
+type Fields env =
+  { fields :: Map String (Field env)
   , typename :: String
   }
 
-type Field =
+type Field env =
   { name :: String
-  , resolver :: { args :: Json } -> Resolver
+  , resolver :: { args :: Json } -> Resolver env
   }
 
 resolveQueryString
-  :: Resolver
+  :: forall env
+   . Resolver env
   -> String
-  -> GqlM (Either GqlError (Result Error))
+  -> GqlM env (Either GqlError (Result Error))
 resolveQueryString resolver query = do
   let
     queryParseResult = runParser query selectionSet
@@ -69,9 +70,10 @@ resolveQueryString resolver query = do
       Right <$> resolve resolver (Just queryAST)
 
 resolve
-  :: Resolver
+  :: forall env
+   . Resolver env
   -> (Maybe AST.SelectionSet)
-  -> GqlM (Result Error)
+  -> GqlM env (Result Error)
 resolve resolver = case resolver, _ of
   AsyncResolver resolverM, a -> catchError resolveAsync handleError
     where
@@ -129,7 +131,7 @@ resolve resolver = case resolver, _ of
 
   err = pure <<< ResultError
 
-gqlTraverseList :: Maybe SelectionSet -> List Resolver -> GqlM (List (Result Error))
+gqlTraverseList :: forall env. Maybe SelectionSet -> List (Resolver env) -> GqlM env (List (Result Error))
 gqlTraverseList selectionSet = parTraverseWithIndex (map (flip catchError handleError) <<< go)
   where
 

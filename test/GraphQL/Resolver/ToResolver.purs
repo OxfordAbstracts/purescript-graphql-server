@@ -92,11 +92,11 @@ gqlObj = GqlObj
 
 resolverParent
   :: GqlObj "Parent"
-       { async :: { str :: String } -> GqlM String
+       { async :: { str :: String } -> GqlM Unit String
        , double :: { a :: Int } -> Int
-       , noArgs :: GqlM String
+       , noArgs :: GqlM Unit String
        , shout :: { str :: String } -> String
-       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlM (Array Int)
+       , ints :: { min :: Maybe Int, max :: Maybe Int } -> GqlM Unit (Array Int)
        , child1 :: ResolverChild1
        , children1 :: { ids :: Array Int } -> (Array ResolverChild1)
        }
@@ -116,7 +116,7 @@ resolverParent =
 
 type ResolverChild1 = GqlObj "ResolverChild1"
   { id :: Int
-  , n :: GqlM Number
+  , n :: GqlM Unit Number
   , name :: String
   }
 
@@ -134,14 +134,14 @@ mkChild = \id ->
 leaf ∷ ∀ (a ∷ Type) err. EncodeJson a ⇒ a → (Result err)
 leaf = ResultLeaf <<< encodeJson
 
-aff :: forall a. a -> GqlM a
+aff :: forall a. a -> GqlM Unit a
 aff = pure
 
-resolveTypedFiber :: forall a. Gql a => a -> String -> GqlM (Either GqlError (Result Error))
+resolveTypedFiber :: forall a. Gql Unit a => a -> String -> GqlM Unit (Either GqlError (Result Error))
 resolveTypedFiber resolver query = resolveQueryString (toResolver resolver mockRequest) query
 
-resolveTyped :: forall a. Gql a => a -> String -> Aff (Either GqlError (Result String))
-resolveTyped resolver query = runGqlM mockRequest Object.empty $ map (map message) <$> resolveTypedFiber resolver query
+resolveTyped :: forall a. Gql Unit a => a -> String -> Aff (Either GqlError (Result String))
+resolveTyped resolver query = runGqlM (const $ pure unit) mockRequest Object.empty $ map (map message) <$> resolveTypedFiber resolver query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit

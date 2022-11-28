@@ -108,7 +108,7 @@ spec =
 
           )
 
-resolver :: Resolver
+resolver :: Resolver Unit
 resolver = Fields
   { typename: "name"
   , fields:
@@ -138,24 +138,24 @@ resolver = Fields
         ]
   }
 
-resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). EncodeJson a ⇒ a → args → Resolver
+resolveNode ∷ ∀ (args ∷ Type) (m ∷ Type -> Type) (a ∷ Type). EncodeJson a ⇒ a → args → Resolver Unit
 resolveNode a _ = Node $ pure $ encodeJson a
 
 mkFieldMap
   :: forall f
    . Foldable f
   => Functor f
-  => f (Field)
-  -> Map.Map String (Field)
+  => f (Field Unit)
+  -> Map.Map String (Field Unit)
 mkFieldMap = Map.fromFoldable <<< map (\f -> Tuple f.name f)
 
-booksResolver :: Resolver
+booksResolver :: Resolver Unit
 booksResolver =
   flip toResolver mockRequest $ TopLevel
     { books
     }
   where
-  books :: _ -> GqlM _
+  books :: _ -> GqlM Unit _
   books = \(opts :: { maxPrice :: Maybe Number }) -> do
     gPure $
       filter (\(Book b) -> maybe true (b.price <= _) opts.maxPrice)
@@ -182,41 +182,41 @@ booksResolver =
     ]
 
 newtype TopLevel = TopLevel
-  { books :: { maxPrice :: Maybe Number } -> GqlM (Array Book)
+  { books :: { maxPrice :: Maybe Number } -> GqlM Unit (Array Book)
   }
 
 derive instance Generic TopLevel _
 
-instance Gql TopLevel where
+instance Gql Unit TopLevel where
   gql _ = object unit
 
 newtype Book = Book
   { title :: String
   , price :: Number
-  , author :: Unit -> GqlM Author
+  , author :: Unit -> GqlM Unit Author
   }
 
 derive instance Generic Book _
 
-instance Gql Book where
+instance Gql Unit Book where
   gql _ = object unit
 
 newtype Author = Author
   { name :: String
-  , bio :: GqlM String
+  , bio :: GqlM Unit String
   , books :: Unit -> Array Book
   }
 
 derive instance Generic (Author) _
 
-instance Gql Author where
+instance Gql Unit Author where
   gql _ = object unit
 
-io :: forall a. a -> GqlM a
+io :: forall a. a -> GqlM Unit a
 io = GqlM <<< pure
 
-resolveTestQuery :: Resolver -> String -> Aff (Either GqlError (Result String))
-resolveTestQuery resolver' query = runGqlM mockRequest Object.empty $ map (map message) <$> resolveQueryString resolver' query
+resolveTestQuery :: Resolver Unit -> String -> Aff (Either GqlError (Result String))
+resolveTestQuery resolver' query = runGqlM (\_ -> pure unit) mockRequest Object.empty $ map (map message) <$> resolveQueryString resolver' query
 
 mockRequest :: Request
 mockRequest = unsafeCoerce unit
