@@ -13,7 +13,7 @@ import Data.String (toUpper)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff, Error, message)
 import Foreign.Object as Object
-import GraphQL.Server.Resolver.GqlM (GqlM, runGqlM)
+import GraphQL.Server.GqlM (GqlM, runGqlM)
 import GraphQL.Server.Resolver.GqlObj (GqlObj(..))
 import GraphQL.Server.Resolver.JsonResolver (resolveQueryString)
 import GraphQL.Server.Resolver.Result (Result(..))

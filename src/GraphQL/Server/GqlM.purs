@@ -1,4 +1,4 @@
-module GraphQL.Server.Resolver.GqlM where
+module GraphQL.Server.GqlM where
 
 import Prelude
 

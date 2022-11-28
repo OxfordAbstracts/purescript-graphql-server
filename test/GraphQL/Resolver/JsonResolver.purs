@@ -14,7 +14,7 @@ import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
 import Effect.Exception (message)
 import Foreign.Object as Object
-import GraphQL.Server.Resolver.GqlM (GqlM(..), gPure, runGqlM)
+import GraphQL.Server.GqlM (GqlM(..), gPure, runGqlM)
 import GraphQL.Server.Resolver.JsonResolver (Field, Resolver(..), resolveQueryString)
 import GraphQL.Server.Resolver.Result (Result(..))
 import GraphQL.Server.Gql (class Gql, object, toResolver)
