@@ -16,10 +16,12 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
+import GraphQL.Server.CoerceVars (coerceVars)
 import GraphQL.Server.GqlError (GqlError(..))
 import GraphQL.Server.GqlM (GqlM, runGqlM)
 import GraphQL.Server.GqlResM (GqlResM)
 import GraphQL.Server.HandleOperation (handleOperation)
+import GraphQL.Server.Introspection (Introspection(..))
 import HTTPure (Request, toString)
 import Parsing (runParser)
 
@@ -36,15 +38,31 @@ handleRequest isAuthorized mkEnv resolvers req = do
   bodyStr <- liftAff $ toString req.body
   { operationName, operation, variables } <- parseGqlRequest bodyStr
   op <- parseOperation operationName operation
+  let
+    varDefs = case op of
+      AST.OperationDefinition_SelectionSet _ ->
+        Nothing
+      AST.OperationDefinition_OperationType
+        { variableDefinitions
+        } -> variableDefinitions
+
+    rawVars = fromMaybe Object.empty variables
+
+  { introspection: Introspection introspection } <- toGqlM rawVars resolvers
+
+  coercedVars <- case coerceVars introspection varDefs rawVars of
+    Left err -> throwError $ VariableInputError err
+    Right vars -> pure vars
+
   either throwError pure =<<
-    ( liftAff
-        $ runGqlM mkEnv req (fromMaybe Object.empty variables)
+    ( toGqlM coercedVars
         $ map encodeJson
-        <$> handleOperation resolvers op (fromMaybe Object.empty variables)
+            <$> handleOperation resolvers op
     )
 
-  -- where 
-  -- vars = (fromMaybe Object.empty variables)
+  where
+  toGqlM :: forall a. Object Json -> GqlM env a -> GqlResM a
+  toGqlM vars' a = liftAff $ runGqlM mkEnv req vars' a
 
 parseGqlRequest
   :: forall m

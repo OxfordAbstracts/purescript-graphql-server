@@ -5,10 +5,8 @@ module GraphQL.Server
 
 import Prelude
 
-import Data.Newtype (class Newtype)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Class (class MonadEffect, liftEffect)
 import GraphQL.Resolver (RootResolver, rootResolver)
 import GraphQL.Server.Gql (class Gql)
 import GraphQL.Server.GqlM (GqlM)
@@ -19,8 +17,6 @@ import GraphQL.Server.Resolver.Root (GqlRoot, MutationRoot, QueryRoot)
 import GraphQL.Server.Schema (class GetSchema)
 import HTTPure (ServerM, Request, serve)
 import Prim.Row (class Nub, class Union)
-import Safe.Coerce (coerce)
-import Unsafe.Coerce (unsafeCoerce)
 
 -- | Create and start a server. This is the main entry point for graphql-server. 
 -- | Takes a ServerOptions with config arguments and a resolver root. 
@@ -70,22 +66,3 @@ defaultOpts =
   , allowIntrospection: const $ pure true
   , mkEnv: const $ pure unit
   }
-
--- | A newtype around HTTPure's `ServerM` with a phantom type to help with type inference
--- newtype GqlServerM :: forall k. k -> Type
--- newtype GqlServerM f = GqlServerM ServerM
-
--- derive instance Newtype (GqlServerM f) _
--- derive newtype instance MonadEffect (GqlServerM f)
-
--- type GqlServer = GqlServerM GqlM
-
--- -- | Run a `GqlServerM` as an `Effect`.
--- asEffect :: forall m. GqlServerM m -> Effect CloseServer
--- asEffect = coerce
-
--- -- | Lift a `GqlServerM` into any `MonadEffect` monad
--- liftServer :: forall p m. MonadEffect m => GqlServerM p -> m CloseServer
--- liftServer = asEffect >>> liftEffect
-
-type CloseServer = Effect Unit -> Effect Unit

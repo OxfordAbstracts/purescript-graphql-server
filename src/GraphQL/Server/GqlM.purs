@@ -47,6 +47,8 @@ runGqlM mkEnv request variables gqlM = do
     }
     gqlM
 
+  
+
 gqlToAff :: forall env a. (GqlEnv env) -> GqlM env a -> Aff a
 gqlToAff env (GqlM gqlM) = runReaderT gqlM env
 

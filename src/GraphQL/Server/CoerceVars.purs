@@ -1,65 +1,21 @@
-module GraphQL.Server.HandleOperation where
+module GraphQL.Server.CoerceVars where
 
 import Prelude
 
 import Control.Monad.Error.Class (throwError)
-import Control.Monad.Reader as H
 import Data.Argonaut (Json)
-import Data.Either (Either(..))
+import Data.Either (Either)
 import Data.Foldable (foldM)
-import Data.GraphQL.AST (OperationType(..))
 import Data.GraphQL.AST as AST
-import Data.List.NonEmpty as NonEmpty
-import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Foreign.Object (Object)
 import Foreign.Object as Object
-import GraphQL.Resolver (RootResolver)
 import GraphQL.Server.EncodeValue (encodeValue)
-import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
-import GraphQL.Server.GqlM (GqlM)
+import GraphQL.Server.GqlError (VariableInputError(..))
 import GraphQL.Server.Introspection (Introspection_T)
 import GraphQL.Server.Introspection.Types (ITypeKind(..))
-import GraphQL.Server.Resolver.JsonResolver (resolve)
-import GraphQL.Server.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
 
-handleOperation
-  :: forall env
-   . GqlM env (RootResolver env)
-  -> AST.OperationDefinition
-  -> GqlM env
-       ( Either GqlError
-           { data :: Json
-           , errors :: Maybe (NonEmptyList Json)
-           }
-       )
-handleOperation rootM opDef = do
-  root <- rootM
-  { request } <- H.ask
-  let
-    mutation = root.mutation request
-    query = root.query request
-
-  case opDef of
-    AST.OperationDefinition_SelectionSet selectionSet ->
-      resolveToJson query selectionSet
-    AST.OperationDefinition_OperationType
-      { operationType
-      , selectionSet
-      } ->
-      case operationType of
-        Query -> resolveToJson query selectionSet
-        Mutation -> resolveToJson mutation selectionSet
-        Subscription -> pure $ Left $ SubscriptionsNotSupported
-  where
-
-  resolveToJson r selectionSet = getJson <$> resolve r (Just selectionSet)
-
-  getJson result = pure
-    { data: resultToData result
-    , errors: NonEmpty.fromList $ encodeLocatedError <$> getLocatedErrors result
-    }
 
 coerceVars :: Introspection_T -> Maybe AST.VariableDefinitions -> Object Json -> Either VariableInputError (Object Json)
 coerceVars _ Nothing _ = pure Object.empty

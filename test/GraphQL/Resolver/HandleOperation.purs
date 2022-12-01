@@ -292,7 +292,7 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- runGqlM (\_ -> pure unit) mockRequest vars $ handleOperation simpleResolver op vars
+  eit <- runGqlM (\_ -> pure unit) mockRequest vars $ handleOperation simpleResolver op
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 

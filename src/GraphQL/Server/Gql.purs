@@ -10,7 +10,6 @@ import Data.Date (Date)
 import Data.DateTime (DateTime)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), Sum(..), from)
-import Data.Lazy (Lazy, defer, force)
 import Data.List (List(..), reverse, (:))
 import Data.List as List
 import Data.Map (Map)
