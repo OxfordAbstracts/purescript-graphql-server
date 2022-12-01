@@ -31,6 +31,7 @@ to generate this file without the comments in this block.
   , "filterable"
   , "foldable-traversable"
   , "foreign-object"
+  , "fork"
   , "graphql-parser"
   , "heterogeneous"
   , "httpure"

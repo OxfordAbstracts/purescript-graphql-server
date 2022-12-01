@@ -1,4 +1,16 @@
-module Test.GraphQL.Server.Resolver.ToResolver where
+module Test.GraphQL.Server.Resolver.ToResolver
+  ( ResolverChild1
+  , aff
+  , gqlObj
+  , leaf
+  , mkChild
+  , mockRequest
+  , resolveTyped
+  , resolverChild1
+  , resolverParent
+  , spec
+  )
+  where
 
 import Prelude
 

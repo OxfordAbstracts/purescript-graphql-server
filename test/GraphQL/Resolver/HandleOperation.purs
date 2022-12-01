@@ -12,10 +12,10 @@ import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (Aff, error, throwError)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver, rootResolver)
-import GraphQL.Server.GqlM (GqlM, gPure)
-import GraphQL.Server.HandleOperation (handleOperation)
 import GraphQL.Server.Gql (class Gql, enum, object, scalar, union)
+import GraphQL.Server.GqlM (GqlM, gPure, runGqlM)
 import GraphQL.Server.GqlResM as GqlM
+import GraphQL.Server.HandleOperation (handleOperation)
 import GraphQL.Server.HandleRequest (parseOperation)
 import HTTPure (Request)
 import Test.GraphQL.E2E.Util (JsonTest(..))
@@ -292,11 +292,11 @@ resolveAsJson = resolveAsJsonWithVars Object.empty
 resolveAsJsonWithVars :: Object.Object Json -> String -> Aff Json
 resolveAsJsonWithVars vars query = do
   op <- GqlM.toAff' $ parseOperation Nothing query
-  eit <- handleOperation (\_ -> pure unit) simpleResolver mockRequest op vars
+  eit <- runGqlM (\_ -> pure unit) mockRequest vars $ handleOperation simpleResolver op vars
   res <- either (throwError <<< error <<< show) pure eit
   pure res.data
 
-simpleResolver :: RootResolver Unit
+simpleResolver :: GqlM Unit (RootResolver Unit)
 simpleResolver =
   rootResolver
     { query:

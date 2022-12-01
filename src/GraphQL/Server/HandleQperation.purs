@@ -3,6 +3,7 @@ module GraphQL.Server.HandleOperation where
 import Prelude
 
 import Control.Monad.Error.Class (throwError)
+import Control.Monad.Reader as H
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
 import Data.Foldable (foldM)
@@ -12,59 +13,57 @@ import Data.List.NonEmpty as NonEmpty
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Effect.Aff (Aff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
 import GraphQL.Server.EncodeValue (encodeValue)
-import GraphQL.Server.GqlM (runGqlM)
+import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
+import GraphQL.Server.GqlM (GqlM)
+import GraphQL.Server.Introspection (Introspection(..), Introspection_T)
+import GraphQL.Server.Introspection.Types (ITypeKind(..))
 import GraphQL.Server.Resolver.JsonResolver (resolve)
 import GraphQL.Server.Resolver.Result (encodeLocatedError, getLocatedErrors, resultToData)
-import GraphQL.Server.GqlError (GqlError(..), VariableInputError(..))
-import GraphQL.Server.Introspection (Introspection(..))
-import GraphQL.Server.Introspection.Types (ITypeKind(..))
-import HTTPure (Request)
 
-handleOperation 
-  :: forall env. 
-  (Request -> Aff env)
-  -> RootResolver env
-  -> Request
+handleOperation
+  :: forall env
+   . GqlM env (RootResolver env)
   -> AST.OperationDefinition
   -> Object Json
-  -> Aff
+  -> GqlM env
        ( Either GqlError
            { data :: Json
            , errors :: Maybe (NonEmptyList Json)
            }
        )
-handleOperation mkEnv root@{ introspection: Introspection introspection } request opDef rawVars = do
+handleOperation rootM opDef rawVars = do
+  root@{ introspection: Introspection introspection } <- rootM
+  { request } <- H.ask
   let
+    mutation = root.mutation request
+    query = root.query request
     vars' = case opDef of
       AST.OperationDefinition_SelectionSet _ ->
         Right Object.empty
       AST.OperationDefinition_OperationType
         { variableDefinitions
-        } -> coerceVars variableDefinitions
+        } -> coerceVars introspection variableDefinitions
 
   case vars' of
     Left err -> pure $ Left $ VariableInputError err
-    Right vars ->
-      runGqlM mkEnv request vars do
-        case opDef of
-          AST.OperationDefinition_SelectionSet selectionSet ->
-            resolveToJson query selectionSet
-          AST.OperationDefinition_OperationType
-            { operationType
-            , selectionSet
-            } ->
-            case operationType of
-              Query -> resolveToJson query selectionSet
-              Mutation -> resolveToJson mutation selectionSet
-              Subscription -> pure $ Left $ SubscriptionsNotSupported
+    Right vars -> do
+      case opDef of
+        AST.OperationDefinition_SelectionSet selectionSet ->
+          resolveToJson query selectionSet
+        AST.OperationDefinition_OperationType
+          { operationType
+          , selectionSet
+          } ->
+          case operationType of
+            Query -> resolveToJson query selectionSet
+            Mutation -> resolveToJson mutation selectionSet
+            Subscription -> pure $ Left $ SubscriptionsNotSupported
   where
-  mutation = root.mutation request
-  query = root.query request
+
   resolveToJson r selectionSet = getJson <$> resolve r (Just selectionSet)
 
   getJson result = pure
@@ -72,9 +71,9 @@ handleOperation mkEnv root@{ introspection: Introspection introspection } reques
     , errors: NonEmpty.fromList $ encodeLocatedError <$> getLocatedErrors result
     }
 
-  coerceVars :: Maybe AST.VariableDefinitions -> Either VariableInputError (Object Json)
-  coerceVars Nothing = pure Object.empty
-  coerceVars (Just (AST.VariableDefinitions varDefs)) = foldM go Object.empty varDefs
+  coerceVars :: Introspection_T -> Maybe AST.VariableDefinitions -> Either VariableInputError (Object Json)
+  coerceVars _ Nothing = pure Object.empty
+  coerceVars introspection (Just (AST.VariableDefinitions varDefs)) = foldM go Object.empty varDefs
     where
     go :: Object Json -> AST.VariableDefinition -> Either VariableInputError (Object Json)
     go

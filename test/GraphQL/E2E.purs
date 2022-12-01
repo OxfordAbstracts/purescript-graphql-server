@@ -1,4 +1,4 @@
-module Test.GraphQL.E2E (spec) where
+module Test.GraphQL.E2E (spec__) where
 
 import Prelude
 
@@ -11,18 +11,19 @@ import Data.Maybe (Maybe, fromMaybe, maybe)
 import Data.Newtype (class Newtype)
 import Effect (Effect)
 import Effect.Aff (Aff, finally)
-import Effect.Class (class MonadEffect, liftEffect)
-import GraphQL.Server (GqlServerM, defaultOpts, liftServer, start)
+import Effect.Class (liftEffect)
+import GraphQL.Server (defaultOpts, start)
 import GraphQL.Server.Gql (class Gql, object)
 import GraphQL.Server.GqlM (GqlM, gPure)
 import GraphQL.Server.Resolver.GqlObj (GqlObj(..))
+import HTTPure (ServerM)
 import Test.GraphQL.E2E.Util (gqlReq, gqlReqVars, noErrors, shouldHaveData)
 import Test.Spec (Spec, before, describe, it)
 
-spec :: Spec Unit
-spec =
+spec__ :: Spec Unit
+spec__ =
   before
-    (liftServer gqlServer) $ describe "Graphql server e2e tests" do
+    (liftEffect gqlServer) $ describe "Graphql server e2e tests" do
     it "should return top level fields" $ e2e do
       res <- gqlReq "query t1 { top_level_pure_ints top_level_string }"
       noErrors res
@@ -112,7 +113,7 @@ e2e aff endServer = finally done do
   where
   done = void $ liftEffect $ endServer (pure unit)
 
-gqlServer ∷ GqlServerM Aff
+gqlServer ∷ ServerM
 gqlServer = start
   defaultOpts
   { query:

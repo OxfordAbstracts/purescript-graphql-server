@@ -6,18 +6,20 @@ import Data.Argonaut (Json, encodeJson, fromArray, fromObject, jsonNull, stringi
 import Data.Array as Array
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
+import Data.Lazy (Lazy, force)
 import Data.List (List(..), fold, reverse, (:))
 import Data.Tuple (Tuple(..))
 import Effect.Exception (Error, message)
 import Foreign.Object as Object
-import GraphQL.Server.Resolver.Path (Path, PathPart(..), encodePath)
 import GraphQL.Server.GqlError (FailedToResolve)
+import GraphQL.Server.Resolver.Path (Path, PathPart(..), encodePath)
 
 data Result err
   = ResultLeaf Json
   | ResultError (FailedToResolve err)
   | ResultObject (List (Tuple String (Result err)))
   | ResultList (List (Result err))
+  | ResultLazy (Lazy (Result err))
   | ResultNull
 
 derive instance Generic (Result err) _
@@ -30,6 +32,7 @@ instance Show err => Show (Result err) where
     ResultError err -> "(ResultError " <> show err <> ")"
     ResultObject fields -> "(ResultObject " <> show fields <> ")"
     ResultList items -> "(ResultList " <> show items <> ")"
+    ResultLazy items -> "(ResultLazy " <> show items <> ")"
     ResultNull -> "ResultNull"
 
 resultToData :: forall err. Result err -> Json
@@ -39,6 +42,7 @@ resultToData = case _ of
   ResultObject fields -> fromObject $ Object.fromFoldable $
     fields <#> map resultToData
   ResultList items -> fromArray $ Array.fromFoldable $ map resultToData items
+  ResultLazy items -> resultToData $ force items
   ResultNull -> jsonNull
 
 newtype LocatedError = LocatedError
@@ -65,6 +69,8 @@ getLocatedErrors = go Nil
     ResultList items -> items
       # mapWithIndex (\i -> go (Index i : path))
       # fold
+
+    ResultLazy r -> go path $ force r
 
     ResultNull -> Nil
 

@@ -3,13 +3,14 @@ module GraphQL.Server.GqlM where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
+import Control.Monad.Fork.Class (class MonadFork)
 import Control.Monad.Reader (class MonadAsk, class MonadReader, ReaderT(..), runReaderT)
 import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Argonaut (Json)
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
-import Effect.Aff (Aff, Error, ParAff)
+import Effect.Aff (Aff, Error, Fiber, ParAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Foreign.Object (Object)
@@ -34,9 +35,9 @@ gPure :: forall env a. a -> GqlM env a
 gPure = pure
 
 runGqlM :: forall env a. (Request -> Aff env) -> Request -> Object Json -> GqlM env a -> Aff a
-runGqlM mkEnv request variables (GqlM a) = do
+runGqlM mkEnv request variables gqlM = do
   env <- mkEnv request
-  runReaderT a
+  gqlToAff
     { depth: 0
     , index: Nothing
     , path: Nil
@@ -44,6 +45,10 @@ runGqlM mkEnv request variables (GqlM a) = do
     , variables
     , env
     }
+    gqlM
+
+gqlToAff :: forall env a. (GqlEnv env) -> GqlM env a -> Aff a
+gqlToAff env (GqlM gqlM) = runReaderT gqlM env
 
 derive instance Newtype (GqlM env a) _
 derive newtype instance Functor (GqlM env)
@@ -57,6 +62,10 @@ derive newtype instance MonadAsk (GqlEnv env) (GqlM env)
 derive newtype instance MonadReader (GqlEnv env) (GqlM env)
 derive newtype instance MonadThrow Error (GqlM env)
 derive newtype instance MonadError Error (GqlM env)
+derive newtype instance MonadFork Fiber (GqlM env)
+
+-- instance Lazy (GqlM env a) where 
+--   defer = ?D
 
 derive instance Newtype ((GqlParM env) a) _
 derive newtype instance Functor (GqlParM env)

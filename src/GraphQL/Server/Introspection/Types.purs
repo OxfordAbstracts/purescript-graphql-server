@@ -6,10 +6,12 @@ import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Enum (class Enum)
 import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Generic.Rep (class Generic)
+import Data.Lazy (Lazy)
 import Data.List (List(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
+import Effect.Aff (Aff)
 import GraphQL.Server.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 
 newtype ISchema = ISchema
@@ -30,7 +32,7 @@ type IType_T =
   { kind :: ITypeKind
   , name :: Maybe String
   , description :: Maybe String
-  , fields :: { includeDeprecated :: Maybe Boolean } -> Maybe (List IField)
+  , fields :: { includeDeprecated :: Maybe Boolean } -> Aff (Maybe (List IField))
   , interfaces :: Maybe (List IType)
   , possibleTypes :: Maybe (List IType)
   , enumValues :: { includeDeprecated :: Maybe Boolean } -> Maybe (List IEnumValue)
@@ -43,7 +45,7 @@ defaultIType =
   { kind: SCALAR
   , name: Nothing
   , description: Nothing
-  , fields: const Nothing
+  , fields: \_ -> pure Nothing
   , interfaces: Nothing
   , possibleTypes: Nothing
   , enumValues: const Nothing

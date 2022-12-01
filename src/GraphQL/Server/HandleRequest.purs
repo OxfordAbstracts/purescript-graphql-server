@@ -16,9 +16,10 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import GraphQL.Resolver (RootResolver)
-import GraphQL.Server.HandleOperation (handleOperation)
 import GraphQL.Server.GqlError (GqlError(..))
+import GraphQL.Server.GqlM (GqlM, runGqlM)
 import GraphQL.Server.GqlResM (GqlResM)
+import GraphQL.Server.HandleOperation (handleOperation)
 import HTTPure (Request, toString)
 import Parsing (runParser)
 
@@ -26,7 +27,7 @@ handleRequest
   :: forall env
    . (Request -> Aff Boolean)
   -> (Request -> Aff env)
-  -> RootResolver env
+  -> GqlM env (RootResolver env)
   -> Request
   -> GqlResM Json
 handleRequest isAuthorized mkEnv resolvers req = do
@@ -37,9 +38,13 @@ handleRequest isAuthorized mkEnv resolvers req = do
   op <- parseOperation operationName operation
   either throwError pure =<<
     ( liftAff
-        $ map (map encodeJson)
-        $ handleOperation mkEnv resolvers req op (fromMaybe Object.empty variables)
+        $ runGqlM mkEnv req (fromMaybe Object.empty variables)
+        $ map encodeJson
+        <$> handleOperation resolvers op (fromMaybe Object.empty variables)
     )
+
+  -- where 
+  -- vars = (fromMaybe Object.empty variables)
 
 parseGqlRequest
   :: forall m
