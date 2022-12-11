@@ -19,6 +19,7 @@ import HTTPure (Request)
 
 newtype GqlM env a = GqlM (ReaderT (GqlEnv env) Aff a)
 newtype GqlParM env a = GqlParM (ReaderT (GqlEnv env) ParAff a)
+newtype GqlFiberM env a = GqlFiberM (ReaderT (GqlEnv env) Fiber a)
 
 type GqlEnv env =
   { env :: env
@@ -65,7 +66,7 @@ derive newtype instance MonadReader (GqlEnv env) (GqlM env)
 derive newtype instance MonadThrow Error (GqlM env)
 derive newtype instance MonadError Error (GqlM env)
 derive newtype instance MonadFork Fiber (GqlM env)
-
+ 
 -- instance Lazy (GqlM env a) where 
 --   defer = ?D
 

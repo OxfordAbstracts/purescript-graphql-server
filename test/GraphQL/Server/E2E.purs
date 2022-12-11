@@ -1,4 +1,4 @@
-module Test.GraphQL.E2E (spec__) where
+module Test.GraphQL.Server.E2E (spec) where
 
 import Prelude
 
@@ -20,8 +20,8 @@ import HTTPure (ServerM)
 import Test.GraphQL.E2E.Util (gqlReq, gqlReqVars, noErrors, shouldHaveData)
 import Test.Spec (Spec, before, describe, it)
 
-spec__ :: Spec Unit
-spec__ =
+spec :: Spec Unit
+spec =
   before
     (liftEffect gqlServer) $ describe "Graphql server e2e tests" do
     it "should return top level fields" $ e2e do

@@ -3,6 +3,7 @@ module GraphQL.Server.Gql where
 import Prelude
 
 import Control.Apply (lift2)
+import Control.Monad.Fork.Class as Fork
 import Control.Monad.Reader (ask)
 import Data.Argonaut (class EncodeJson, Json, encodeJson)
 import Data.Argonaut.Encode.Generic (class EncodeLiteral, encodeLiteralSum)
@@ -10,6 +11,7 @@ import Data.Date (Date)
 import Data.DateTime (DateTime)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), Sum(..), from)
+import Data.Lazy (Lazy, force)
 import Data.List (List(..), reverse, (:))
 import Data.List as List
 import Data.Map (Map)
@@ -19,8 +21,9 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Time (Time)
 import Data.Traversable (sequence)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, Fiber)
 import Effect.Aff.Class (liftAff)
+import GraphQL.Server.Branch (class GqlIf, Branch(..), gqlIf)
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.Decode (class DecodeArg, decodeArg)
 import GraphQL.Server.GqlError (FailedToResolve(..))
@@ -158,20 +161,65 @@ instance (Gql env a) => Gql env (Aff a) where
           iType unit
     }
 
--- instance (Gql env a) => Gql env (Lazy a) where
---   gql _ = GqlProps
---     { resolver:  \a req -> LazyResolver $  
---         let
---           GqlProps { resolver } = gql unit :: GqlProps env a
---         in
---           resolver (force a) req
+instance (Gql env a) => Gql env (Fiber a) where
+  gql _ = GqlProps
+    { resolver: \a req ->
+        AsyncResolver do
+          a' <- Fork.join a
+          let
+            GqlProps { resolver } = gql unit :: GqlProps env a
+          pure $ resolver a' req
+    , iType: \_ ->
+        let
+          GqlProps { iType } = gql unit :: GqlProps env a
+        in
+          iType unit
+    }
 
---     , iType: \_ ->
---         let
---           GqlProps { iType } = gql unit :: GqlProps env a
---         in
---           iType unit
---     }
+instance (Gql env a) => Gql env (Lazy a) where
+  gql _ = GqlProps
+    { resolver: \a req ->
+        let
+          GqlProps { resolver } = gql unit :: GqlProps env a
+        in
+          resolver (force a) req
+
+    , iType: \_ ->
+        let
+          GqlProps { iType } = gql unit :: GqlProps env a
+        in
+          iType unit
+    }
+
+instance (Gql env a, Gql env b, GqlIf resource env) => Gql env (Branch resource env a b) where
+  gql _ = GqlProps
+    { resolver: \(Branch _ a b) req ->
+        AsyncResolver do
+          pass <- gqlIf (Proxy :: Proxy resource)
+          if pass then do
+            b' <- b
+            let
+              GqlProps { resolver } = gql unit :: GqlProps env b
+            pure $ resolver b' req
+          else do
+            a' <- a
+            let
+              GqlProps { resolver } = gql unit :: GqlProps env a
+            pure $ resolver a' req
+
+    , iType: \_ -> do
+        pass <- gqlIf (Proxy :: Proxy resource)
+        if pass then do
+          let
+            GqlProps { iType } = gql unit :: GqlProps env a
+
+          iType unit
+        else do
+          let
+            GqlProps { iType } = gql unit :: GqlProps env b
+
+          iType unit
+    }
 
 instance Gql env ISchema where
   gql = objectWithName "__Schema"
@@ -265,9 +313,9 @@ instance
     pure $ pure $ IType defaultIType
       { name = Just typename
       , kind = IT.OBJECT
-      , fields = \_ -> do 
-        fields <- gqlToAff env $ getIFields (Proxy :: Proxy { | arg })
-        pure $ Just  fields
+      , fields = \_ -> do
+          fields <- gqlToAff env $ getIFields (Proxy :: Proxy { | arg })
+          pure $ Just fields
       }
     where
     typename = ctrName <> "_" <> reflectSymbol (Proxy :: Proxy name)

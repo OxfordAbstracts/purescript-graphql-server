@@ -6,7 +6,7 @@ import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Data.Argonaut (Json, decodeJson, encodeJson, parseJson)
 import Data.Either (Either(..), either, note)
 import Data.Filterable (filterMap)
-import Data.Foldable (findMap)
+import Data.Foldable (findMap, null)
 import Data.GraphQL.AST as AST
 import Data.GraphQL.Parser (document)
 import Data.List (List(..), (:))
@@ -40,19 +40,21 @@ handleRequest isAuthorized mkEnv resolvers req = do
   op <- parseOperation operationName operation
   let
     varDefs = case op of
-      AST.OperationDefinition_SelectionSet _ ->
-        Nothing
       AST.OperationDefinition_OperationType
-        { variableDefinitions
+        { variableDefinitions: Just (AST.VariableDefinitions variableDefinitions)
         } -> variableDefinitions
-
+      _ ->
+        Nil
     rawVars = fromMaybe Object.empty variables
 
-  { introspection: Introspection introspection } <- toGqlM rawVars resolvers
-
-  coercedVars <- case coerceVars introspection varDefs rawVars of
-    Left err -> throwError $ VariableInputError err
-    Right vars -> pure vars
+  coercedVars <-
+    if null varDefs then
+      pure Object.empty
+    else do
+      { introspection: Introspection introspection } <- toGqlM Object.empty resolvers
+      case coerceVars introspection varDefs rawVars of
+        Left err -> throwError $ VariableInputError err
+        Right vars -> pure vars
 
   either throwError pure =<<
     ( toGqlM coercedVars

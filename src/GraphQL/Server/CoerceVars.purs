@@ -7,6 +7,7 @@ import Data.Argonaut (Json)
 import Data.Either (Either)
 import Data.Foldable (foldM)
 import Data.GraphQL.AST as AST
+import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Foreign.Object (Object)
@@ -17,9 +18,8 @@ import GraphQL.Server.Introspection (Introspection_T)
 import GraphQL.Server.Introspection.Types (ITypeKind(..))
 
 
-coerceVars :: Introspection_T -> Maybe AST.VariableDefinitions -> Object Json -> Either VariableInputError (Object Json)
-coerceVars _ Nothing _ = pure Object.empty
-coerceVars introspection (Just (AST.VariableDefinitions varDefs)) rawVars = foldM go Object.empty varDefs
+coerceVars :: Introspection_T -> List AST.VariableDefinition -> Object Json -> Either VariableInputError (Object Json)
+coerceVars introspection varDefs rawVars = foldM go Object.empty varDefs
   where
   go :: Object Json -> AST.VariableDefinition -> Either VariableInputError (Object Json)
   go
