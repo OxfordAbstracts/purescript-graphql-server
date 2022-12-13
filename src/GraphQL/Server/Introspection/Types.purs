@@ -12,6 +12,7 @@ import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Effect.Aff (Aff)
 import GraphQL.Server.Introspection.Types.DirectiveLocation (IDirectiveLocation)
+import Safe.Coerce (coerce)
 
 newtype ISchema = ISchema
   { types :: List IType
@@ -38,6 +39,7 @@ type IType_T =
   , inputFields :: Maybe (List IInputValue)
   , ofType :: Maybe IType
   }
+  
 
 defaultIType :: IType_T
 defaultIType =
@@ -51,6 +53,14 @@ defaultIType =
   , inputFields: Nothing
   , ofType: Nothing
   }
+modifyIType :: (IType_T -> IType_T) -> IType -> IType
+modifyIType = coerce
+
+scalarType :: String -> IType
+scalarType name = IType defaultIType { name = Just name }
+
+unnamed :: ITypeKind -> IType
+unnamed kind = IType defaultIType { kind = kind }
 
 derive instance Generic IType _
 

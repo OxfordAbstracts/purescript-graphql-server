@@ -23,13 +23,14 @@ import Data.Time (Time)
 import Data.Traversable (sequence)
 import Effect.Aff (Aff, Fiber)
 import Effect.Aff.Class (liftAff)
-import GraphQL.Server.Branch (class GqlIf, Branch(..), gqlIf)
+import GraphQL.Server.Auth (Forbidden, forbiddenType)
+import GraphQL.Server.Branch
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.Decode (class DecodeArg, decodeArg)
 import GraphQL.Server.GqlError (FailedToResolve(..))
 import GraphQL.Server.GqlM (GqlM, gqlToAff)
 import GraphQL.Server.Introspection.GqlNullable (class GqlNullable, isNullable)
-import GraphQL.Server.Introspection.Types (IDirective, IEnumValue, IField(..), IInputValue(..), ISchema, IType(..), ITypeKind, IType_T, defaultIType)
+import GraphQL.Server.Introspection.Types (IDirective, IEnumValue, IField(..), IInputValue(..), ISchema, IType(..), ITypeKind, defaultIType)
 import GraphQL.Server.Introspection.Types as IT
 import GraphQL.Server.Introspection.Types.DirectiveLocation (IDirectiveLocation)
 import GraphQL.Server.Record.Unsequence (class UnsequenceProxies, unsequenceProxies)
@@ -112,7 +113,7 @@ instance Gql env a => Gql env (Array a) where
     { resolver: \a req -> ListResolver $ flip resolver req <$> List.fromFoldable a
     , iType: \_ -> do
         t <- getTypeWithNull (Proxy :: Proxy a)
-        pure $ unnamed IT.LIST # modifyIType _
+        pure $ IT.unnamed IT.LIST # IT.modifyIType _
           { ofType = Just t
           }
     }
@@ -124,7 +125,7 @@ instance Gql env a => Gql env (List a) where
     { resolver: \a req -> ListResolver $ flip resolver req <$> a
     , iType: \_ -> do
         t <- getTypeWithNull (Proxy :: Proxy a)
-        pure $ unnamed IT.LIST # modifyIType _
+        pure $ IT.unnamed IT.LIST # IT.modifyIType _
           { ofType = Just t
           }
     }
@@ -191,34 +192,39 @@ instance (Gql env a) => Gql env (Lazy a) where
           iType unit
     }
 
-instance (Gql env a, Gql env b, GqlIf resource env) => Gql env (Branch resource env a b) where
+instance (Gql env a, Gql env b, GqlIf pred env) => Gql env (Branch pred a b) where
   gql _ = GqlProps
     { resolver: \(Branch _ a b) req ->
         AsyncResolver do
-          pass <- gqlIf (Proxy :: Proxy resource)
+          pass <- gqlIf (Proxy :: Proxy pred)
           if pass then do
-            b' <- b
             let
               GqlProps { resolver } = gql unit :: GqlProps env b
-            pure $ resolver b' req
+            pure $ resolver b req
           else do
-            a' <- a
             let
               GqlProps { resolver } = gql unit :: GqlProps env a
-            pure $ resolver a' req
+            pure $ resolver a req
 
-    , iType: \_ -> do
-        pass <- gqlIf (Proxy :: Proxy resource)
-        if pass then do
-          let
-            GqlProps { iType } = gql unit :: GqlProps env a
+    , iType: \_ ->
+        do
+          pass <- gqlIf (Proxy :: Proxy pred)
+          if pass then do
+            let
+              GqlProps { iType } = gql unit :: GqlProps env a
 
-          iType unit
-        else do
-          let
-            GqlProps { iType } = gql unit :: GqlProps env b
+            iType unit
+          else do
+            let
+              GqlProps { iType } = gql unit :: GqlProps env b
 
-          iType unit
+            iType unit
+    }
+
+instance Gql env Forbidden where
+  gql _ = GqlProps
+    { resolver: \_ _ -> Null
+    , iType: \_ -> pure $ forbiddenType
     }
 
 instance Gql env ISchema where
@@ -562,17 +568,8 @@ jsonScalar = scalar encodeJson
 scalar :: forall env a. (a -> Json) -> String -> GqlProps env a
 scalar encode name = GqlProps
   { resolver: \a _ -> Node $ pure $ encode a
-  , iType: \_ -> pure $ scalarType name
+  , iType: \_ -> pure $ IT.scalarType name
   }
-
-modifyIType :: (IType_T -> IType_T) -> IType -> IType
-modifyIType = coerce
-
-scalarType :: String -> IType
-scalarType name = IType defaultIType { name = Just name }
-
-unnamed :: IT.ITypeKind -> IType
-unnamed kind = IType defaultIType { kind = kind }
 
 getTypeWithNull :: forall env a. Gql env a => Proxy a -> GqlM env IType
 getTypeWithNull proxy =
@@ -580,7 +577,7 @@ getTypeWithNull proxy =
     iType unit
   else do
     t <- iType unit
-    pure $ unnamed IT.NON_NULL # modifyIType _ { ofType = Just t }
+    pure $ IT.unnamed IT.NON_NULL # IT.modifyIType _ { ofType = Just t }
   where
   GqlProps { iType } = (gql unit) :: GqlProps env a
 
