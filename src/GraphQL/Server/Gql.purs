@@ -1,5 +1,6 @@
 module GraphQL.Server.Gql where
 
+import GraphQL.Server.Branch
 import Prelude
 
 import Control.Apply (lift2)
@@ -10,6 +11,7 @@ import Data.Argonaut.Encode.Generic (class EncodeLiteral, encodeLiteralSum)
 import Data.Date (Date)
 import Data.DateTime (DateTime)
 import Data.Either (Either(..))
+import Data.Filterable (filter)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), Sum(..), from)
 import Data.Lazy (Lazy, force)
 import Data.List (List(..), reverse, (:))
@@ -23,8 +25,7 @@ import Data.Time (Time)
 import Data.Traversable (sequence)
 import Effect.Aff (Aff, Fiber)
 import Effect.Aff.Class (liftAff)
-import GraphQL.Server.Auth (Forbidden, forbiddenType)
-import GraphQL.Server.Branch
+import GraphQL.Server.Auth (Forbidden(..), forbiddenName, forbiddenType, isForbidden)
 import GraphQL.Server.DateTime (encodeDate, encodeDateTime, encodeTime)
 import GraphQL.Server.Decode (class DecodeArg, decodeArg)
 import GraphQL.Server.GqlError (FailedToResolve(..))
@@ -211,12 +212,12 @@ instance (Gql env a, Gql env b, GqlIf pred env) => Gql env (Branch pred a b) whe
           pass <- gqlIf (Proxy :: Proxy pred)
           if pass then do
             let
-              GqlProps { iType } = gql unit :: GqlProps env a
+              GqlProps { iType } = gql unit :: GqlProps env b
 
             iType unit
           else do
             let
-              GqlProps { iType } = gql unit :: GqlProps env b
+              GqlProps { iType } = gql unit :: GqlProps env a
 
             iType unit
     }
@@ -519,6 +520,7 @@ getRecordIFields r =
   r # hfoldlWithIndex (GetIFieldsProps :: GetIFieldsProps) (mempty :: List (GqlM env IField))
     # reverse
     # sequence
+    <#> filter (unwrap >>> _.type >>> not isForbidden)
 
 class GetIInputValues :: forall k. Type -> k -> Constraint
 class GetIInputValues env a where
